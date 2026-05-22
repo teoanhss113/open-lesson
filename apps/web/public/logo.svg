@@ -1,0 +1,11 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' role='img' aria-label='AI Curriculum Workspace'>
+  <title>AI Curriculum Workspace</title>
+  <g stroke='#0a0a0a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'>
+    <path d='M12 48 C 22 42, 32 42, 52 48' />
+    <path d='M12 40 C 22 34, 32 34, 52 40' />
+    <polygon points='32 10 52 20 32 30 12 20' fill='#ffffff' />
+    <path d='M20 24.5 V 36 C 20 40, 26 42, 32 42 C 38 42, 44 40, 44 36 V 24.5' />
+    <path d='M32 20 L45 26.5 V 34' stroke='#00d4a4' stroke-width='2.6' />
+  </g>
+  <path d='M52 14 L53.5 19 L58.5 20.5 L53.5 22 L52 27 L50.5 22 L45.5 20.5 L50.5 19 Z' fill='#00d4a4' />
+</svg>

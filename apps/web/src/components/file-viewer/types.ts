@@ -1,0 +1,83 @@
+import type { CSSProperties } from 'react';
+import type { Dict } from '../../i18n/types';
+import type { WebDeployProviderId } from '../../providers/registry';
+import type { ManualEditStyles } from '../../edit-mode/types';
+
+export type TranslateFn = (key: keyof Dict, vars?: Record<string, string | number>) => string;
+export type SlideState = { active: number; count: number };
+export type BoardTool = 'inspect' | 'pod';
+export type StrokePoint = { x: number; y: number };
+
+export type ManualEditPendingStyleSave = {
+  id: string;
+  styles: Partial<ManualEditStyles>;
+  label: string;
+  version: number;
+};
+
+export type PreviewViewportId = 'desktop' | 'tablet' | 'mobile';
+export type PreviewCanvasSize = { width: number; height: number };
+
+export interface PreviewViewportPreset {
+  id: PreviewViewportId;
+  width: number | null;
+  height: number | null;
+  labelKey: keyof Dict;
+  titleKey: keyof Dict;
+}
+
+export type DeployProviderOption = {
+  id: WebDeployProviderId;
+  labelKey: 'fileViewer.vercelProvider' | 'fileViewer.cloudflarePagesProvider';
+  tokenLink: string;
+  tokenLinkKey: 'fileViewer.vercelTokenGetLink' | 'fileViewer.cloudflareApiTokenGetLink';
+  tokenPlaceholderKey:
+    | 'fileViewer.vercelTokenPlaceholder'
+    | 'fileViewer.cloudflareApiTokenPlaceholder';
+  tokenReuseHintKey: 'fileViewer.vercelTokenReuseHint' | 'fileViewer.cloudflareApiTokenReuseHint';
+  tokenRequiredKey: 'fileViewer.vercelTokenRequired' | 'fileViewer.cloudflareApiTokenRequired';
+  previewHintKey: 'fileViewer.vercelPreviewOnly' | 'fileViewer.cloudflarePagesPreviewHint';
+  tokenLabelKey:
+    | 'fileViewer.vercelToken'
+    | 'fileViewer.cloudflareApiToken';
+  accountIdLabelKey?: 'fileViewer.cloudflareAccountId';
+  accountIdHintKey?: 'fileViewer.cloudflareAccountIdHint';
+};
+
+export type CloudflarePagesZoneOption = {
+  id: string;
+  name: string;
+  status?: string;
+  type?: string;
+};
+
+export type DeployResultCard = {
+  id: string;
+  label: string;
+  url: string;
+  status: string;
+  message?: string;
+};
+
+export type InspectStyleSnapshot = {
+  color?: string;
+  backgroundColor?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  paddingTop?: string;
+  paddingRight?: string;
+  paddingBottom?: string;
+  paddingLeft?: string;
+  borderRadius?: string;
+  textAlign?: string;
+  fontFamily?: string;
+  lineHeight?: string;
+};
+
+export type InspectTarget = {
+  elementId: string;
+  selector: string;
+  label: string;
+  text: string;
+  style: InspectStyleSnapshot;
+};

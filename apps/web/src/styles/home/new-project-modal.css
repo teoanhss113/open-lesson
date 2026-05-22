@@ -1,0 +1,73 @@
+/* ============================================================
+   New project modal — wraps NewProjectPanel in a centered modal
+   surface, triggered by the "+" button on the entry nav rail.
+   ============================================================ */
+.new-project-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 920;
+  background: rgba(28, 27, 26, 0.42);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  overflow: hidden;
+}
+.new-project-modal {
+  width: 100%;
+  max-width: 760px;
+  max-height: min(90vh, calc(100dvh - 48px));
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.new-project-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.new-project-modal__title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.new-project-modal__close {
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.new-project-modal__close svg {
+  display: block;
+  width: 14px !important;
+  height: 14px !important;
+  stroke-width: 1.9;
+}
+.new-project-modal__close:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+.new-project-modal__body {
+  padding: var(--spacing-xl);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}

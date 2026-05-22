@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="128" fill="url(#bg-grad)" />
+  <circle cx="256" cy="256" r="210" fill="#0a0a0a" opacity="0.9" />
+  
+  <circle cx="256" cy="256" r="180" stroke="url(#accent-grad)" stroke-width="6" stroke-dasharray="12 8" opacity="0.8" />
+  
+  <g transform="translate(120, 120)">
+    <path d="M60 160 C 100 130, 140 130, 212 160 C 172 130, 132 130, 60 160 Z" fill="#00d4a4" opacity="0.8" />
+    <path d="M106 172 C 106 200, 126 210, 212 210 C 160 210, 106 200, 106 172 Z" fill="#00d4a4" />
+    
+    <polygon points="136,40 236,90 136,140 36,90" fill="#ffffff" stroke="#0a0a0a" stroke-width="6" stroke-linejoin="round" />
+    
+    <path d="M136 90 L196 120 L196 150" stroke="#00d4a4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="196" cy="155" r="5" fill="#00d4a4" />
+    
+    <path d="M210 40 L214 52 L226 56 L214 60 L210 72 L206 60 L194 56 L206 52 Z" fill="#00d4a4" />
+  </g>
+
+  <defs>
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1a3d4a" />
+      <stop offset="0.5" stop-color="#00d4a4" />
+      <stop offset="1" stop-color="#2d5a4f" />
+    </linearGradient>
+    <linearGradient id="accent-grad" x1="0" y1="0" x2="256" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00d4a4" />
+      <stop offset="1" stop-color="#00b48a" />
+    </linearGradient>
+  </defs>
+</svg>

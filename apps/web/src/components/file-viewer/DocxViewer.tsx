@@ -1,0 +1,294 @@
+import { useEffect, useRef, useState, SyntheticEvent } from 'react';
+import { projectFileUrl } from '../../providers/registry';
+import { buildSrcdoc } from '../../runtime/srcdoc';
+
+export function DocxViewer({
+  projectId,
+  fileName,
+  iframeRef,
+  selectedPalette,
+  onLoad,
+}: {
+  projectId: string;
+  fileName: string;
+  iframeRef: React.RefObject<HTMLIFrameElement | null> | any;
+  selectedPalette: string | null;
+  onLoad?: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Generate srcDoc with selection tracker, snapshot, palette, comment, inspect, etc. bridges.
+  const srcDoc = buildSrcdoc(
+    `
+    <div id="docx-container" class="docx-viewer-content" style="
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: var(--spacing-xl, 24px);
+      box-sizing: border-box;
+      opacity: 0.3;
+      transition: opacity 150ms ease;
+    "></div>
+    `,
+    {
+      commentBridge: true,
+      inspectBridge: true,
+      paletteBridge: true,
+      editBridge: true,
+      initialPalette: selectedPalette,
+    }
+  );
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+
+    // Disconnect and clean up the observer from a previous render
+    const iframe = iframeRef.current;
+    if (iframe && (iframe as any)._docxMutationObserver) {
+      try {
+        (iframe as any)._docxMutationObserver.disconnect();
+        delete (iframe as any)._docxMutationObserver;
+      } catch (e) {
+        console.error('Error disconnecting observer', e);
+      }
+    }
+  }, [projectId, fileName]);
+
+  // Disconnect the observer on unmount
+  useEffect(() => {
+    return () => {
+      const iframe = iframeRef.current;
+      if (iframe && (iframe as any)._docxMutationObserver) {
+        try {
+          (iframe as any)._docxMutationObserver.disconnect();
+          delete (iframe as any)._docxMutationObserver;
+        } catch (e) {
+          console.error('Error disconnecting observer on unmount', e);
+        }
+      }
+    };
+  }, []);
+
+  const handleIframeLoad = (event?: SyntheticEvent<HTMLIFrameElement>) => {
+    const iframe = event?.currentTarget || iframeRef.current;
+    if (!iframe || !iframe.contentDocument) return;
+
+    // Avoid duplicate renders
+    if (iframe.getAttribute('data-docx-loaded') === 'true') return;
+
+    const docxContainer = iframe.contentDocument.getElementById('docx-container');
+    if (!docxContainer) return;
+
+    const fileUrl = projectFileUrl(projectId, fileName);
+
+    // Mark as loaded immediately to prevent double triggers during download
+    iframe.setAttribute('data-docx-loaded', 'true');
+
+    Promise.all([
+      fetch(fileUrl).then((res) => {
+        if (!res.ok) throw new Error('Không thể tải tệp tin');
+        return res.arrayBuffer();
+      }),
+      import('docx-preview'),
+    ])
+      .then(([buffer, docx]) => {
+        const currentIframe = event?.currentTarget || iframeRef.current;
+        if (!currentIframe || !currentIframe.contentDocument) return;
+
+        const currentContainer = currentIframe.contentDocument.getElementById('docx-container');
+        if (!currentContainer) return;
+        
+        currentContainer.innerHTML = '';
+
+        // Add some nice styling for docx pages in the iframe's head
+        const style = currentIframe.contentDocument.createElement('style');
+        style.textContent = `
+          body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-panel, #f3f4f6);
+            font-family: Inter, system-ui, -apple-system, sans-serif;
+            overflow: auto !important;
+          }
+          #docx-container {
+            background-color: var(--bg-panel, #f3f4f6) !important;
+            width: 100%;
+            max-width: none !important;
+            display: block !important;
+          }
+          .docx-wrapper {
+            background-color: var(--bg-panel, #f3f4f6) !important;
+            padding: 24px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            width: fit-content !important;
+            min-width: 100% !important;
+            box-sizing: border-box !important;
+            margin: 0 auto !important;
+          }
+          .docx {
+            background: white !important;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+            margin-bottom: 24px !important;
+            border-radius: var(--rounded-lg, 8px) !important;
+            box-sizing: border-box !important;
+          }
+        `;
+        currentIframe.contentDocument.head.appendChild(style);
+
+        return docx.renderAsync(buffer, currentContainer, undefined, {
+          className: 'docx',
+          inWrapper: true,
+          ignoreWidth: false,
+          ignoreHeight: false,
+          experimental: true,
+        });
+      })
+      .then(() => {
+        setLoading(false);
+        const currentIframe = event?.currentTarget || iframeRef.current;
+        if (currentIframe && currentIframe.contentDocument) {
+          const currentContainer = currentIframe.contentDocument.getElementById('docx-container');
+          if (currentContainer) {
+            currentContainer.style.opacity = '1';
+
+            let fallbackIndex = 0;
+            const skipTags = new Set(['script', 'style', 'template', 'noscript', 'br']);
+            
+            const annotate = () => {
+              if (!currentContainer) return;
+              const allElements = currentContainer.querySelectorAll('*');
+              let changed = false;
+              allElements.forEach((el: any) => {
+                if (el.hasAttribute('data-od-id') || el.hasAttribute('data-screen-label')) return;
+                const tag = el.tagName.toLowerCase();
+                if (skipTags.has(tag)) return;
+                el.setAttribute('data-od-id', `docx-${tag}-${fallbackIndex++}`);
+                changed = true;
+              });
+              if (changed && onLoad) {
+                onLoad();
+              }
+            };
+
+            // Run immediate annotation pass
+            annotate();
+
+            // Set up MutationObserver to catch progressive/asynchronous child node attachments from docx-preview
+            const observer = new MutationObserver((mutations) => {
+              let shouldAnnotate = false;
+              for (const mutation of mutations) {
+                if (mutation.addedNodes.length > 0) {
+                  shouldAnnotate = true;
+                  break;
+                }
+              }
+              if (shouldAnnotate) {
+                annotate();
+              }
+            });
+
+            observer.observe(currentContainer, {
+              childList: true,
+              subtree: true,
+            });
+
+            // Store the observer instance on the iframe for cleanup on file change/unmount
+            (currentIframe as any)._docxMutationObserver = observer;
+
+            // Extra safety checks for progressive layout passes
+            setTimeout(annotate, 100);
+            setTimeout(annotate, 500);
+            setTimeout(annotate, 1500);
+          }
+        }
+        if (onLoad) onLoad();
+      })
+      .catch((err) => {
+        console.error(err);
+        const currentIframe = event?.currentTarget || iframeRef.current;
+        if (currentIframe) {
+          currentIframe.removeAttribute('data-docx-loaded');
+        }
+        setError(err.message || 'Lỗi khi hiển thị tài liệu');
+        setLoading(false);
+      });
+  };
+
+  // Fallback useEffect to cover cases where onLoad doesn't fire or ref matches late
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (iframe && iframe.contentDocument) {
+      const docxContainer = iframe.contentDocument.getElementById('docx-container');
+      if (docxContainer && iframe.getAttribute('data-docx-loaded') !== 'true') {
+        handleIframeLoad();
+      }
+    }
+  }, [projectId, fileName, loading]);
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        background: 'var(--bg-panel, #f3f4f6)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {loading && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            color: 'var(--text-muted, #4b5563)',
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontSize: '14px',
+            zIndex: 10,
+          }}
+        >
+          Đang chuẩn bị hiển thị tài liệu...
+        </div>
+      )}
+      {error && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            color: 'var(--text-danger, #ef4444)',
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontSize: '14px',
+            zIndex: 10,
+          }}
+        >
+          {error}
+        </div>
+      )}
+      <iframe
+        key={`${projectId}-${fileName}-${selectedPalette}`}
+        ref={iframeRef}
+        data-testid="artifact-preview-frame"
+        data-od-render-mode="srcdoc"
+        title={fileName}
+        sandbox="allow-scripts allow-downloads allow-same-origin"
+        srcDoc={srcDoc}
+        onLoad={handleIframeLoad}
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          background: 'var(--bg-panel, #f3f4f6)',
+        }}
+      />
+    </div>
+  );
+}
