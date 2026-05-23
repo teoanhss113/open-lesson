@@ -4,11 +4,36 @@ import type { Dict } from '../i18n/types';
 import { projectFileUrl } from '../providers/registry';
 import type { LiveArtifactWorkspaceEntry, ProjectFile, ProjectFileKind } from '../types';
 import type { PluginFolderAgentAction } from './design-files/pluginFolderActions';
+import {
+  browsePathSegments,
+  displayNameForFile,
+  listBrowseDirectory,
+  mergeBrowseRows,
+  parentBrowsePath,
+  type BrowseFolder,
+  type BrowsePath,
+  type BrowseRow,
+} from './design-files/folderBrowse';
 import { getPluginFolderCandidates } from './design-files/pluginFolders';
 import { Icon } from './Icon';
 import { LiveArtifactBadges } from './LiveArtifactBadges';
 import { humanBytes } from '../utils/format';
 import { isRenderableSketchJson, SketchPreview } from './SketchPreview';
+import { SlidePreview } from './file-viewer/SlidePreview';
+import {
+  CURRICULUM_STAGE_ORDER,
+  KIND_FAMILY_ORDER,
+  SIZE_BUCKET_ORDER,
+  curriculumStageI18nKey,
+  detectCurriculumStage,
+  detectKindFamily,
+  detectSizeBucket,
+  kindFamilyI18nKey,
+  sizeBucketI18nKey,
+  type CurriculumStage,
+  type KindFamily,
+  type SizeBucket,
+} from './design-files/curriculum';
 
 
 type TranslateFn = (key: keyof Dict, vars?: Record<string, string | number>) => string;
@@ -24,6 +49,7 @@ interface Props {
   onDeleteFile: (name: string) => void;
   onDeleteFiles: (names: string[]) => Promise<void> | void;
   onUpload: () => void;
+  onUploadFolder: () => void;
   onUploadFiles: (files: File[]) => void;
   onPaste: () => void;
   onNewSketch: () => void;
@@ -35,10 +61,17 @@ interface Props {
   ) => Promise<void> | void;
 }
 
-type DesignFilesGroupMode = 'kind' | 'modified';
+type DesignFilesGroupMode = 'kind' | 'modified' | 'stage' | 'folder' | 'size';
 type ModifiedSection = 'today' | 'yesterday' | 'previous7Days' | 'previous30Days' | 'older';
 type SortKey = 'name' | 'kind' | 'mtime';
 type SortDir = 'asc' | 'desc';
+/**
+ * `null` here is the "All files" sentinel. We use null instead of a
+ * dedicated 'all' literal so a quick truthy check is enough to decide
+ * whether to filter, and so it's impossible for a stage detector to
+ * accidentally produce the same value.
+ */
+type KindFamilyFilter = KindFamily | null;
 
 const MODIFIED_SECTION_ORDER: ModifiedSection[] = [
   'today',
@@ -72,6 +105,7 @@ export function DesignFilesPanel({
   onDeleteFile,
   onDeleteFiles,
   onUpload,
+  onUploadFolder,
   onUploadFiles,
   onPaste,
   onNewSketch,
@@ -97,35 +131,99 @@ export function DesignFilesPanel({
   const [sharingFolder, setSharingFolder] = useState<string | null>(null);
   const [installNotice, setInstallNotice] = useState<string | null>(null);
   const [groupMode, setGroupMode] = useState<DesignFilesGroupMode>('kind');
+  const [kindFamilyFilter, setKindFamilyFilter] = useState<KindFamilyFilter>(null);
   const [collapsedModifiedSections, setCollapsedModifiedSections] = useState<
     Set<ModifiedSection>
   >(new Set());
   const [renaming, setRenaming] = useState<{ name: string; draft: string; saving: boolean } | null>(null);
   const [dayBoundary, setDayBoundary] = useState(() => Date.now());
+  const [browsePath, setBrowsePath] = useState<BrowsePath>('');
 
-  const sortedFiles = useMemo(() => {
-    return [...files].sort((a, b) => {
+  const directoryListing = useMemo(
+    () => listBrowseDirectory(files, browsePath),
+    [files, browsePath],
+  );
+
+  const sortedBrowseRows = useMemo(() => {
+    const rows = mergeBrowseRows(directoryListing.folders, directoryListing.files);
+    return [...rows].sort((a, b) => {
       let cmp: number;
-      if (sortKey === 'name') cmp = a.name.localeCompare(b.name);
-      else if (sortKey === 'kind') cmp = kindSortPriority(a.kind) - kindSortPriority(b.kind);
-      else cmp = a.mtime - b.mtime;
+      if (sortKey === 'name') {
+        const aName =
+          a.type === 'folder' ? a.folder.name : displayNameForFile(a.file, browsePath);
+        const bName =
+          b.type === 'folder' ? b.folder.name : displayNameForFile(b.file, browsePath);
+        cmp = aName.localeCompare(bName);
+      } else if (sortKey === 'kind') {
+        const aKind = a.type === 'folder' ? -1 : kindSortPriority(a.file.kind);
+        const bKind = b.type === 'folder' ? -1 : kindSortPriority(b.file.kind);
+        cmp = aKind - bKind;
+      } else {
+        const aMtime = a.type === 'folder' ? a.folder.mtime : a.file.mtime;
+        const bMtime = b.type === 'folder' ? b.folder.mtime : b.file.mtime;
+        cmp = aMtime - bMtime;
+      }
       return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [files, sortKey, sortDir]);
+  }, [browsePath, directoryListing.files, directoryListing.folders, sortDir, sortKey]);
+
+  /**
+   * Filter chips operate on the file rows only — folder rows are kept
+   * even when a kind-family chip is active, because hiding the way
+   * back to a parent folder would trap the user. Counters in the chip
+   * row still reflect the pre-filter file population so the chips read
+   * as "what's available", not "what's currently showing".
+   */
+  const filteredBrowseRows = useMemo(() => {
+    if (!kindFamilyFilter) return sortedBrowseRows;
+    return sortedBrowseRows.filter((row) => {
+      if (row.type === 'folder') return true;
+      return detectKindFamily(row.file) === kindFamilyFilter;
+    });
+  }, [sortedBrowseRows, kindFamilyFilter]);
+
+  const sortedFiles = useMemo(
+    () => filteredBrowseRows
+      .filter((row): row is BrowseRow & { type: 'file' } => row.type === 'file')
+      .map((row) => row.file),
+    [filteredBrowseRows],
+  );
+
+  /**
+   * Counts of each kind family across the un-filtered directory, used
+   * to render the badge next to each chip and decide which chips to
+   * even show (an empty family hides its chip).
+   */
+  const kindFamilyCounts = useMemo(() => {
+    const counts = new Map<KindFamily, number>();
+    for (const row of sortedBrowseRows) {
+      if (row.type !== 'file') continue;
+      const family = detectKindFamily(row.file);
+      counts.set(family, (counts.get(family) ?? 0) + 1);
+    }
+    return counts;
+  }, [sortedBrowseRows]);
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number | 'all'>(30);
 
-  const effectivePageSize = pageSize === 'all' ? Math.max(1, sortedFiles.length) : pageSize;
-  const totalPages = Math.max(1, Math.ceil(sortedFiles.length / effectivePageSize));
+  const effectivePageSize = pageSize === 'all' ? Math.max(1, filteredBrowseRows.length) : pageSize;
+  const totalPages = Math.max(1, Math.ceil(filteredBrowseRows.length / effectivePageSize));
   const safePage = Math.min(page, totalPages - 1);
-  const pageFiles = useMemo(
+  const pageBrowseRows = useMemo(
     () =>
-      sortedFiles.slice(
+      filteredBrowseRows.slice(
         safePage * effectivePageSize,
         (safePage + 1) * effectivePageSize,
       ),
-    [effectivePageSize, safePage, sortedFiles],
+    [effectivePageSize, safePage, filteredBrowseRows],
+  );
+  const pageFiles = useMemo(
+    () =>
+      pageBrowseRows
+        .filter((row): row is BrowseRow & { type: 'file' } => row.type === 'file')
+        .map((row) => row.file),
+    [pageBrowseRows],
   );
   const modifiedGroups = useMemo(() => {
     const groups: Record<ModifiedSection, ProjectFile[]> = {
@@ -145,13 +243,13 @@ export function DesignFilesPanel({
     (section) => modifiedGroups[section].length > 0,
   );
   const rangeStart = safePage * effectivePageSize + 1;
-  const rangeEnd = Math.min((safePage + 1) * effectivePageSize, sortedFiles.length);
+  const rangeEnd = Math.min((safePage + 1) * effectivePageSize, filteredBrowseRows.length);
   const allPageSelected = pageFiles.every((f) => selected.has(f.name));
   const somePageSelected = !allPageSelected && pageFiles.some((f) => selected.has(f.name));
 
   useEffect(() => {
     setPage(0);
-  }, [pageSize]);
+  }, [pageSize, browsePath]);
 
   useEffect(() => {
     if (Number.isFinite(totalPages)) setPage((p) => Math.min(p, totalPages - 1));
@@ -345,7 +443,92 @@ export function DesignFilesPanel({
     });
   }
 
+  function openBrowseFolder(path: BrowsePath) {
+    setBrowsePath(path);
+    setPreview(null);
+    setMenuPos(null);
+    setRenaming(null);
+    setPage(0);
+  }
+
+  function folderRowTestId(folderPath: BrowsePath): string {
+    return `design-folder-row-${folderPath.replace(/\//g, '--')}`;
+  }
+
+  function renderFolderRow(folder: BrowseFolder) {
+    const rowKey = `folder:${folder.path}`;
+    const isHovered = hover === rowKey;
+    return (
+      <tr
+        key={rowKey}
+        data-testid={folderRowTestId(folder.path)}
+        className={`df-file-row df-folder-row ${isHovered ? 'active' : ''}`}
+        onMouseEnter={() => setHover(rowKey)}
+        onMouseLeave={() => setHover((c) => (c === rowKey ? null : c))}
+      >
+        <td className="df-cell-check">
+          <span className="df-row-check" style={{ opacity: 0.3, pointerEvents: 'none' }} aria-hidden>
+            {'\u2610'}
+          </span>
+        </td>
+        <td
+          className="df-cell-icon df-cell-openable"
+          onClick={() => openBrowseFolder(folder.path)}
+          onDoubleClick={() => openBrowseFolder(folder.path)}
+        >
+          <span className="df-row-icon" data-kind="folder" aria-hidden>
+            📁
+          </span>
+        </td>
+        <td
+          className="df-cell-name df-cell-openable"
+          onClick={() => openBrowseFolder(folder.path)}
+          onDoubleClick={() => openBrowseFolder(folder.path)}
+        >
+          <button
+            type="button"
+            className="df-row-name-btn"
+            onClick={() => openBrowseFolder(folder.path)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openBrowseFolder(folder.path);
+              }
+            }}
+          >
+            <span className="df-row-name-wrap">
+              <span className="df-row-name">{folder.name}</span>
+              <span className="df-row-sub">
+                {t('designFiles.folderItemCount', { n: folder.childCount })}
+              </span>
+            </span>
+          </button>
+        </td>
+        <td
+          className="df-cell-kind df-cell-openable"
+          onClick={() => openBrowseFolder(folder.path)}
+          onDoubleClick={() => openBrowseFolder(folder.path)}
+        >
+          <span className="df-kind-label">{t('designFiles.kindFolder')}</span>
+        </td>
+        <td
+          className="df-cell-time df-cell-openable"
+          onClick={() => openBrowseFolder(folder.path)}
+          onDoubleClick={() => openBrowseFolder(folder.path)}
+        >
+          {relativeTime(folder.mtime, t)}
+        </td>
+        <td className="df-cell-menu" />
+      </tr>
+    );
+  }
+
+  function renderBrowseRow(row: BrowseRow) {
+    return row.type === 'folder' ? renderFolderRow(row.folder) : renderFileRow(row.file);
+  }
+
   function renderFileRow(f: ProjectFile) {
+    const displayName = displayNameForFile(f, browsePath);
     const active = preview === f.name;
     const isHovered = hover === f.name;
     const renameState = renaming?.name === f.name ? renaming : null;
@@ -442,7 +625,7 @@ export function DesignFilesPanel({
               }}
             >
               <span className="df-row-name-wrap">
-                <span className="df-row-name">{f.name}</span>
+                <span className="df-row-name">{displayName}</span>
                 <span className="df-row-sub">{humanBytes(f.size)}</span>
               </span>
             </button>
@@ -490,7 +673,8 @@ export function DesignFilesPanel({
   }
 
   function renderModifiedSections() {
-    return visibleModifiedSections.flatMap((section) => {
+    const folderSection = renderFolderSectionRows(pageBrowseRows);
+    const sectionRows = visibleModifiedSections.flatMap((section) => {
       const sectionFiles = modifiedGroups[section];
       const collapsed = collapsedModifiedSections.has(section);
       const label = t(MODIFIED_SECTION_LABEL_KEY[section]);
@@ -513,6 +697,23 @@ export function DesignFilesPanel({
         ...(collapsed ? [] : sectionFiles.map(renderFileRow)),
       ];
     });
+    return [...folderSection, ...sectionRows];
+  }
+
+  function renderFolderSectionRows(rows: BrowseRow[]) {
+    const folders = rows.filter((row): row is BrowseRow & { type: 'folder' } => row.type === 'folder');
+    if (folders.length === 0) return [];
+    return [
+      <tr className="df-section-row" key="browse-folders-label">
+        <td colSpan={6}>
+          <div className="df-section-label">
+            <span>{t('designFiles.sectionFolders')}</span>
+            <span className="df-section-count">{folders.length}</span>
+          </div>
+        </td>
+      </tr>,
+      ...folders.map((row) => renderFolderRow(row.folder)),
+    ];
   }
 
   type UnifiedItem =
@@ -645,12 +846,15 @@ export function DesignFilesPanel({
       const cat = classify(f.name);
       categories[cat].items.push({ type: 'file', file: f });
     }
-    for (const art of liveArtifacts) {
-      const cat = classify(art.title, art.slug);
-      categories[cat].items.push({ type: 'live-artifact', artifact: art });
+    if (!browsePath) {
+      for (const art of liveArtifacts) {
+        const cat = classify(art.title, art.slug);
+        categories[cat].items.push({ type: 'live-artifact', artifact: art });
+      }
     }
 
-    return Object.entries(categories)
+    const folderSection = renderFolderSectionRows(pageBrowseRows);
+    const categoryRows = Object.entries(categories)
       .filter(([_, cat]) => cat.items.length > 0)
       .flatMap(([key, cat]) => [
         <tr className="df-section-row" key={`${key}-label`}>
@@ -667,6 +871,108 @@ export function DesignFilesPanel({
             : renderLiveArtifactRow(item.artifact)
         ),
       ]);
+    return [...folderSection, ...categoryRows];
+  }
+
+  function renderStageSections() {
+    const buckets = new Map<CurriculumStage, UnifiedItem[]>();
+    for (const stage of CURRICULUM_STAGE_ORDER) buckets.set(stage, []);
+    for (const f of pageFiles) {
+      const stage = detectCurriculumStage(f);
+      buckets.get(stage)!.push({ type: 'file', file: f });
+    }
+    if (!browsePath) {
+      for (const art of liveArtifacts) {
+        const stage = detectStageFromLiveArtifact(art);
+        buckets.get(stage)!.push({ type: 'live-artifact', artifact: art });
+      }
+    }
+    const folderSection = renderFolderSectionRows(pageBrowseRows);
+    const sectionRows = CURRICULUM_STAGE_ORDER.flatMap((stage) => {
+      const items = buckets.get(stage)!;
+      if (items.length === 0) return [];
+      const label = t(curriculumStageI18nKey(stage));
+      return [
+        <tr className="df-section-row" key={`stage-${stage}-label`}>
+          <td colSpan={6}>
+            <div className="df-section-label">
+              <span>{label}</span>
+              <span className="df-section-count">{items.length}</span>
+            </div>
+          </td>
+        </tr>,
+        ...items.map((item) =>
+          item.type === 'file'
+            ? renderFileRow(item.file)
+            : renderLiveArtifactRow(item.artifact)
+        ),
+      ];
+    });
+    return [...folderSection, ...sectionRows];
+  }
+
+  function renderFolderGroupingSections() {
+    // When grouped by folder, every file is bucketed by its parent
+    // directory relative to the current browse path. Files directly in
+    // the browsed directory live under the "root" bucket. Folder rows
+    // (subdirectories) still render in their own section at the top so
+    // the user can drill into nested folders alongside their grouping.
+    const folderSection = renderFolderSectionRows(pageBrowseRows);
+    const buckets = new Map<string, ProjectFile[]>();
+    for (const f of pageFiles) {
+      const dir = parentDirRelative(f.name, browsePath);
+      const bucket = buckets.get(dir) ?? [];
+      bucket.push(f);
+      buckets.set(dir, bucket);
+    }
+    const orderedKeys = [...buckets.keys()].sort((a, b) => {
+      if (a === '') return -1;
+      if (b === '') return 1;
+      return a.localeCompare(b);
+    });
+    const sectionRows = orderedKeys.flatMap((key) => {
+      const items = buckets.get(key)!;
+      const label = key || t('designFiles.rootFolder');
+      return [
+        <tr className="df-section-row" key={`folder-group-${key || 'root'}-label`}>
+          <td colSpan={6}>
+            <div className="df-section-label">
+              <span>{label}</span>
+              <span className="df-section-count">{items.length}</span>
+            </div>
+          </td>
+        </tr>,
+        ...items.map(renderFileRow),
+      ];
+    });
+    return [...folderSection, ...sectionRows];
+  }
+
+  function renderSizeSections() {
+    const buckets = new Map<SizeBucket, ProjectFile[]>();
+    for (const bucket of SIZE_BUCKET_ORDER) buckets.set(bucket, []);
+    for (const f of pageFiles) {
+      const bucket = detectSizeBucket(f.size);
+      buckets.get(bucket)!.push(f);
+    }
+    const folderSection = renderFolderSectionRows(pageBrowseRows);
+    const sectionRows = SIZE_BUCKET_ORDER.flatMap((bucket) => {
+      const items = buckets.get(bucket)!;
+      if (items.length === 0) return [];
+      const label = t(sizeBucketI18nKey(bucket));
+      return [
+        <tr className="df-section-row" key={`size-${bucket}-label`}>
+          <td colSpan={6}>
+            <div className="df-section-label">
+              <span>{label}</span>
+              <span className="df-section-count">{items.length}</span>
+            </div>
+          </td>
+        </tr>,
+        ...items.map(renderFileRow),
+      ];
+    });
+    return [...folderSection, ...sectionRows];
   }
 
   async function handleBatchDownload() {
@@ -748,7 +1054,44 @@ export function DesignFilesPanel({
           >
             <Icon name={refreshing ? 'spinner' : 'reload'} size={14} />
           </button>
-          <span className="crumbs">{t('designFiles.crumbs')}</span>
+          {browsePath ? (
+            <button
+              type="button"
+              className="icon-only"
+              onClick={() => openBrowseFolder(parentBrowsePath(browsePath))}
+              title={t('designFiles.up')}
+              aria-label={t('designFiles.up')}
+            >
+              <Icon name="chevron-left" size={14} />
+            </button>
+          ) : null}
+          <nav className="df-crumbs" aria-label={t('designFiles.crumbs')}>
+            <button
+              type="button"
+              className="df-crumb"
+              onClick={() => openBrowseFolder('')}
+              aria-current={browsePath ? undefined : 'page'}
+            >
+              {t('designFiles.crumbs')}
+            </button>
+            {browsePathSegments(browsePath).map((segment, index, segments) => {
+              const path = segments.slice(0, index + 1).join('/');
+              const isLast = index === segments.length - 1;
+              return (
+                <span key={path} className="df-crumb-wrap">
+                  <span className="df-crumb-sep">/</span>
+                  <button
+                    type="button"
+                    className="df-crumb"
+                    onClick={() => openBrowseFolder(path)}
+                    aria-current={isLast ? 'page' : undefined}
+                  >
+                    {segment}
+                  </button>
+                </span>
+              );
+            })}
+          </nav>
           {selected.size > 0 ? (
             <div className="df-actions">
               <button
@@ -789,6 +1132,15 @@ export function DesignFilesPanel({
               <Icon name="upload" size={13} />
               <span>{t('designFiles.upload.label')}</span>
             </button>
+            <button
+              type="button"
+              data-testid="design-files-upload-folder-trigger"
+              onClick={onUploadFolder}
+              title={t('designFiles.uploadFolder.title')}
+            >
+              <Icon name="folder" size={13} />
+              <span>{t('designFiles.uploadFolder.label')}</span>
+            </button>
           </div>
           )}
         </div>
@@ -807,7 +1159,9 @@ export function DesignFilesPanel({
               ) : null}
             </div>
           ) : null}
-          {files.length === 0 && liveArtifacts.length === 0 ? (
+          {directoryListing.folders.length === 0 &&
+          directoryListing.files.length === 0 &&
+          (browsePath || liveArtifacts.length === 0) ? (
             <div className="df-empty" data-testid="design-files-empty">
               <div className="df-empty-pill">
                 <span className="df-empty-title">
@@ -827,32 +1181,97 @@ export function DesignFilesPanel({
             </div>
           ) : (
             <>
-              {files.length > 0 ? (
-                <div
-                  className="df-group-toggle"
-                  role="group"
-                  aria-label={t('designFiles.groupBy')}
-                >
-                  <span>{t('designFiles.groupBy')}</span>
-                  <button
-                    type="button"
-                    className={groupMode === 'kind' ? 'active' : ''}
-                    aria-pressed={groupMode === 'kind'}
-                    onClick={() => setGroupMode('kind')}
+              {files.length > 0 || (!browsePath && liveArtifacts.length > 0) ? (
+                <>
+                  <div
+                    className="df-group-toggle"
+                    role="group"
+                    aria-label={t('designFiles.groupBy')}
                   >
-                    {t('designFiles.groupByKind')}
-                  </button>
-                  <button
-                    type="button"
-                    className={groupMode === 'modified' ? 'active' : ''}
-                    aria-pressed={groupMode === 'modified'}
-                    onClick={() => setGroupMode('modified')}
-                  >
-                    {t('designFiles.groupByModified')}
-                  </button>
-                </div>
+                    <span>{t('designFiles.groupBy')}</span>
+                    <button
+                      type="button"
+                      className={groupMode === 'kind' ? 'active' : ''}
+                      aria-pressed={groupMode === 'kind'}
+                      onClick={() => setGroupMode('kind')}
+                    >
+                      {t('designFiles.groupByKind')}
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="design-files-group-stage"
+                      className={groupMode === 'stage' ? 'active' : ''}
+                      aria-pressed={groupMode === 'stage'}
+                      onClick={() => setGroupMode('stage')}
+                    >
+                      {t('designFiles.groupByStage')}
+                    </button>
+                    <button
+                      type="button"
+                      className={groupMode === 'modified' ? 'active' : ''}
+                      aria-pressed={groupMode === 'modified'}
+                      onClick={() => setGroupMode('modified')}
+                    >
+                      {t('designFiles.groupByModified')}
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="design-files-group-folder"
+                      className={groupMode === 'folder' ? 'active' : ''}
+                      aria-pressed={groupMode === 'folder'}
+                      onClick={() => setGroupMode('folder')}
+                    >
+                      {t('designFiles.groupByFolder')}
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="design-files-group-size"
+                      className={groupMode === 'size' ? 'active' : ''}
+                      aria-pressed={groupMode === 'size'}
+                      onClick={() => setGroupMode('size')}
+                    >
+                      {t('designFiles.groupBySize')}
+                    </button>
+                  </div>
+                  {kindFamilyCounts.size > 0 ? (
+                    <div
+                      className="df-filter-chips"
+                      role="group"
+                      aria-label={t('designFiles.filterByLabel')}
+                      data-testid="design-files-filter-chips"
+                    >
+                      <span>{t('designFiles.filterByLabel')}</span>
+                      <button
+                        type="button"
+                        data-testid="design-files-filter-all"
+                        className={`df-filter-chip ${kindFamilyFilter === null ? 'active' : ''}`}
+                        aria-pressed={kindFamilyFilter === null}
+                        onClick={() => setKindFamilyFilter(null)}
+                      >
+                        {t('designFiles.filterAll')}
+                      </button>
+                      {KIND_FAMILY_ORDER.filter((family) => (kindFamilyCounts.get(family) ?? 0) > 0).map((family) => {
+                        const isActive = kindFamilyFilter === family;
+                        const labelKey = kindFamilyI18nKey(family);
+                        return (
+                          <button
+                            key={family}
+                            type="button"
+                            data-testid={`design-files-filter-${family}`}
+                            className={`df-filter-chip ${isActive ? 'active' : ''}`}
+                            aria-pressed={isActive}
+                            onClick={() => setKindFamilyFilter(isActive ? null : family)}
+                          >
+                            <span>{t(labelKey)}</span>
+                            <span className="df-filter-chip-count">{kindFamilyCounts.get(family)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </>
               ) : null}
-              {liveArtifacts.length > 0 && groupMode !== 'kind' ? (
+              {!browsePath && liveArtifacts.length > 0 && groupMode !== 'kind' ? (
                 <div className="df-section" key="live-artifacts">
                   <div className="df-section-label">{t('designFiles.sectionLiveArtifacts')}</div>
                   {liveArtifacts.map((artifact) => (
@@ -885,7 +1304,7 @@ export function DesignFilesPanel({
                   ))}
                 </div>
               ) : null}
-              {pluginFolders.length > 0 ? (
+              {!browsePath && pluginFolders.length > 0 ? (
                 <div className="df-section" key="plugin-folders">
                   <div className="df-section-label">
                     Plugin folders
@@ -957,7 +1376,7 @@ export function DesignFilesPanel({
                   ))}
                 </div>
               ) : null}
-              {sortedFiles.length > 0 ? (
+              {sortedBrowseRows.length > 0 || (!browsePath && liveArtifacts.length > 0) ? (
                 <>
                   <div className="df-pagination df-pagination-start">
                     <label>
@@ -977,7 +1396,7 @@ export function DesignFilesPanel({
                       </select>
                     </label>
                     <span className="df-page-info">
-                      {t('designFiles.pageInfo', { start: rangeStart, end: rangeEnd, total: sortedFiles.length })}
+                      {t('designFiles.pageInfo', { start: rangeStart, end: rangeEnd, total: filteredBrowseRows.length })}
                     </span>
                     <div className="df-select-bar">
                       {selected.size < sortedFiles.length ? (
@@ -1069,7 +1488,13 @@ export function DesignFilesPanel({
                         ? renderModifiedSections()
                         : groupMode === 'kind'
                           ? renderKindSections()
-                          : pageFiles.map(renderFileRow)}
+                          : groupMode === 'stage'
+                            ? renderStageSections()
+                            : groupMode === 'folder'
+                              ? renderFolderGroupingSections()
+                              : groupMode === 'size'
+                                ? renderSizeSections()
+                                : pageBrowseRows.map(renderBrowseRow)}
                     </tbody>
                   </table>
                   <div className="df-pagination df-pagination-center">
@@ -1103,7 +1528,7 @@ export function DesignFilesPanel({
                       {t('designFiles.next')}
                     </button>
                     <span className="df-page-info">
-                      {t('designFiles.pageInfo', { start: rangeStart, end: rangeEnd, total: sortedFiles.length })}
+                      {t('designFiles.pageInfo', { start: rangeStart, end: rangeEnd, total: filteredBrowseRows.length })}
                     </span>
                   </div>
                 </>
@@ -1112,6 +1537,18 @@ export function DesignFilesPanel({
           )}
           <div
             className={`df-drop ${draggingFiles ? 'dragging' : ''}`}
+            data-testid="design-files-drop-zone"
+            role="button"
+            tabIndex={0}
+            title={t('designFiles.upload.title')}
+            aria-label={`${t('designFiles.dropTitle')} ${t('designFiles.dropDesc')}`}
+            onClick={onUpload}
+            onKeyDown={(ev) => {
+              if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                onUpload();
+              }
+            }}
             onDragEnter={(ev) => {
               ev.preventDefault();
               dragDepthRef.current += 1;
@@ -1240,6 +1677,8 @@ function DfPreview({
           />
         ) : file.kind === 'audio' ? (
           <audio src={`${url}?v=${Math.round(file.mtime)}`} controls preload="metadata" />
+        ) : file.kind === 'presentation' ? (
+          <SlidePreview projectId={projectId} file={file} compact onOpenInTab={onOpen} />
         ) : (
           <div
             style={{
@@ -1290,6 +1729,35 @@ function DfPreview({
       </div>
     </aside>
   );
+}
+
+/**
+ * Returns the parent directory of a file path relative to the current
+ * browse path. Files directly in `browsePath` produce an empty string
+ * (rendered as "Project root" by the caller).
+ */
+function parentDirRelative(name: string, browsePath: BrowsePath): string {
+  const file = name.replace(/\\/g, '/');
+  const base = browsePath ? `${browsePath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')}/` : '';
+  const rel = base && file.startsWith(base) ? file.slice(base.length) : file;
+  const slash = rel.lastIndexOf('/');
+  return slash === -1 ? '' : rel.slice(0, slash);
+}
+
+/**
+ * Curriculum-stage classification for live artifacts. Reuses the file
+ * classifier so the same heuristic vocabulary applies to docx / pdf
+ * uploads and to AI-produced live documents.
+ */
+function detectStageFromLiveArtifact(art: LiveArtifactWorkspaceEntry): CurriculumStage {
+  const synthetic: ProjectFile = {
+    name: art.title || art.slug || '',
+    size: 0,
+    mtime: Date.parse(art.updatedAt) || Date.now(),
+    kind: 'text',
+    mime: 'text/plain',
+  };
+  return detectCurriculumStage(synthetic, art.slug);
 }
 
 function kindSortPriority(kind: ProjectFileKind): number {

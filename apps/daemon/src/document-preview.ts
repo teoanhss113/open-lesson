@@ -7,8 +7,16 @@ import JSZip from 'jszip';
 import { kindFor } from './projects.js';
 
 const execFileP = promisify(execFile);
-const MAX_COMPRESSED_PREVIEW_BYTES = 100 * 1024 * 1024;
-const MAX_UNCOMPRESSED_PREVIEW_BYTES = 300 * 1024 * 1024;
+// These ceilings cap how much memory the daemon will allocate per preview
+// request. Real curriculum slide decks routinely run 150–250 MB once
+// video / poster art is embedded, so the old 100 MB cap rejected the
+// most common large-PPTX case and forced clients into a graceless
+// "preview unavailable" state. Raise to 500 MB compressed / 1 GB
+// uncompressed; anything bigger still falls back to the client-side
+// JSZip parser on the web app, so the daemon doesn't become the only
+// path to a slide preview.
+const MAX_COMPRESSED_PREVIEW_BYTES = 500 * 1024 * 1024;
+const MAX_UNCOMPRESSED_PREVIEW_BYTES = 1024 * 1024 * 1024;
 const MAX_XML_ENTRY_BYTES = 50 * 1024 * 1024;
 const MAX_PDF_PREVIEW_CONCURRENCY = 2;
 const pdfPreviewQueue = createLimiter(MAX_PDF_PREVIEW_CONCURRENCY);

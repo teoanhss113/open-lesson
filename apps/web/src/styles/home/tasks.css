@@ -399,7 +399,7 @@
   margin: 0;
   font-size: clamp(24px, 4vw, 34px);
   line-height: 1.05;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   color: var(--text-strong);
 }
 

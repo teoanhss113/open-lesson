@@ -15,11 +15,12 @@ import type {
 } from './types';
 import { useT } from '../../i18n';
 import {
-  fetchProjectFilePreview,
+  fetchProjectFilePreviewResult,
   projectFileUrl,
   type ProjectFilePreview,
   type ProjectFilePreviewSection,
 } from '../../providers/registry';
+import { buildClientPptxPreview } from './pptxClientPreview';
 import {
   documentMetaLabel,
   usePreviewCanvasSize,
@@ -34,10 +35,10 @@ import { Icon } from '../Icon';
 import { Toast } from '../Toast';
 import { buildSrcdoc } from '../../runtime/srcdoc';
 import { PreviewViewportControls } from './PreviewViewportControls';
-import { compilePptxToHtml, compileDocxToHtml } from './pptxTemplate';
 import { PaletteTweaks, type PaletteId } from '../PaletteTweaks';
 import { PreviewDrawOverlay, type PreviewDrawMode } from '../PreviewDrawOverlay';
 import { DocxViewer } from './DocxViewer';
+import { PptxViewer } from './PptxViewer';
 import { BoardComposerPopover } from './BoardComposerPopover';
 import { CommentSidePanel } from './CommentSidePanel';
 import { InspectPanel } from './InspectPanel';
@@ -161,20 +162,45 @@ export function DocumentPreviewViewer({
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setPreview(null);
-    void fetchProjectFilePreview(projectId, file.name).then(
-      (next: ProjectFilePreview | null) => {
-        if (!cancelled) {
-          setPreview(next);
-          setLoading(false);
-        }
+    const isPresentation =
+      (file.kind as string) === 'presentation' || /\.pptx?$/i.test(file.name);
+    void (async () => {
+      const daemonResult = await fetchProjectFilePreviewResult(projectId, file.name);
+      if (cancelled) return;
+      if (daemonResult.ok) {
+        // Render the daemon's text-only result immediately so the
+        // user sees actual slide content right away. For
+        // presentations we still kick off the client parser below
+        // and silently upgrade to the rich slideLayout when it
+        // finishes — that's what carries the shape positions /
+        // fonts / images the renderer needs for fidelity.
+        setPreview(daemonResult.preview);
+        setLoading(false);
+        if (!isPresentation) return;
+      } else if (!isPresentation) {
+        setPreview(null);
+        setLoading(false);
+        return;
       }
-    );
+      const clientResult = await buildClientPptxPreview(projectId, file.name, {
+        signal: controller.signal,
+      });
+      if (cancelled) return;
+      if ('preview' in clientResult) {
+        setPreview(clientResult.preview);
+      } else if (!daemonResult.ok) {
+        setPreview(null);
+      }
+      setLoading(false);
+    })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [projectId, file.name, file.mtime, reloadKey]);
+  }, [projectId, file.name, file.mtime, file.kind, reloadKey]);
 
   // Sync slide navigation message responses from inside the iframe's deck bridge
   useEffect(() => {
@@ -776,23 +802,18 @@ export function DocumentPreviewViewer({
     );
   };
 
-  // Build the widescreen slide deck or document srcDoc
-  const srcDoc = (() => {
-    if (loading || !preview) return '';
-    const activePalette = previewPalette || selectedPalette;
-    if (isDeck) {
-      return buildSrcdoc(compilePptxToHtml(preview, activeSlide, activePalette), {
-        deck: true,
-        initialSlideIndex: activeSlide,
-      });
-    }
-    if (isDoc) {
-      return buildSrcdoc(compileDocxToHtml(preview, activePalette), {
-        deck: false,
-      });
-    }
-    return '';
-  })();
+  // Per-kind viewers (DocxViewer, PptxViewer) own their srcDoc /
+  // rendering. The legacy `compilePptxToHtml` / `compileDocxToHtml`
+  // templating pipeline produced static HTML — including the
+  // malformed `data:image/png;base64,...` MindX logo that triggered
+  // ERR_INVALID_URL spam and a brand template that ignored the
+  // user's real slide content. The new viewers render real DOM
+  // (docx-preview for .docx, pptxClientPreview for .pptx) into
+  // sandboxed iframes that already carry the Comment / Inspect /
+  // palette / edit bridges via `buildSrcdoc`, so every interactive
+  // feature works against true slide elements instead of a brand
+  // mock-up. We no longer need a srcDoc fallback at this layer.
+  const srcDoc = '';
 
   const renderBody = () => {
     if (loading) {
@@ -847,6 +868,15 @@ export function DocumentPreviewViewer({
                   fileName={file.name}
                   iframeRef={iframeRef}
                   selectedPalette={selectedPalette}
+                  onLoad={syncBridgeModes}
+                />
+              ) : effectiveKind === 'presentation' ? (
+                <PptxViewer
+                  projectId={projectId}
+                  fileName={file.name}
+                  iframeRef={iframeRef}
+                  selectedPalette={selectedPalette}
+                  initialSlideIndex={activeSlide}
                   onLoad={syncBridgeModes}
                 />
               ) : (

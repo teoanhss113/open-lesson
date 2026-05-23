@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
+  type InputHTMLAttributes,
 } from 'react';
 import type { TrackingProjectKind } from '@open-design/contracts/analytics';
 import { useT } from '../i18n';
@@ -15,6 +16,7 @@ import {
   renameProjectFile,
   type UploadProjectFilesResult,
   uploadProjectFiles,
+  uploadProjectFolder,
   writeProjectTextFile,
   updateCurriculumStatus,
 } from '../providers/registry';
@@ -158,12 +160,14 @@ export function FileWorkspace({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [sketches, setSketches] = useState<Record<string, SketchState>>({});
   const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
+  const [designFilesResetNonce, setDesignFilesResetNonce] = useState(0);
   const [draggedTabName, setDraggedTabName] = useState<string | null>(null);
   const [dragOverTab, setDragOverTab] = useState<{
     name: string;
     edge: TabDropEdge;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
   const tabsBarRef = useRef<HTMLDivElement | null>(null);
   const draggedTabNameRef = useRef<string | null>(null);
 
@@ -187,6 +191,16 @@ export function FileWorkspace({
   function setPersistedActive(name: string | null) {
     setActiveTab(name ?? DESIGN_FILES_TAB);
     onTabsStateChange({ tabs: persistedTabs, active: name });
+  }
+
+  function activateDesignFilesTab() {
+    if (activeTab === DESIGN_FILES_TAB) {
+      // Already on the Design Files surface — treat a repeat click as
+      // "back to the file list" (close in-panel preview / folder drill-down).
+      setDesignFilesResetNonce((nonce) => nonce + 1);
+      return;
+    }
+    setPersistedActive(null);
   }
 
   function activatePending(name: string) {
@@ -291,18 +305,13 @@ export function FileWorkspace({
     await uploadFiles(picked);
   }
 
-  async function uploadFiles(picked: File[]) {
-    if (picked.length === 0) return;
+  async function handleFolderPicked(ev: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(ev.target.files ?? []);
+    ev.target.value = '';
+    await uploadFolderFiles(picked);
+  }
 
-    setUploadError(null);
-    let result: UploadProjectFilesResult;
-    try {
-      result = await uploadProjectFiles(projectId, picked);
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      setUploadError(`Upload failed for ${picked.length} file(s) (${detail}).`);
-      return;
-    }
+  async function applyUploadResult(picked: File[], result: UploadProjectFilesResult) {
     if (result.uploaded.length > 0) {
       await onRefreshFiles();
       const lastUploaded = result.uploaded[result.uploaded.length - 1];
@@ -320,6 +329,36 @@ export function FileWorkspace({
       );
       console.warn('Project upload had failures', result.failed);
     }
+  }
+
+  async function uploadFiles(picked: File[]) {
+    if (picked.length === 0) return;
+
+    setUploadError(null);
+    let result: UploadProjectFilesResult;
+    try {
+      result = await uploadProjectFiles(projectId, picked);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      setUploadError(`Upload failed for ${picked.length} file(s) (${detail}).`);
+      return;
+    }
+    await applyUploadResult(picked, result);
+  }
+
+  async function uploadFolderFiles(picked: File[]) {
+    if (picked.length === 0) return;
+
+    setUploadError(null);
+    let result: UploadProjectFilesResult;
+    try {
+      result = await uploadProjectFolder(projectId, picked);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      setUploadError(`Folder upload failed for ${picked.length} file(s) (${detail}).`);
+      return;
+    }
+    await applyUploadResult(picked, result);
   }
 
   useEffect(() => {
@@ -698,7 +737,7 @@ export function FileWorkspace({
             aria-selected={activeTab === DESIGN_FILES_TAB}
             tabIndex={0}
             data-testid="design-files-tab"
-            onClick={() => setActiveTab(DESIGN_FILES_TAB)}
+            onClick={activateDesignFilesTab}
             title={t('workspace.designFiles')}
           >
             <span className="tab-icon" aria-hidden>
@@ -858,7 +897,7 @@ export function FileWorkspace({
         ) : null}
         {activeTab === DESIGN_FILES_TAB ? (
           <DesignFilesPanel
-            key={projectId}
+            key={`${projectId}:${designFilesResetNonce}`}
             projectId={projectId}
             files={visibleFiles}
             liveArtifacts={liveArtifactEntries}
@@ -869,7 +908,13 @@ export function FileWorkspace({
             onDeleteFile={(name) => void handleDelete(name)}
             onDeleteFiles={handleDeleteMany}
             onUpload={() => fileInputRef.current?.click()}
-            onUploadFiles={(picked) => void uploadFiles(picked)}
+            onUploadFolder={() => folderInputRef.current?.click()}
+            onUploadFiles={(picked) => {
+              const hasFolderPaths = picked.some((f) =>
+                Boolean((f as File & { webkitRelativePath?: string }).webkitRelativePath),
+              );
+              void (hasFolderPaths ? uploadFolderFiles(picked) : uploadFiles(picked));
+            }}
             onPaste={() => setShowPasteDialog(true)}
             onNewSketch={startNewSketch}
             uploadError={uploadError}
@@ -925,7 +970,7 @@ export function FileWorkspace({
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                setActiveTab(DESIGN_FILES_TAB);
+                activateDesignFilesTab();
               }}
             >
               {t('workspace.designFilesLink')}
@@ -941,6 +986,15 @@ export function FileWorkspace({
         data-testid="design-files-upload-input"
         style={{ display: 'none' }}
         onChange={handleFilePicked}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        multiple
+        {...({ webkitdirectory: '', directory: '' } as InputHTMLAttributes<HTMLInputElement>)}
+        data-testid="design-files-upload-folder-input"
+        style={{ display: 'none' }}
+        onChange={handleFolderPicked}
       />
       {showPasteDialog ? (
         <PasteTextDialog

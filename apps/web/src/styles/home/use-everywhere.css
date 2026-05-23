@@ -60,7 +60,7 @@
   margin: 0;
   font-size: 19px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--text-strong);
 }
 .use-everywhere-modal__subtitle {
@@ -154,7 +154,7 @@
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
 }
 .use-everywhere-section__intro {
   margin: 0;

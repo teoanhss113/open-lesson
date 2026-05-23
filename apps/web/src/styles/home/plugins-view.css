@@ -64,7 +64,7 @@
 .plugins-view__stat-value {
   display: block;
   color: var(--text-strong);
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 24px;
   font-weight: 600;
   line-height: 1;

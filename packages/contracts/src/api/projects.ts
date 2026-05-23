@@ -121,7 +121,15 @@ export interface ProjectMetadata {
   // remains the primary executable plugin for the run.
   contextPlugins?: Array<{ id: string; title: string; description?: string }>;
   // Curriculum workspace extensions
-  curriculumKind?: 'lesson-plan' | 'teaching-guide' | 'slides' | 'curriculum-review' | 'rollout-validation';
+  curriculumKind?:
+    | 'syllabus'
+    | 'lesson-plan'
+    | 'teaching-guide'
+    | 'slides'
+    | 'material'
+    | 'homework'
+    | 'curriculum-review'
+    | 'rollout-validation';
   courseId?: string;
   courseName?: string;
   moduleId?: string;

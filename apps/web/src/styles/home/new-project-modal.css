@@ -36,7 +36,7 @@
 }
 .new-project-modal__title {
   margin: 0;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 18px;
   font-weight: 600;
   color: var(--text-strong);
@@ -67,7 +67,15 @@
 }
 .new-project-modal__body {
   padding: var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  /* Single scroll surface: `.newproj-body` inside NewProjectPanel. */
+  overflow: hidden;
+}
+.new-project-modal__body .newproj {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0;
 }

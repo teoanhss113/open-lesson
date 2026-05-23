@@ -2290,6 +2290,27 @@ function handleProjectUpload(req, res, next) {
   });
 }
 
+const PROJECT_FOLDER_UPLOAD_MAX_FILES = 500;
+const PROJECT_FOLDER_UPLOAD_MAX_BYTES = 200 * 1024 * 1024;
+
+const projectFolderUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+    files: PROJECT_FOLDER_UPLOAD_MAX_FILES,
+    fieldSize: 2 * 1024 * 1024,
+  },
+});
+
+function handleProjectFolderUpload(req, res, next) {
+  projectFolderUpload.array('files', PROJECT_FOLDER_UPLOAD_MAX_FILES)(req, res, (err) => {
+    if (err) {
+      return sendMulterError(res, err);
+    }
+    next();
+  });
+}
+
 function sendMulterError(res, err) {
   if (err instanceof multer.MulterError) {
     const code = err.code || 'UPLOAD_ERROR';
@@ -3533,7 +3554,13 @@ export async function startServer({
   };
   const nodeDeps = { fs, path };
   const idDeps = { randomId, randomUUID };
-  const uploadDeps = { upload, importUpload, handleProjectUpload };
+  const uploadDeps = {
+    upload,
+    importUpload,
+    handleProjectUpload,
+    handleProjectFolderUpload,
+    PROJECT_FOLDER_UPLOAD_MAX_BYTES,
+  };
   const projectStoreDeps = {
     getProject,
     insertProject,
@@ -7651,7 +7678,15 @@ export async function startServer({
   // main: file-upload routes lifted to a dedicated module. Keep alongside the
   // inline routes garnet still owns above; duplicate registrations resolve in
   // a follow-up after route-routes.ts vs garnet inline coverage is audited.
-  registerProjectUploadRoutes(app, { http: httpDeps, uploads: uploadDeps, node: nodeDeps });
+  registerProjectUploadRoutes(app, {
+    db,
+    http: httpDeps,
+    uploads: uploadDeps,
+    node: nodeDeps,
+    paths: pathDeps,
+    projectStore: projectStoreDeps,
+    projectFiles: projectFileDeps,
+  });
 
   const composeDaemonSystemPrompt = async ({
     agentId,

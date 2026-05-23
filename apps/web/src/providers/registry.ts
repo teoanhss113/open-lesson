@@ -1088,10 +1088,80 @@ export interface ProjectFilePreviewSection {
   lines: string[];
 }
 
+/**
+ * High-fidelity slide layout. Populated by the client-side PPTX
+ * parser; the daemon doesn't (yet) produce this because it would
+ * require shipping image blobs and font tables in the JSON
+ * response. When present, the slide renderer uses absolute
+ * positioning, real fonts, and embedded images to recreate the
+ * deck instead of falling back to a text-only summary.
+ */
+export interface PresentationSlideRun {
+  text: string;
+  /** Font family from `<a:latin typeface="…">` */
+  font?: string;
+  /** Font size in pt (PPTX stores 100×pt) */
+  size?: number;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  /** Hex RGB without leading `#` */
+  color?: string;
+}
+
+export interface PresentationSlideParagraph {
+  runs: PresentationSlideRun[];
+  /** Bullet level (0..n) when this paragraph is a bullet */
+  bullet?: number | null;
+  /** Paragraph alignment: l, ctr, r, just */
+  align?: 'l' | 'ctr' | 'r' | 'just';
+}
+
+export interface PresentationSlideShape {
+  kind: 'text' | 'image';
+  /** Position in slide pixels (computed from EMU at 9525 EMU/px). */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Optional rotation in degrees (negative = counter-clockwise). */
+  rot?: number;
+  /** For `kind === 'text'`: ordered list of paragraphs. */
+  paragraphs?: PresentationSlideParagraph[];
+  /** Background fill colour for text shapes (hex without leading `#`). */
+  fill?: string;
+  /** For `kind === 'image'`: a `blob:` or `data:` URL usable as <img src>. */
+  src?: string;
+  /** Z-order index from the source XML (lower = behind). */
+  z?: number;
+}
+
+export interface PresentationSlideLayout {
+  /** Slide title (for thumbnails / accessibility). */
+  title?: string;
+  shapes: PresentationSlideShape[];
+  /** Background fill (hex without leading `#`). Defaults to white. */
+  background?: string;
+}
+
+export interface PresentationLayout {
+  /** Slide canvas width in pixels (after EMU → px conversion). */
+  width: number;
+  /** Slide canvas height in pixels. */
+  height: number;
+  slides: PresentationSlideLayout[];
+}
+
 export interface ProjectFilePreview {
   kind: 'pdf' | 'document' | 'presentation' | 'spreadsheet';
   title: string;
   sections: ProjectFilePreviewSection[];
+  /**
+   * Optional rich slide layout for high-fidelity rendering. Only
+   * populated when the client-side parser was used (the daemon path
+   * still returns text-only sections for backwards compatibility).
+   */
+  slideLayout?: PresentationLayout;
 }
 
 export async function fetchProjectFilePreview(
@@ -1106,6 +1176,48 @@ export async function fetchProjectFilePreview(
     return (await resp.json()) as ProjectFilePreview;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Variant of `fetchProjectFilePreview` that exposes the daemon's
+ * error status / message so callers can decide whether to fall back
+ * (e.g. parse the .pptx client-side when the daemon rejects a large
+ * file with 413) and what to tell the user when the fallback also
+ * fails. The plain `fetchProjectFilePreview` swallows everything as
+ * `null`; do not change that contract because legacy callers depend
+ * on it.
+ */
+export type ProjectFilePreviewResult =
+  | { ok: true; preview: ProjectFilePreview }
+  | { ok: false; status: number; message: string };
+
+export async function fetchProjectFilePreviewResult(
+  projectId: string,
+  name: string,
+): Promise<ProjectFilePreviewResult> {
+  try {
+    const resp = await fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(name)}/preview`,
+    );
+    if (resp.ok) {
+      const preview = (await resp.json()) as ProjectFilePreview;
+      return { ok: true, preview };
+    }
+    let message = `preview unavailable (HTTP ${resp.status})`;
+    try {
+      const body = await resp.json();
+      if (body && typeof body.message === 'string') message = body.message;
+    } catch {
+      /* ignore — empty / non-json body, default message stands */
+    }
+    return { ok: false, status: resp.status, message };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: err instanceof Error ? err.message : 'network error',
+    };
   }
 }
 
@@ -1289,6 +1401,12 @@ export async function uploadProjectFile(
 // reshaped into ChatAttachments so the composer can stage them without a
 // follow-up listFiles round-trip.
 const PROJECT_UPLOAD_BATCH_SIZE = 12;
+const PROJECT_FOLDER_UPLOAD_BATCH_SIZE = 1;
+
+function projectUploadRelativePath(file: File): string {
+  const withRelativePath = file as File & { webkitRelativePath?: string };
+  return withRelativePath.webkitRelativePath || file.name;
+}
 
 export interface ProjectUploadFailure {
   name: string;
@@ -1300,6 +1418,28 @@ export interface UploadProjectFilesResult {
   uploaded: ChatAttachment[];
   failed: ProjectUploadFailure[];
   error?: string;
+}
+
+type UploadErrorPayload = {
+  code?: string;
+  error?: string | { code?: string; message?: string };
+  message?: string;
+};
+
+function parseUploadError(
+  payload: UploadErrorPayload | null,
+  fallback: string,
+): { code?: string; error: string } {
+  if (typeof payload?.error === 'string') {
+    return { code: payload.code, error: payload.error };
+  }
+  if (payload?.error && typeof payload.error === 'object') {
+    return {
+      code: payload.error.code ?? payload.code,
+      error: payload.error.message ?? payload.message ?? fallback,
+    };
+  }
+  return { code: payload?.code, error: payload?.message ?? fallback };
 }
 
 export async function uploadProjectFiles(
@@ -1326,14 +1466,15 @@ export async function uploadProjectFiles(
 
       if (!resp.ok) {
         const payload = (await resp.json().catch(() => null)) as
-          | { code?: string; error?: string }
+          | UploadErrorPayload
           | null;
-        error = payload?.error ?? `upload failed (${resp.status})`;
+        const parsed = parseUploadError(payload, `upload failed (${resp.status})`);
+        error = parsed.error;
         for (const f of batch) {
-          failed.push({ name: f.name, code: payload?.code, error: error });
+          failed.push({ name: f.name, code: parsed.code, error: error });
         }
         for (const f of remaining) {
-          failed.push({ name: f.name, code: payload?.code, error: error });
+          failed.push({ name: f.name, code: parsed.code, error: error });
         }
         break;
       }
@@ -1367,6 +1508,86 @@ export async function uploadProjectFiles(
       }
       for (const f of remaining) {
         failed.push({ name: f.name, error });
+      }
+      break;
+    }
+  }
+
+  return { uploaded, failed, error };
+}
+
+export async function uploadProjectFolder(
+  projectId: string,
+  files: File[],
+): Promise<UploadProjectFilesResult> {
+  if (files.length === 0) return { uploaded: [], failed: [] };
+
+  const uploaded: ChatAttachment[] = [];
+  const failed: ProjectUploadFailure[] = [];
+  let error: string | undefined;
+
+  for (let i = 0; i < files.length; i += PROJECT_FOLDER_UPLOAD_BATCH_SIZE) {
+    const batch = files.slice(i, i + PROJECT_FOLDER_UPLOAD_BATCH_SIZE);
+    const remaining = files.slice(i + PROJECT_FOLDER_UPLOAD_BATCH_SIZE);
+    const form = new FormData();
+    for (const f of batch) {
+      const relativePath = projectUploadRelativePath(f);
+      form.append('files', f, f.name);
+      form.append('paths', relativePath);
+    }
+
+    try {
+      const resp = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/upload-folder`,
+        { method: 'POST', body: form },
+      );
+
+      if (!resp.ok) {
+        const payload = (await resp.json().catch(() => null)) as
+          | UploadErrorPayload
+          | null;
+        const parsed = parseUploadError(payload, `upload failed (${resp.status})`);
+        error = parsed.error;
+        for (const f of batch) {
+          failed.push({ name: projectUploadRelativePath(f), code: parsed.code, error: error });
+        }
+        if (resp.status === 404) {
+          for (const f of remaining) {
+            failed.push({ name: projectUploadRelativePath(f), code: parsed.code, error: error });
+          }
+          break;
+        }
+        continue;
+      }
+
+      const json = (await resp.json()) as {
+        files: { name: string; path: string; size?: number; originalName?: string }[];
+      };
+      const responseFiles = json.files ?? [];
+      uploaded.push(
+        ...responseFiles.map((f) => ({
+          path: f.path,
+          name: f.originalName ?? f.name,
+          kind: looksLikeImage(f.name) ? ('image' as const) : ('file' as const),
+          size: f.size,
+        })),
+      );
+      if (responseFiles.length < batch.length) {
+        error ??= 'some files could not be stored';
+        for (const f of batch.slice(responseFiles.length)) {
+          failed.push({
+            name: projectUploadRelativePath(f),
+            error: error ?? 'some files could not be stored',
+          });
+        }
+      }
+    } catch {
+      error = 'upload request failed';
+      for (const f of batch) {
+        failed.push({ name: projectUploadRelativePath(f), error });
+      }
+      for (const f of remaining) {
+        failed.push({ name: projectUploadRelativePath(f), error });
       }
       break;
     }

@@ -100,12 +100,20 @@ export async function detectEntryFile(dir: string): Promise<string | null> {
   return null;
 }
 
+function isIgnorableDirReadError(err) {
+  if (!err || typeof err.code !== 'string') return false;
+  // ENOENT — missing project/subdir; ENOTDIR — baseDir points at a file or a
+  // directory entry is a symlink/junction to a non-directory; EACCES/EPERM —
+  // protected paths on Windows when walking an imported user folder.
+  return err.code === 'ENOENT' || err.code === 'ENOTDIR' || err.code === 'EACCES' || err.code === 'EPERM';
+}
+
 async function collectFiles(dir, relDir, out, skipDirs?: Set<string>) {
   let entries = [];
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch (err) {
-    if (err && err.code === 'ENOENT') return;
+    if (isIgnorableDirReadError(err)) return;
     throw err;
   }
   for (const e of entries) {

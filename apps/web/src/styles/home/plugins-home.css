@@ -32,11 +32,11 @@
 }
 .plugins-home__title {
   margin: 0;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 18px;
   font-weight: 600;
   color: var(--text-strong);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 .plugins-home__count {
   font-size: 11.5px;
@@ -419,7 +419,7 @@
   margin: 0 0 var(--spacing-xs);
   color: var(--text-strong);
   font-size: 16px;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 .plugins-home__contribute-inner p {
   margin: 0;
@@ -586,7 +586,7 @@
   flex-direction: column;
   justify-content: space-between;
   color: rgba(255, 255, 255, 0.92);
-  font-family: var(--serif);
+  font-family: var(--sans);
 }
 .plugins-home__html-fallback-glyph {
   flex: 1;
@@ -595,7 +595,7 @@
   justify-content: center;
   font-size: 96px;
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
   user-select: none;
   font-weight: 600;
@@ -617,7 +617,7 @@
   flex-direction: column;
   justify-content: space-between;
   padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
-  font-family: var(--serif);
+  font-family: var(--sans);
   overflow: hidden;
 }
 .plugins-home__design--showcase {
@@ -667,7 +667,7 @@
 }
 .plugins-home__design-headline strong {
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 .plugins-home__design-specimen {
   position: relative;
@@ -701,11 +701,11 @@
   background: linear-gradient(135deg, var(--accent-tint) 0%, var(--bg-subtle) 100%);
 }
 .plugins-home__text-glyph {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 56px;
   font-weight: 600;
   color: var(--accent);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 /* ---------- Hover overlay (mask) ----------

@@ -4,6 +4,7 @@ import {
   type PluginManifest,
 } from '@open-design/contracts';
 import { ArtifactRegressionError } from './artifact-stub-guard.js';
+import { decodeMultipartFilename, isSafeId, sanitizePath } from './projects.js';
 import { listDesignSystems } from './design-systems.js';
 import {
   FIRST_PARTY_ATOMS,
@@ -195,6 +196,9 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
         createdAt: now,
         updatedAt: now,
       });
+      if (typeof projectMetadata?.baseDir !== 'string') {
+        await ensureProject(PROJECTS_DIR, id, projectMetadata ?? undefined);
+      }
       // Seed a default conversation so the UI always has somewhere to write.
       const cid = randomId();
       insertConversation(db, {
@@ -790,11 +794,20 @@ export function registerProjectFileRoutes(app: Express, ctx: RegisterProjectFile
   // project's own folder (see apps/daemon/src/projects.ts).
   app.get('/api/projects/:id/files', async (req, res) => {
     try {
+      if (!isSafeId(req.params.id)) {
+        return sendApiError(res, 400, 'BAD_REQUEST', 'invalid project id');
+      }
       const since = Number(req.query?.since);
       const project = getProject(db, req.params.id);
+      if (!project) {
+        return sendApiError(res, 404, 'PROJECT_NOT_FOUND', 'not found');
+      }
+      if (typeof project.metadata?.baseDir !== 'string') {
+        await ensureProject(PROJECTS_DIR, req.params.id, project.metadata);
+      }
       const files = await listFiles(PROJECTS_DIR, req.params.id, {
         since: Number.isFinite(since) ? since : undefined,
-        metadata: project?.metadata,
+        metadata: project.metadata,
       });
       /** @type {import('@open-design/contracts').ProjectFilesResponse} */
       const body = { files };
@@ -1117,12 +1130,18 @@ export function registerProjectFileRoutes(app: Express, ctx: RegisterProjectFile
 
 }
 
-export interface RegisterProjectUploadRoutesDeps extends RouteDeps<'http' | 'uploads' | 'node'> {}
+export interface RegisterProjectUploadRoutesDeps
+  extends RouteDeps<'db' | 'http' | 'uploads' | 'node' | 'paths' | 'projectStore' | 'projectFiles'> {}
 
 export function registerProjectUploadRoutes(app: Express, ctx: RegisterProjectUploadRoutesDeps) {
   const { sendApiError } = ctx.http;
-  const { handleProjectUpload } = ctx.uploads;
+  const { handleProjectUpload, handleProjectFolderUpload, PROJECT_FOLDER_UPLOAD_MAX_BYTES } =
+    ctx.uploads;
   const { fs } = ctx.node;
+  const { PROJECTS_DIR } = ctx.paths;
+  const { getProject } = ctx.projectStore;
+  const { writeProjectFile } = ctx.projectFiles;
+  const { db } = ctx;
 
   app.post(
     '/api/projects/:id/upload',
@@ -1150,6 +1169,70 @@ export function registerProjectUploadRoutes(app: Express, ctx: RegisterProjectUp
         res.json(body);
       } catch (err: any) {
         sendApiError(res, 500, 'INTERNAL_ERROR', 'upload failed');
+      }
+    },
+  );
+
+  app.post(
+    '/api/projects/:id/upload-folder',
+    handleProjectFolderUpload,
+    async (req, res) => {
+      try {
+        const incoming = Array.isArray(req.files) ? req.files : [];
+        if (incoming.length === 0) {
+          return sendApiError(res, 400, 'BAD_REQUEST', 'files are required');
+        }
+        const project = getProject(db, req.params.id);
+        const rawPaths = req.body?.paths;
+        const paths = Array.isArray(rawPaths) ? rawPaths : rawPaths ? [rawPaths] : [];
+        let totalBytes = 0;
+        const out = [];
+        for (let i = 0; i < incoming.length; i += 1) {
+          const file = incoming[i];
+          if (!file) continue;
+          const buffer = file.buffer;
+          if (!buffer) continue;
+          totalBytes += buffer.length;
+          if (totalBytes > PROJECT_FOLDER_UPLOAD_MAX_BYTES) {
+            return sendApiError(res, 413, 'PAYLOAD_TOO_LARGE', 'folder upload too large');
+          }
+          const relRaw = decodeMultipartFilename(
+            paths[i] || file.originalname || file.fieldname || 'file',
+          );
+          const safeName = sanitizePath(relRaw);
+          const written = await writeProjectFile(
+            PROJECTS_DIR,
+            req.params.id,
+            safeName,
+            buffer,
+            { overwrite: true },
+            project?.metadata,
+          );
+          out.push({
+            name: written.name,
+            path: written.path,
+            size: written.size,
+            mtime: written.mtime,
+            originalName: relRaw,
+          });
+        }
+        /** @type {import('@open-design/contracts').UploadProjectFilesResponse} */
+        const body = { files: out };
+        res.json(body);
+      } catch (err: any) {
+        const message = String(err?.message || err);
+        const status =
+          message.includes('invalid file name') ||
+          message.includes('unsafe') ||
+          message.includes('reserved project path')
+            ? 400
+            : 500;
+        sendApiError(
+          res,
+          status,
+          status === 400 ? 'BAD_REQUEST' : 'INTERNAL_ERROR',
+          message || 'upload failed',
+        );
       }
     },
   );

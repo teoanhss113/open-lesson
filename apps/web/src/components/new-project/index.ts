@@ -2,6 +2,7 @@ export { NewProjectPanel } from './NewProjectPanel';
 export type {
   CreateInput,
   CreateTab,
+  CurriculumKind,
   MediaSurface,
   NewProjectPanelProps,
   NewProjectPlatform,

@@ -10,8 +10,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  defaultScenarioPluginIdForKind,
   type ConnectorDetail,
+  type ImportFolderResponse,
   type InstalledPluginRecord,
 } from '@open-design/contracts';
 import { LOCALE_LABEL, LOCALES, useI18n, useT, type Locale } from '../i18n';
@@ -24,7 +24,6 @@ import type {
   DesignSystemSummary,
   ExecMode,
   Project,
-  ProjectMetadata,
   ProjectTemplate,
   PromptTemplateSummary,
   SkillSummary,
@@ -36,19 +35,13 @@ import { DesignSystemPreviewModal } from './DesignSystemPreviewModal';
 import { DesignSystemsTab } from './DesignSystemsTab';
 import { EntryNavRail, type EntryView as EntryViewKind } from './EntryNavRail';
 import { HomeView } from './HomeView';
-import {
-  createPluginAuthoringHandoff,
-  createPluginUseHandoff,
-  type HomePromptHandoff,
-} from './home-hero/plugin-authoring';
-import type { PluginUseAction } from './plugins-home/useActions';
 import { Icon } from './Icon';
 import { IntegrationsView, type IntegrationTab } from './IntegrationsView';
 import { InlineModelSwitcher } from './InlineModelSwitcher';
 import { NewProjectModal } from './NewProjectModal';
 import { PluginsView } from './PluginsView';
 import type { CreateInput } from './NewProjectPanel';
-import type { PluginLoopSubmit } from './PluginLoopHome';
+import type { PluginUseAction } from './plugins-home/useActions';
 import type {
   PluginShareAction,
   PluginShareProjectOutcome,
@@ -61,47 +54,6 @@ import { TasksView } from './TasksView';
 // in `entry-layout.css` so server and client render identical
 // markup — both surfaces are always present, and CSS toggles
 // `display` based on `--compact-topbar` breakpoint (900px).
-
-// Default scenario plugin for each project kind. The mapping lives in
-// `@open-design/contracts` so the daemon's `/api/projects` and
-// `/api/runs` fallbacks resolve to the same plugin id when no
-// `pluginId` is on the request body — plan §3.3 of
-// `specs/current/plugin-driven-flow-plan.md`.
-function defaultPluginIdForKind(metadata: ProjectMetadata): string | null {
-  return defaultScenarioPluginIdForKind(metadata.kind);
-}
-
-function defaultPluginInputsForCreate(
-  input: CreateInput,
-  pluginId: string | null,
-): Record<string, unknown> | null {
-  if (pluginId !== 'od-media-generation') return null;
-  const kind = input.metadata.kind;
-  if (kind !== 'image' && kind !== 'video' && kind !== 'audio') return null;
-
-  const promptTemplate = input.metadata.promptTemplate;
-  const subject =
-    promptTemplate?.prompt?.trim()
-    || input.name.trim()
-    || promptTemplate?.title?.trim()
-    || `${kind} concept`;
-  const style =
-    promptTemplate?.summary?.trim()
-    || 'cinematic, high-quality, on-brand';
-  const aspect =
-    kind === 'image'
-      ? input.metadata.imageAspect
-      : kind === 'video'
-        ? input.metadata.videoAspect
-        : undefined;
-
-  return {
-    mediaKind: kind,
-    subject,
-    style,
-    ...(aspect ? { aspect } : {}),
-  };
-}
 
 // Theme options exposed in the avatar-popover appearance submenu.
 // Mirrors the segmented control in `SettingsDialog` so the same three
@@ -208,7 +160,7 @@ interface Props {
       autoSendFirstMessage?: boolean;
       pendingFiles?: File[];
     },
-  ) => void;
+  ) => boolean | void | Promise<boolean | void>;
   onCreatePluginShareProject: (
     pluginId: string,
     action: PluginShareAction,
@@ -216,6 +168,7 @@ interface Props {
   ) => Promise<PluginShareProjectOutcome>;
   onImportClaudeDesign: (file: File) => Promise<void> | void;
   onImportFolder?: (baseDir: string) => Promise<boolean> | boolean;
+  onImportFolderResponse?: (response: ImportFolderResponse) => Promise<void> | void;
   onOpenProject: (id: string) => void;
   onOpenLiveArtifact: (projectId: string, artifactId: string) => void;
   onDeleteProject: (id: string) => void;
@@ -266,6 +219,7 @@ export function EntryShell({
   onCreatePluginShareProject,
   onImportClaudeDesign,
   onImportFolder,
+  onImportFolderResponse,
   onOpenProject,
   onOpenLiveArtifact,
   onDeleteProject,
@@ -288,7 +242,6 @@ export function EntryShell({
   const [appearanceExpanded, setAppearanceExpanded] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [integrationTab, setIntegrationTab] = useState<IntegrationTab>(integrationInitialTab);
-  const [homePromptHandoff, setHomePromptHandoff] = useState<HomePromptHandoff | null>(null);
   const avatarMenuRef = useRef<HTMLDivElement | null>(null);
   // Active-model summary is kept in render scope so
   // the dropdown's collapsed rows can mirror what the chips show
@@ -303,20 +256,18 @@ export function EntryShell({
     navigate({ kind: 'home', view: next });
   }
 
-  function startPluginAuthoring(goal?: string) {
-    setHomePromptHandoff(
-      createPluginAuthoringHandoff(Date.now(), goal),
-    );
+  // The home view no longer hosts a prompt loop, so the plugin
+  // library's "create plugin" / "use plugin" entry points just
+  // bounce the user back to the workspace home. The associated
+  // prefill state was removed when HomeView was simplified.
+  function startPluginAuthoring(_goal?: string) {
     changeView('home');
   }
 
   function usePluginFromLibrary(
-    record: InstalledPluginRecord,
-    action: PluginUseAction = 'use',
+    _record: InstalledPluginRecord,
+    _action: PluginUseAction = 'use',
   ) {
-    setHomePromptHandoff(
-      createPluginUseHandoff(Date.now(), record.id, { action }),
-    );
     changeView('home');
   }
 
@@ -334,81 +285,12 @@ export function EntryShell({
     [designSystems, previewSystemId],
   );
 
-  function handleCreate(input: CreateInput) {
-    // The NewProjectModal no longer asks the user to pick a plugin.
-    // Each project kind is silently bound to its default scenario
-    // pipeline at creation time so the user lands in a running flow
-    // without having to reason about pipeline internals. The mapping
-    // is intentionally explicit so future kind-specific scenarios
-    // (e.g. a deck- or image-specialized pipeline) can take over a
-    // single row without touching the form.
-    const pluginId = defaultPluginIdForKind(input.metadata);
-    const pluginInputs = defaultPluginInputsForCreate(input, pluginId);
-    onCreateProject({
-      ...input,
-      ...(pluginId ? { pluginId } : {}),
-      ...(pluginInputs ? { pluginInputs } : {}),
-    });
-  }
-
-  // Plan §3.F5 — the home prompt-loop submit path. The user picks a
-  // plugin (which calls /api/plugins/:id/apply and binds a snapshot),
-  // edits the rendered example query if any, then presses Enter. We
-  // derive a project name from the active plugin (or prompt head),
-  // forward the pluginId so POST /api/projects pins the snapshot to
-  // project + conversation, and request auto-send of the first
-  // message so the user lands inside a running pipeline.
-  //
-  // Stage B of plugin-driven-flow-plan: the rail can stamp a
-  // `projectKind` on the payload so the created project records the
-  // chosen surface (image / video / audio, etc.). Free-form Home
-  // submits now arrive with the hidden od-default router plugin and
-  // projectKind='other', so the agent asks for the exact task type
-  // before continuing.
-  function handlePluginLoopSubmit(payload: PluginLoopSubmit) {
-    const head = payload.prompt.trim().split(/\s+/).slice(0, 8).join(' ');
-    const firstAttachmentName = payload.attachments?.[0]?.name ?? '';
-    const fallbackName = head.length > 0 ? head : firstAttachmentName || 'Untitled';
-    const name =
-      payload.pluginTitle && payload.pluginTitle.trim().length > 0
-        ? payload.pluginTitle.trim()
-        : fallbackName;
-    const metadata: ProjectMetadata = {
-      kind: payload.projectKind ?? 'prototype',
-      ...(payload.contextPlugins && payload.contextPlugins.length > 0
-        ? { contextPlugins: payload.contextPlugins }
-        : {}),
-    };
-    onCreateProject({
-      name,
-      skillId: payload.skillId ?? null,
-      designSystemId: null,
-      metadata,
-      pendingPrompt: payload.prompt,
-      ...(payload.pluginId ? { pluginId: payload.pluginId } : {}),
-      ...(payload.appliedPluginSnapshotId
-        ? { appliedPluginSnapshotId: payload.appliedPluginSnapshotId }
-        : {}),
-      ...(payload.pluginInputs ? { pluginInputs: payload.pluginInputs } : {}),
-      ...(payload.attachments && payload.attachments.length > 0
-        ? { pendingFiles: payload.attachments }
-        : {}),
-      autoSendFirstMessage: true,
-    });
-  }
-
-  // Stage B of plugin-driven-flow-plan: the rail's "From folder" chip
-  // dispatcher. Prefers the Electron-native folder picker when
-  // available so a single click lands the user in an imported
-  // project. Browser-only shells fall back to the existing modal
-  // path so the user can paste a baseDir.
-  async function handleChipFolderImport() {
-    // PR #974 trust boundary: the renderer cannot pick a folder directly
-    // anymore — the bridge exposes `pickAndImport` instead (atomic
-    // pick + HMAC-gated import). On the web (no electronAPI) or when
-    // the bridge is older, fall back to opening the New Project modal
-    // so the user can paste a baseDir manually.
-    setNewProjectOpen(true);
+  function handleCreate(input: CreateInput & { requestId?: string }) {
+    // Let the daemon attach an installed default scenario if one exists.
+    // Passing a missing default plugin explicitly makes /api/projects fail
+    // after the project has already been inserted, which prevents routing
+    // into the new workspace.
+    return onCreateProject(input);
   }
 
   // Dismiss the avatar dropdown on outside-click / Escape so it
@@ -666,23 +548,9 @@ export function EntryShell({
               <HomeView
                 projects={projects}
                 projectsLoading={projectsLoading}
-                onSubmit={handlePluginLoopSubmit}
                 onOpenProject={onOpenProject}
                 onViewAllProjects={() => changeView('projects')}
-                onBrowseRegistry={() => changeView('plugins')}
-                onImportFolder={handleChipFolderImport}
-                onOpenNewProject={(tab) => {
-                  // Stage B of plugin-driven-flow-plan: the rail's
-                  // "From template" chip wires through here so the
-                  // existing modal-based create flow still owns the
-                  // template picker UI. Future tabs (e.g. live-artifact
-                  // import) can reuse the same callback.
-                  void tab;
-                  setNewProjectOpen(true);
-                }}
-                promptHandoff={homePromptHandoff}
-                skills={skills}
-                skillsLoading={skillsLoading}
+                onCreateProject={() => setNewProjectOpen(true)}
               />
             ) : null}
             {view === 'projects' ? (
@@ -765,6 +633,7 @@ export function EntryShell({
         onCreate={handleCreate}
         onImportClaudeDesign={onImportClaudeDesign}
         {...(onImportFolder ? { onImportFolder } : {})}
+        {...(onImportFolderResponse ? { onImportFolderResponse } : {})}
         onOpenConnectorsTab={() => {
           setNewProjectOpen(false);
           openIntegrationTab('connectors');
