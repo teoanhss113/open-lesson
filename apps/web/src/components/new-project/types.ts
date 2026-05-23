@@ -12,6 +12,15 @@ import type {
 
 export type CreateTab = 'prototype' | 'live-artifact' | 'deck' | 'template' | 'media' | 'other';
 export type MediaSurface = 'image' | 'video' | 'audio';
+export type CurriculumKind =
+  | 'syllabus'
+  | 'lesson-plan'
+  | 'teaching-guide'
+  | 'slides'
+  | 'material'
+  | 'homework'
+  | 'curriculum-review'
+  | 'rollout-validation';
 
 export interface CreateInput {
   name: string;
@@ -36,7 +45,9 @@ export interface NewProjectPanelProps {
   templates: ProjectTemplate[];
   onDeleteTemplate?: (id: string) => Promise<boolean>;
   promptTemplates: PromptTemplateSummary[];
-  onCreate: (input: CreateInput & { requestId?: string }) => void;
+  onCreate: (
+    input: CreateInput & { requestId?: string },
+  ) => boolean | void | Promise<boolean | void>;
   onImportClaudeDesign?: (file: File) => Promise<void> | void;
   onImportFolder?: (baseDir: string) => Promise<boolean> | boolean;
   onImportFolderResponse?: (response: ImportFolderResponse) => Promise<void> | void;

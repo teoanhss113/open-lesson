@@ -240,6 +240,9 @@ importers:
       docx-preview:
         specifier: ^0.3.7
         version: 0.3.7
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
       lucide-react:
         specifier: ^1.14.0
         version: 1.16.0(react@18.3.1)

@@ -34,6 +34,7 @@
     "@open-design/sidecar": "workspace:*",
     "@open-design/sidecar-proto": "workspace:*",
     "docx-preview": "^0.3.7",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.14.0",
     "next": "^16.2.5",
     "openai": "^6.36.0",
@@ -55,6 +56,6 @@
     "vitest": "^2.1.8"
   },
   "engines": {
-    "node": "~24"
+    "node": "^22.11.0 || ~24"
   }
 }

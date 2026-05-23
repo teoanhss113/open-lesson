@@ -1,0 +1,93 @@
+/* ============================================================
+   Home view — simplified header
+   ----------------------------------------------------------------
+   The redesigned home surface renders only a brand title plus a
+   "+" affordance above the Recent projects strip. All values are
+   pulled from the design-token CSS custom properties defined in
+   `src/index.css` so the header stays in lock-step with the rest
+   of the workspace (Inter typography, brand-green accent, full
+   pill for the icon button per DESIGN.md). No inline pixel values
+   or color literals.
+   ============================================================ */
+
+.home-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxl);
+}
+
+.home-view__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xxl) 0 var(--spacing-xs);
+}
+
+.home-view__brand {
+  margin: 0;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: 0;
+  color: var(--text-strong);
+}
+
+/* Brand-green pill — mirrors the Lovart-style "+" affordance the
+   nav rail already uses, but sized up for the home surface so it
+   reads as the primary creation entry point. Animation duration
+   and easing follow DESIGN.md (enter ~200ms, exit ~140ms, the
+   smooth 0.23/1/0.32/1 curve). */
+.home-view__create {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition:
+    background-color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.home-view__create:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.home-view__create:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+.home-view__create:active {
+  transform: translateY(0);
+  transition-duration: 140ms;
+}
+
+.home-view__create:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  .home-view__brand {
+    font-size: 24px;
+  }
+  .home-view__header {
+    padding-top: var(--spacing-xl);
+  }
+}

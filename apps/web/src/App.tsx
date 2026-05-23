@@ -723,7 +723,7 @@ export function App() {
         requestId?: string;
         pendingFiles?: File[];
       },
-    ) => {
+    ): Promise<boolean> => {
       // Honor an explicit `null` design system — the create panel defaults
       // to "None" for every kind now, and the user expects that to land
       // as a no-design-system project rather than silently inheriting the
@@ -764,7 +764,7 @@ export function App() {
           },
           { requestId: input.requestId },
         );
-        return;
+        return false;
       }
       const pendingFiles = Array.isArray(input.pendingFiles)
         ? input.pendingFiles.filter((file): file is File => file instanceof File)
@@ -835,6 +835,7 @@ export function App() {
         projectId: project.id,
         fileName: null,
       });
+      return true;
     },
     [analytics.track],
   );

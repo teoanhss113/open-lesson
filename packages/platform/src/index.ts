@@ -202,7 +202,12 @@ export function createCommandInvocation({ args = [], command, env = process.env 
 
 export function createPackageManagerInvocation(args: string[], env: NodeJS.ProcessEnv = process.env): CommandInvocation {
   const execPath = env.npm_execpath;
-  if (execPath) return { args: [execPath, ...args], command: process.execPath };
+  if (execPath) {
+    if (/\.(?:cjs|mjs|js)$/i.test(execPath)) {
+      return { args: [execPath, ...args], command: process.execPath };
+    }
+    return createCommandInvocation({ args, command: execPath, env });
+  }
   if (process.platform === "win32") {
     return buildCmdShimInvocation("pnpm", args, env);
   }

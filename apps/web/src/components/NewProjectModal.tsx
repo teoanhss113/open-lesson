@@ -1,15 +1,13 @@
 // Modal wrapper around NewProjectPanel.
 //
 // Triggered by the "+" button on the entry nav rail. Reuses the
-// existing NewProjectPanel surface so all of the per-kind tabs
-// (prototype / live-artifact / deck / template / image / video /
-// audio / other) and their connector / template / design-system
-// pickers carry over without duplication. The modal closes itself
-// when the panel calls onCreate (success path) or when the user
-// clicks the backdrop / Esc.
+// NewProjectPanel workspace starter surface so project creation stays
+// focused on the curriculum folder. Artifact-level tabs live inside the
+// project workspace after creation. The modal closes itself when the panel
+// calls onCreate (success path) or when the user clicks the backdrop / Esc.
 
-import { useEffect, useRef } from 'react';
-import type { ConnectorDetail } from '@open-design/contracts';
+import { useEffect, useRef, useState } from 'react';
+import type { ConnectorDetail, ImportFolderResponse } from '@open-design/contracts';
 import type {
   DesignSystemSummary,
   MediaProviderCredentials,
@@ -19,6 +17,7 @@ import type {
 } from '../types';
 import { Icon } from './Icon';
 import { NewProjectPanel, type CreateInput } from './NewProjectPanel';
+import { useT } from '../i18n';
 
 interface Props {
   open: boolean;
@@ -31,9 +30,12 @@ interface Props {
   connectors?: ConnectorDetail[];
   connectorsLoading?: boolean;
   loading?: boolean;
-  onCreate: (input: CreateInput) => void;
+  onCreate: (
+    input: CreateInput & { requestId?: string },
+  ) => boolean | void | Promise<boolean | void>;
   onImportClaudeDesign?: (file: File) => Promise<void> | void;
   onImportFolder?: (baseDir: string) => Promise<boolean> | boolean;
+  onImportFolderResponse?: (response: ImportFolderResponse) => Promise<void> | void;
   onOpenConnectorsTab?: () => void;
   onClose: () => void;
 }
@@ -52,10 +54,13 @@ export function NewProjectModal({
   onCreate,
   onImportClaudeDesign,
   onImportFolder,
+  onImportFolderResponse,
   onOpenConnectorsTab,
   onClose,
 }: Props) {
+  const t = useT();
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -87,7 +92,7 @@ export function NewProjectModal({
       className="new-project-modal-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="New project"
+      aria-label={t('newproj.titleCurriculumWorkspace')}
       data-testid="new-project-modal"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -95,7 +100,7 @@ export function NewProjectModal({
     >
       <div className="new-project-modal">
         <header className="new-project-modal__head">
-          <h2 className="new-project-modal__title">New project</h2>
+          <h2 className="new-project-modal__title">{t('newproj.titleCurriculumWorkspace')}</h2>
           <button
             ref={closeRef}
             type="button"
@@ -117,13 +122,27 @@ export function NewProjectModal({
             {...(mediaProviders ? { mediaProviders } : {})}
             {...(connectors ? { connectors } : {})}
             {...(typeof connectorsLoading === 'boolean' ? { connectorsLoading } : {})}
-            {...(typeof loading === 'boolean' ? { loading } : {})}
-            onCreate={(input) => {
-              onCreate(input);
-              onClose();
+            loading={Boolean(loading) || creating}
+            onCreate={async (input) => {
+              if (creating) return false;
+              setCreating(true);
+              try {
+                const result = await onCreate(input);
+                if (result === false) {
+                  setCreating(false);
+                  return false;
+                }
+                onClose();
+                return result;
+              } catch (err) {
+                console.error('Create project failed', err);
+                setCreating(false);
+                return false;
+              }
             }}
             {...(onImportClaudeDesign ? { onImportClaudeDesign } : {})}
             {...(onImportFolder ? { onImportFolder } : {})}
+            {...(onImportFolderResponse ? { onImportFolderResponse } : {})}
             {...(onOpenConnectorsTab ? { onOpenConnectorsTab } : {})}
           />
         </div>

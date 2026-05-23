@@ -13,3 +13,4 @@ export * from './TextViewer';
 export * from './PreviewViewportControls';
 export * from './LiveArtifactViewer';
 export * from './HtmlViewer';
+export * from './SlidePreview';

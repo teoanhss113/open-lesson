@@ -18,6 +18,7 @@ import type {
 } from '../../types';
 import type {
   CreateTab,
+  CurriculumKind,
   MediaSurface,
   NewProjectPlatform,
   PromptTemplatePick,
@@ -76,6 +77,17 @@ export const MEDIA_SURFACE_LABEL_KEYS: Record<MediaSurface, keyof Dict> = {
   image: 'newproj.surfaceImage',
   video: 'newproj.surfaceVideo',
   audio: 'newproj.surfaceAudio',
+};
+
+export const CURRICULUM_KIND_LABEL_KEYS: Record<CurriculumKind, keyof Dict> = {
+  syllabus: 'newproj.curriculumKind.syllabus',
+  'lesson-plan': 'newproj.curriculumKind.lessonPlan',
+  'teaching-guide': 'newproj.curriculumKind.teachingGuide',
+  slides: 'newproj.curriculumKind.slides',
+  material: 'newproj.curriculumKind.material',
+  homework: 'newproj.curriculumKind.homework',
+  'curriculum-review': 'newproj.curriculumKind.curriculumReview',
+  'rollout-validation': 'newproj.curriculumKind.rolloutValidation',
 };
 
 export function formatPickAndImportErrorDetails(details: unknown): string | undefined {
@@ -249,7 +261,7 @@ export function buildMetadata(input: {
   voice: string;
   inspirationIds: string[];
   promptTemplate: PromptTemplatePick | null;
-  curriculumKind?: 'lesson-plan' | 'teaching-guide' | 'slides' | 'curriculum-review' | 'rollout-validation';
+  curriculumKind?: CurriculumKind;
   courseName?: string;
   moduleName?: string;
   lessonTitle?: string;
@@ -384,4 +396,32 @@ export function autoName(
   const labelKey: keyof Dict =
     tab === 'media' ? MEDIA_SURFACE_LABEL_KEYS[mediaSurface] : TAB_LABEL_KEYS[tab];
   return `${t(labelKey)} · ${stamp}`;
+}
+
+export function autoCurriculumWorkspaceName(t: TranslateFn): string {
+  const stamp = new Date().toLocaleDateString();
+  return `${t('newproj.titleCurriculumWorkspace')} · ${stamp}`;
+}
+
+export function defaultCurriculumWorkspaceSkillId(skills: Array<{ id: string; mode?: string; defaultFor?: string[]; name?: string }>): string | null {
+  const byId = (...ids: string[]) => {
+    for (const id of ids) {
+      const skill = skills.find((s) => s.id === id);
+      if (skill) return skill.id;
+    }
+    return null;
+  };
+  const curriculumSkill = byId(
+    'lesson-plan-generator',
+    'teaching-guide-generator',
+    'curriculum-analysis',
+    'curriculum-review',
+  );
+  if (curriculumSkill) return curriculumSkill;
+  const liveArtifact = skills.find((s) => s.id === 'live-artifact' || s.name === 'live-artifact');
+  if (liveArtifact) return liveArtifact.id;
+  const prototypes = skills.filter((s) => s.mode === 'prototype');
+  return prototypes.find((s) => s.defaultFor?.includes('prototype'))?.id
+    ?? prototypes[0]?.id
+    ?? null;
 }

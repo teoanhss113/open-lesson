@@ -271,7 +271,7 @@ describe("createPackageManagerInvocation", () => {
     Object.defineProperty(process, "platform", { configurable: true, value: originalPlatform });
   });
 
-  it("uses npm_execpath via process.execPath when set, regardless of platform", () => {
+  it("uses process.execPath for JavaScript npm_execpath values", () => {
     setPlatform("win32");
     const invocation = createPackageManagerInvocation(["install"], {
       npm_execpath: "C:\\Users\\u\\.nvm\\pnpm.cjs",
@@ -280,6 +280,34 @@ describe("createPackageManagerInvocation", () => {
     expect(invocation.args[0]).toBe("C:\\Users\\u\\.nvm\\pnpm.cjs");
     expect(invocation.args.slice(1)).toEqual(["install"]);
     expect(invocation.windowsVerbatimArguments).toBeUndefined();
+  });
+
+  it("runs native Windows npm_execpath values directly", () => {
+    setPlatform("win32");
+    const invocation = createPackageManagerInvocation(["--filter", "@open-design/desktop", "build"], {
+      npm_execpath: "D:\\.pnpm-store\\v11\\links\\@pnpm\\exe\\10.33.2\\node_modules\\@pnpm\\exe\\pnpm.exe",
+    } as NodeJS.ProcessEnv);
+    expect(invocation.command).toBe(
+      "D:\\.pnpm-store\\v11\\links\\@pnpm\\exe\\10.33.2\\node_modules\\@pnpm\\exe\\pnpm.exe",
+    );
+    expect(invocation.args).toEqual(["--filter", "@open-design/desktop", "build"]);
+    expect(invocation.windowsVerbatimArguments).toBeUndefined();
+  });
+
+  it("wraps Windows npm_execpath shims through cmd.exe", () => {
+    setPlatform("win32");
+    const invocation = createPackageManagerInvocation(["install"], {
+      ComSpec: "cmd.exe",
+      npm_execpath: "C:\\Users\\u\\AppData\\Roaming\\npm\\pnpm.cmd",
+    } as NodeJS.ProcessEnv);
+    expect(invocation.command).toBe("cmd.exe");
+    expect(invocation.windowsVerbatimArguments).toBe(true);
+    expect(invocation.args).toEqual([
+      "/d",
+      "/s",
+      "/c",
+      '"C:\\Users\\u\\AppData\\Roaming\\npm\\pnpm.cmd install"',
+    ]);
   });
 
   it("returns plain pnpm invocation on POSIX without npm_execpath", () => {

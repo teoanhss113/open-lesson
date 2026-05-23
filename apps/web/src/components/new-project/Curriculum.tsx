@@ -1,81 +1,44 @@
 import { useT } from '../../i18n';
-import { OptionCards } from './Options';
+
+const AGE_ENDPOINT_OPTIONS = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18'];
+
+function splitAgeGroup(value: string): [string, string] {
+  const trimmed = value.trim();
+  if (!trimmed) return ['', ''];
+  const leadingEnd = trimmed.match(/^-(.+)$/);
+  if (leadingEnd) return ['', leadingEnd[1]?.trim() ?? ''];
+  const range = trimmed.match(/^(.+?)\s*-\s*(.+)$/);
+  if (range) return [range[1]?.trim() ?? '', range[2]?.trim() ?? ''];
+  return [trimmed, ''];
+}
+
+function joinAgeGroup(from: string, to: string): string {
+  const start = from.trim();
+  const end = to.trim();
+  if (start && end) return `${start}-${end}`;
+  if (start) return start;
+  if (end) return `-${end}`;
+  return '';
+}
 
 export function CurriculumMetadataSection({
-  curriculumKind,
-  onChangeCurriculumKind,
-  courseName,
-  onChangeCourseName,
-  moduleName,
-  onChangeModuleName,
-  lessonTitle,
-  onChangeLessonTitle,
   ageGroup,
   onChangeAgeGroup,
-  level,
-  onChangeLevel,
   curriculumVersion,
   onChangeCurriculumVersion,
 }: {
-  curriculumKind: 'lesson-plan' | 'teaching-guide' | 'slides' | 'curriculum-review' | 'rollout-validation';
-  onChangeCurriculumKind: (v: 'lesson-plan' | 'teaching-guide' | 'slides' | 'curriculum-review' | 'rollout-validation') => void;
-  courseName: string;
-  onChangeCourseName: (v: string) => void;
-  moduleName: string;
-  onChangeModuleName: (v: string) => void;
-  lessonTitle: string;
-  onChangeLessonTitle: (v: string) => void;
   ageGroup: string;
   onChangeAgeGroup: (v: string) => void;
-  level: string;
-  onChangeLevel: (v: string) => void;
   curriculumVersion: string;
   onChangeCurriculumVersion: (v: string) => void;
 }) {
   const t = useT();
+  const [ageFrom, ageTo] = splitAgeGroup(ageGroup);
+  const ageEndpointListId = 'curriculum-age-endpoints';
+
   return (
-    <div className="newproj-section curriculum-metadata-section" style={{ borderTop: '1px solid var(--colors-border)', paddingTop: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
-      <OptionCards
-        label={t('newproj.curriculumKindLabel')}
-        options={[
-          { value: 'lesson-plan' as const, title: t('newproj.curriculumKind.lessonPlan') },
-          { value: 'teaching-guide' as const, title: t('newproj.curriculumKind.teachingGuide') },
-          { value: 'slides' as const, title: t('newproj.curriculumKind.slides') },
-          { value: 'curriculum-review' as const, title: t('newproj.curriculumKind.curriculumReview') },
-          { value: 'rollout-validation' as const, title: t('newproj.curriculumKind.rolloutValidation') },
-        ]}
-        value={curriculumKind}
-        onChange={onChangeCurriculumKind}
-      />
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
-        <label className="newproj-label">
-          <span>{t('newproj.courseNameLabel')}</span>
-          <input
-            value={courseName}
-            placeholder="e.g. Science 101"
-            onChange={(e) => onChangeCourseName(e.target.value)}
-          />
-        </label>
-        <label className="newproj-label">
-          <span>{t('newproj.moduleNameLabel')}</span>
-          <input
-            value={moduleName}
-            placeholder="e.g. Physics"
-            onChange={(e) => onChangeModuleName(e.target.value)}
-          />
-        </label>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
-        <label className="newproj-label">
-          <span>{t('newproj.lessonTitleLabel')}</span>
-          <input
-            value={lessonTitle}
-            placeholder="e.g. Newton's Laws"
-            onChange={(e) => onChangeLessonTitle(e.target.value)}
-          />
-        </label>
+    <div className="newproj-section curriculum-metadata-section">
+      <div className="curriculum-field-grid curriculum-field-grid--lesson">
         <label className="newproj-label">
           <span>{t('newproj.curriculumVersionLabel')}</span>
           <input
@@ -86,27 +49,32 @@ export function CurriculumMetadataSection({
         </label>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
-        <label className="newproj-label">
+      <div className="curriculum-field-grid">
+        <label className="newproj-label curriculum-age-label">
           <span>{t('newproj.ageGroupLabel')}</span>
-          <select value={ageGroup} onChange={(e) => onChangeAgeGroup(e.target.value)}>
-            <option value="">-- {t('common.none').toLowerCase()} --</option>
-            <option value="6-8">6-8</option>
-            <option value="8-10">8-10</option>
-            <option value="10-12">10-12</option>
-            <option value="12-15">12-15</option>
-            <option value="15-18">15-18</option>
-            <option value="adult">Adult</option>
-          </select>
-        </label>
-        <label className="newproj-label">
-          <span>{t('newproj.levelLabel')}</span>
-          <select value={level} onChange={(e) => onChangeLevel(e.target.value)}>
-            <option value="">-- {t('common.none').toLowerCase()} --</option>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
+          <div className="curriculum-age-range">
+            <input
+              aria-label={t('newproj.ageFromLabel')}
+              inputMode="numeric"
+              list={ageEndpointListId}
+              value={ageFrom}
+              placeholder={t('newproj.ageFromPlaceholder')}
+              onChange={(e) => onChangeAgeGroup(joinAgeGroup(e.target.value, ageTo))}
+            />
+            <input
+              aria-label={t('newproj.ageToLabel')}
+              inputMode="numeric"
+              list={ageEndpointListId}
+              value={ageTo}
+              placeholder={t('newproj.ageToPlaceholder')}
+              onChange={(e) => onChangeAgeGroup(joinAgeGroup(ageFrom, e.target.value))}
+            />
+            <datalist id={ageEndpointListId}>
+              {AGE_ENDPOINT_OPTIONS.map((age) => (
+                <option key={age} value={age} />
+              ))}
+            </datalist>
+          </div>
         </label>
       </div>
     </div>

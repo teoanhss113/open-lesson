@@ -16,6 +16,7 @@ import {
   isDeployProviderId,
   updateDeployConfig,
   uploadProjectFiles,
+  uploadProjectFolder,
 } from '../../src/providers/registry';
 
 describe('fetchAppVersionInfo', () => {
@@ -535,6 +536,100 @@ describe('uploadProjectFiles', () => {
     expect(result.uploaded).toHaveLength(2);
     expect(result.failed).toHaveLength(1);
     expect(result.failed[0]).toMatchObject({ name: 'c.txt' });
+  });
+});
+
+describe('uploadProjectFolder', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('posts files with relative paths to upload-folder', async () => {
+    const file = new File(['hello'], 'readme.txt', { type: 'text/plain' });
+    Object.defineProperty(file, 'webkitRelativePath', {
+      value: 'assets/readme.txt',
+      configurable: true,
+    });
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          files: [
+            {
+              name: 'assets/readme.txt',
+              path: 'assets/readme.txt',
+              size: 5,
+              originalName: 'assets/readme.txt',
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await uploadProjectFolder('project-1', [file]);
+
+    expect(result.failed).toEqual([]);
+    expect(result.uploaded).toHaveLength(1);
+    expect(result.uploaded[0]).toMatchObject({ path: 'assets/readme.txt' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/project-1/upload-folder',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    const call = fetchMock.mock.calls[0] as [string, RequestInit] | undefined;
+    const body = call?.[1]?.body as FormData;
+    expect(body.get('paths')).toBe('assets/readme.txt');
+  });
+
+  it('continues uploading remaining folder files after one file fails', async () => {
+    const first = new File(['large'], 'large.pptx', { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+    Object.defineProperty(first, 'webkitRelativePath', {
+      value: 'slides/large.pptx',
+      configurable: true,
+    });
+    const second = new File(['ok'], 'readme.txt', { type: 'text/plain' });
+    Object.defineProperty(second, 'webkitRelativePath', {
+      value: 'docs/readme.txt',
+      configurable: true,
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          error: {
+            code: 'PAYLOAD_TOO_LARGE',
+            message: 'file is too large',
+          },
+        }),
+        { status: 413 },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          files: [
+            {
+              name: 'docs/readme.txt',
+              path: 'docs/readme.txt',
+              size: 2,
+              originalName: 'docs/readme.txt',
+            },
+          ],
+        }),
+        { status: 200 },
+      ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await uploadProjectFolder('project-1', [first, second]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.failed).toEqual([
+      {
+        name: 'slides/large.pptx',
+        code: 'PAYLOAD_TOO_LARGE',
+        error: 'file is too large',
+      },
+    ]);
+    expect(result.uploaded).toHaveLength(1);
+    expect(result.uploaded[0]).toMatchObject({ path: 'docs/readme.txt' });
   });
 });
 

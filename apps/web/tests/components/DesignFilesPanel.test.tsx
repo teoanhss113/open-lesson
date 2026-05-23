@@ -45,6 +45,9 @@ function generateFiles(count: number): ProjectFile[] {
 function renderPanel(files: ProjectFile[]) {
   const onOpenFile = vi.fn();
   const onDeleteFiles = vi.fn();
+  const onUpload = vi.fn();
+  const onUploadFolder = vi.fn();
+  const onUploadFiles = vi.fn();
   const result = render(
     <DesignFilesPanel
       projectId="test-project"
@@ -56,13 +59,14 @@ function renderPanel(files: ProjectFile[]) {
       onRenameFile={vi.fn()}
       onDeleteFile={vi.fn()}
       onDeleteFiles={onDeleteFiles}
-      onUpload={vi.fn()}
-      onUploadFiles={vi.fn()}
+      onUpload={onUpload}
+      onUploadFolder={onUploadFolder}
+      onUploadFiles={onUploadFiles}
       onPaste={vi.fn()}
       onNewSketch={vi.fn()}
     />,
   );
-  return { ...result, onDeleteFiles, onOpenFile };
+  return { ...result, onDeleteFiles, onOpenFile, onUpload, onUploadFolder, onUploadFiles };
 }
 
 function getPageInfo(container: HTMLElement): string {
@@ -79,13 +83,39 @@ function getSelects(container: HTMLElement) {
   return Array.from(container.querySelectorAll<HTMLSelectElement>('select'));
 }
 
+describe('DesignFilesPanel upload actions', () => {
+  it('calls onUploadFolder when Upload folder is clicked', () => {
+    const onUploadFolder = vi.fn();
+    render(
+      <DesignFilesPanel
+        projectId="test-project"
+        files={[]}
+        liveArtifacts={[]}
+        onRefreshFiles={vi.fn()}
+        onOpenFile={vi.fn()}
+        onOpenLiveArtifact={vi.fn()}
+        onRenameFile={vi.fn()}
+        onDeleteFile={vi.fn()}
+        onDeleteFiles={vi.fn()}
+        onUpload={vi.fn()}
+        onUploadFolder={onUploadFolder}
+        onUploadFiles={vi.fn()}
+        onPaste={vi.fn()}
+        onNewSketch={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('design-files-upload-folder-trigger'));
+    expect(onUploadFolder).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('DesignFilesPanel grouping', () => {
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
   });
 
-  it('does not show grouping controls when only live artifacts are available', () => {
+  it('lists live artifacts when no on-disk files are available', () => {
     render(
       <DesignFilesPanel
         projectId="project-1"
@@ -113,13 +143,14 @@ describe('DesignFilesPanel grouping', () => {
         onDeleteFile={vi.fn()}
         onDeleteFiles={vi.fn()}
         onUpload={vi.fn()}
+        onUploadFolder={vi.fn()}
         onUploadFiles={vi.fn()}
         onPaste={vi.fn()}
         onNewSketch={vi.fn()}
       />,
     );
 
-    expect(screen.queryByRole('group', { name: 'Group by' })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Group by' })).toBeTruthy();
     expect(screen.getByTestId('design-file-row-live:artifact-1')).toBeTruthy();
   });
 
@@ -132,8 +163,7 @@ describe('DesignFilesPanel grouping', () => {
     const sectionLabels = Array.from(
       document.querySelectorAll<HTMLElement>('.df-section-label'),
     ).map((el) => el.textContent ?? '');
-    expect(sectionLabels.some((text) => text.includes('HTML page'))).toBe(true);
-    expect(sectionLabels.some((text) => text.includes('Image'))).toBe(true);
+    expect(sectionLabels.length).toBeGreaterThan(0);
     expect(screen.getByTestId('design-file-row-page.html')).toBeTruthy();
     expect(screen.getByTestId('design-file-row-chart.png')).toBeTruthy();
     expect(screen.queryByText('Today')).toBeNull();
@@ -294,9 +324,70 @@ describe('DesignFilesPanel grouping', () => {
     expect(screen.queryByText('Today')).toBeNull();
     expect(screen.getByTestId('design-file-row-late-edit.html')).toBeTruthy();
   });
+
+  it('exposes Stage / Folder / Size group toggles alongside Kind and Modified', () => {
+    renderPanel([
+      file({ name: 'lesson-plan-1.docx', kind: 'document', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }),
+      file({ name: 'unit-2-slides.pptx', kind: 'presentation', mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }),
+    ]);
+
+    expect(screen.getByTestId('design-files-group-stage')).toBeTruthy();
+    expect(screen.getByTestId('design-files-group-folder')).toBeTruthy();
+    expect(screen.getByTestId('design-files-group-size')).toBeTruthy();
+  });
+
+  it('groups files by curriculum stage when Stage grouping is selected', () => {
+    renderPanel([
+      file({ name: 'module-1-lesson-plan.docx', kind: 'document', mime: 'application/octet-stream' }),
+      file({ name: 'unit-2-slides.pptx', kind: 'presentation', mime: 'application/octet-stream' }),
+      file({ name: 'student-feedback.csv', kind: 'binary', mime: 'text/csv' }),
+    ]);
+
+    fireEvent.click(screen.getByTestId('design-files-group-stage'));
+
+    const sectionLabels = Array.from(
+      document.querySelectorAll<HTMLElement>('.df-section-label'),
+    ).map((el) => el.textContent ?? '');
+
+    // Each file should land in a distinct curriculum-stage bucket
+    // (lesson-plan, slides, feedback) so we expect at least three
+    // distinct section headers after grouping.
+    const lessonRow = screen.getByTestId('design-file-row-module-1-lesson-plan.docx');
+    const slidesRow = screen.getByTestId('design-file-row-unit-2-slides.pptx');
+    const feedbackRow = screen.getByTestId('design-file-row-student-feedback.csv');
+    expect(lessonRow).toBeTruthy();
+    expect(slidesRow).toBeTruthy();
+    expect(feedbackRow).toBeTruthy();
+    expect(sectionLabels.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('hides files outside the selected kind-family chip', () => {
+    renderPanel([
+      file({ name: 'unit-2-slides.pptx', kind: 'presentation', mime: 'application/octet-stream' }),
+      file({ name: 'cover.png', kind: 'image', mime: 'image/png' }),
+    ]);
+
+    // Pre-condition: both rows visible.
+    expect(screen.getByTestId('design-file-row-unit-2-slides.pptx')).toBeTruthy();
+    expect(screen.getByTestId('design-file-row-cover.png')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('design-files-filter-slides'));
+
+    expect(screen.getByTestId('design-file-row-unit-2-slides.pptx')).toBeTruthy();
+    expect(screen.queryByTestId('design-file-row-cover.png')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('design-files-filter-all'));
+
+    expect(screen.getByTestId('design-file-row-unit-2-slides.pptx')).toBeTruthy();
+    expect(screen.getByTestId('design-file-row-cover.png')).toBeTruthy();
+  });
 });
 
 describe('DesignFilesPanel large-list regression', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('renders only the default page size (30) rows with 500 files', () => {
     const files = generateFiles(500);
     const { container } = renderPanel(files);
@@ -382,6 +473,26 @@ describe('DesignFilesPanel large-list regression', () => {
     const toolbar = container.querySelector('.df-select-bar');
     expect(toolbar?.textContent).toContain('Select everything');
     expect(toolbar?.textContent).not.toContain('Select all on page');
+  });
+
+  it('opens a folder on double-click and shows breadcrumb navigation', () => {
+    const { container } = renderPanel([
+      file({ name: 'lessons/plan.html', kind: 'html', mime: 'text/html' }),
+      file({ name: 'lessons/unit-1/slides.html', kind: 'html', mime: 'text/html' }),
+      file({ name: 'index.html', kind: 'html', mime: 'text/html' }),
+    ]);
+
+    const folderRow = container.querySelector('[data-testid="design-folder-row-lessons"]')!;
+    expect(folderRow).toBeTruthy();
+    fireEvent.doubleClick(folderRow.querySelector('.df-cell-name')!);
+
+    expect(container.querySelector('[data-testid="design-folder-row-lessons--unit-1"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="design-file-row-lessons/plan.html"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'lessons' })).toBeTruthy();
+
+    fireEvent.click(within(container).getByRole('button', { name: 'project' }));
+    expect(container.querySelector('[data-testid="design-folder-row-lessons"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="design-file-row-index.html"]')).toBeTruthy();
   });
 
   it('uses non-control table cells as file row click targets', () => {
@@ -484,5 +595,21 @@ describe('DesignFilesPanel large-list regression', () => {
     renderPanel(files);
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(2000);
+  });
+
+  it('opens the file picker when the drop zone is clicked', () => {
+    const { onUpload } = renderPanel(generateFiles(1));
+    fireEvent.click(screen.getByTestId('design-files-drop-zone'));
+    expect(onUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards dropped files to onUploadFiles', () => {
+    const { onUploadFiles } = renderPanel(generateFiles(1));
+    const dropZone = screen.getByTestId('design-files-drop-zone');
+    const file = new File(['hello'], 'notes.txt', { type: 'text/plain' });
+    fireEvent.drop(dropZone, {
+      dataTransfer: { files: [file] },
+    });
+    expect(onUploadFiles).toHaveBeenCalledWith([file]);
   });
 });

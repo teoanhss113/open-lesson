@@ -328,6 +328,7 @@ describe('DesignFilesPanel plugin folders', () => {
         onDeleteFiles={vi.fn()}
         onRenameFile={vi.fn()}
         onUpload={vi.fn()}
+        onUploadFolder={vi.fn()}
         onUploadFiles={vi.fn()}
         onPaste={vi.fn()}
         onNewSketch={vi.fn()}
@@ -364,6 +365,65 @@ describe('DesignFilesPanel plugin folders', () => {
     expect(container.textContent).toContain(
       'Sent to the agent. The CLI run will continue in chat.',
     );
+  });
+});
+
+describe('FileWorkspace Design Files tab', () => {
+  it('shows the file browser and clears persisted active when switching from a file tab', () => {
+    const onTabsStateChange = vi.fn();
+
+    render(
+      <FileWorkspace
+        projectId="project-1"
+        projectKind="prototype"
+        files={[workspaceFile('notes.md')]}
+        liveArtifacts={[]}
+        onRefreshFiles={vi.fn()}
+        isDeck={false}
+        tabsState={{ tabs: ['notes.md'], active: 'notes.md' }}
+        onTabsStateChange={onTabsStateChange}
+      />,
+    );
+
+    expect(screen.queryByTestId('design-files-upload-trigger')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('design-files-tab'));
+
+    expect(onTabsStateChange).toHaveBeenCalledWith({
+      tabs: ['notes.md'],
+      active: null,
+    });
+    expect(screen.getByTestId('design-files-upload-trigger')).toBeTruthy();
+    expect(screen.getByTestId('design-files-tab').className).toContain('active');
+  });
+
+  it('closes in-panel preview when Design Files is clicked again', async () => {
+    render(
+      <FileWorkspace
+        projectId="project-1"
+        projectKind="prototype"
+        files={[baseFile()]}
+        liveArtifacts={[]}
+        onRefreshFiles={vi.fn()}
+        isDeck={false}
+        tabsState={{ tabs: [], active: null }}
+        onTabsStateChange={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByTestId('design-file-row-mock.png');
+    const nameButton = row.querySelector<HTMLButtonElement>('.df-row-name-btn');
+    if (!nameButton) throw new Error('Could not find file name button');
+    fireEvent.click(nameButton);
+
+    expect(screen.getByTestId('design-file-preview')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('design-files-tab'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('design-file-preview')).toBeNull();
+    });
+    expect(screen.getByTestId('design-files-upload-trigger')).toBeTruthy();
   });
 });
 
