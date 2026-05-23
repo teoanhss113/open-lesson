@@ -63,11 +63,50 @@ vi.mock('../../src/providers/provider-models', () => ({
   fetchProviderModels: fetchProviderModelsMock,
 }));
 
+vi.mock('../../src/i18n/types', async () => {
+  const actual = await vi.importActual<typeof import('../../src/i18n/types')>(
+    '../../src/i18n/types',
+  );
+  return {
+    ...actual,
+    LOCALES: ['en', 'vi', 'zh-CN', 'fa', 'de'],
+  };
+});
+
+
 import { SettingsDialog } from '../../src/components/SettingsDialog';
 import type { SettingsSection } from '../../src/components/SettingsDialog';
 import { I18nProvider } from '../../src/i18n';
 import { LOCALES } from '../../src/i18n/types';
 import type { AgentInfo, AppConfig, AppVersionInfo } from '../../src/types';
+
+function createStorageStub(): Storage {
+  const store = new Map<string, string>();
+  return {
+    getItem: (k) => (store.has(k) ? store.get(k)! : null),
+    setItem: (k, v) => { store.set(k, v); },
+    removeItem: (k) => { store.delete(k); },
+    clear: () => { store.clear(); },
+    key: (i) => Array.from(store.keys())[i] ?? null,
+    get length() { return store.size; },
+  } satisfies Storage;
+}
+
+beforeEach(() => {
+  const stub = createStorageStub();
+  vi.stubGlobal('localStorage', stub);
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', {
+      value: stub,
+      writable: true,
+      configurable: true,
+    });
+  }
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const baseConfig: AppConfig = {
   mode: 'api',
@@ -1388,7 +1427,7 @@ describe('SettingsDialog MCP server interactions', () => {
       expect(screen.getByText(/claude mcp add-json --scope user open-design/i)).toBeTruthy();
     });
     expect(screen.getByText(/Restart your client to pick up the new server/i)).toBeTruthy();
-    expect(screen.getByText(/Open Design must be running for MCP tool calls to succeed/i)).toBeTruthy();
+    expect(screen.getByText(/The daemon must be running for MCP tool calls to succeed/i)).toBeTruthy();
   });
 
   it('switches client instructions and snippet content when a different MCP client is selected', async () => {
@@ -1664,7 +1703,7 @@ describe('SettingsDialog appearance interactions', () => {
     );
 
     expect(screen.getByRole('radio', { name: 'Default accent color' }).getAttribute('aria-checked')).toBe('true');
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#c96442');
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('');
   });
 
   it('live previews explicit themes and removes the explicit document theme when switching back to System', () => {
@@ -1727,12 +1766,12 @@ describe('SettingsDialog appearance interactions', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: 'Default accent color' }));
 
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#c96442');
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('');
 
     await waitForPersist(
       onPersist,
       expect.objectContaining({
-        accentColor: '#c96442',
+        accentColor: '#00d4a4',
       }),
       {},
     );
@@ -2047,7 +2086,7 @@ describe('SettingsDialog skills section', () => {
       expect(screen.getByText('skill body for blog-post')).toBeTruthy();
     });
 
-    const toggles = screen.getAllByTitle('Toggle');
+    const toggles = screen.getAllByLabelText('Toggle');
     fireEvent.click(toggles[0] as HTMLElement);
 
     await waitForPersist(
@@ -2102,7 +2141,7 @@ describe('SettingsDialog design systems section', () => {
       expect(screen.getByText('design system body for signal-green')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getAllByTitle('Toggle')[0] as HTMLElement);
+    fireEvent.click(screen.getAllByLabelText('Toggle')[0] as HTMLElement);
 
     await waitForPersist(
       onPersist,

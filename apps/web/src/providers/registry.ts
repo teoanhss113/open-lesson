@@ -468,7 +468,7 @@ export interface ConnectorActionResult {
 }
 
 function popupBlockedMessage(): string {
-  return 'Popup blocked. Allow popups for Open Design and try again.';
+  return 'Popup blocked. Allow popups for Curriculum Workspace and try again.';
 }
 
 async function decodeConnectorError(resp: Response): Promise<string> {
@@ -1180,6 +1180,44 @@ export async function fetchProjectFilePreview(
 }
 
 /**
+ * Triggers embedded-media extraction for a document/PDF/PPTX/XLSX file
+ * without building a full text preview. Called fire-and-forget from
+ * DesignFilesPanel when the user selects a file so the `.df-preview`
+ * media grid is populated promptly, even for files uploaded before
+ * this extraction-on-upload feature existed.
+ */
+export async function triggerExtractDocumentMedia(
+  projectId: string,
+  name: string,
+): Promise<void> {
+  try {
+    await fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(name)}/extract-media`,
+      { method: 'POST' },
+    );
+  } catch {
+    // Extraction is best-effort; ignore errors silently.
+  }
+}
+
+export async function fetchExtractedDocumentMedia(
+  projectId: string,
+  name: string,
+): Promise<string[]> {
+  try {
+    const resp = await fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(name)}/extracted-media`,
+    );
+    if (!resp.ok) return [];
+    const json = (await resp.json()) as { extracted: string[] };
+    return json.extracted ?? [];
+  } catch {
+    return [];
+  }
+}
+
+
+/**
  * Variant of `fetchProjectFilePreview` that exposes the daemon's
  * error status / message so callers can decide whether to fall back
  * (e.g. parse the .pptx client-side when the daemon rejects a large
@@ -1403,9 +1441,16 @@ export async function uploadProjectFile(
 const PROJECT_UPLOAD_BATCH_SIZE = 12;
 const PROJECT_FOLDER_UPLOAD_BATCH_SIZE = 1;
 
-function projectUploadRelativePath(file: File): string {
+function projectUploadRelativePath(file: File, destinationFolder?: string): string {
   const withRelativePath = file as File & { webkitRelativePath?: string };
-  return withRelativePath.webkitRelativePath || file.name;
+  const relative = withRelativePath.webkitRelativePath || file.name;
+  const destination = destinationFolder?.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') ?? '';
+  if (!destination) return relative;
+  return relative ? `${destination}/${relative}` : destination;
+}
+
+export interface UploadProjectFilesOptions {
+  destinationFolder?: string;
 }
 
 export interface ProjectUploadFailure {
@@ -1445,9 +1490,13 @@ function parseUploadError(
 export async function uploadProjectFiles(
   projectId: string,
   files: File[],
+  options?: UploadProjectFilesOptions,
 ): Promise<UploadProjectFilesResult> {
   if (files.length === 0) return { uploaded: [], failed: [] };
 
+  const destinationFolder = options?.destinationFolder
+    ?.replace(/\\/g, '/')
+    .replace(/^\/+|\/+$/g, '');
   const uploaded: ChatAttachment[] = [];
   const failed: ProjectUploadFailure[] = [];
   let error: string | undefined;
@@ -1456,6 +1505,7 @@ export async function uploadProjectFiles(
     const batch = files.slice(i, i + PROJECT_UPLOAD_BATCH_SIZE);
     const remaining = files.slice(i + PROJECT_UPLOAD_BATCH_SIZE);
     const form = new FormData();
+    if (destinationFolder) form.append('destination', destinationFolder);
     for (const f of batch) form.append('files', f);
 
     try {
@@ -1519,9 +1569,13 @@ export async function uploadProjectFiles(
 export async function uploadProjectFolder(
   projectId: string,
   files: File[],
+  options?: UploadProjectFilesOptions,
 ): Promise<UploadProjectFilesResult> {
   if (files.length === 0) return { uploaded: [], failed: [] };
 
+  const destinationFolder = options?.destinationFolder
+    ?.replace(/\\/g, '/')
+    .replace(/^\/+|\/+$/g, '');
   const uploaded: ChatAttachment[] = [];
   const failed: ProjectUploadFailure[] = [];
   let error: string | undefined;
@@ -1531,7 +1585,7 @@ export async function uploadProjectFolder(
     const remaining = files.slice(i + PROJECT_FOLDER_UPLOAD_BATCH_SIZE);
     const form = new FormData();
     for (const f of batch) {
-      const relativePath = projectUploadRelativePath(f);
+      const relativePath = projectUploadRelativePath(f, destinationFolder);
       form.append('files', f, f.name);
       form.append('paths', relativePath);
     }
@@ -1626,6 +1680,39 @@ export async function deleteProjectFile(
   } catch {
     return false;
   }
+}
+
+export async function deleteProjectFolder(
+  projectId: string,
+  folderPath: string,
+): Promise<boolean> {
+  try {
+    const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/folders`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: folderPath }),
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function createProjectFolder(
+  projectId: string,
+  folderPath: string,
+): Promise<ProjectFile> {
+  const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/folders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: folderPath }),
+  });
+  if (!resp.ok) {
+    const errorBody = await readApiErrorBody(resp);
+    throw new Error(errorBody.message);
+  }
+  const json = (await resp.json()) as { file: ProjectFile };
+  return json.file;
 }
 
 export async function renameProjectFile(
@@ -1839,4 +1926,3 @@ export async function updateCurriculumStatus(
     };
   }
 }
-

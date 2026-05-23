@@ -61,6 +61,7 @@ import {
   listTemplates,
   deleteTemplate,
   patchProject,
+  createConversation,
 } from './state/projects';
 import type {
   PluginShareAction,
@@ -958,6 +959,29 @@ export function App() {
     void patchProject(projectId, { pendingPrompt: null });
   }, [route]);
 
+  const handleStartProjectConversation = useCallback(
+    async (projectId: string, prompt: string): Promise<boolean> => {
+      const pendingPrompt = prompt.trim();
+      if (!projectId || !pendingPrompt) return false;
+      const freshConversation = await createConversation(projectId);
+      if (!freshConversation) return false;
+      const updated = await patchProject(projectId, { pendingPrompt });
+      if (!updated) return false;
+      const seededProject = { ...updated, pendingPrompt };
+      setProjects((curr) =>
+        curr.map((p) => (p.id === projectId ? seededProject : p)),
+      );
+      navigate({
+        kind: 'project',
+        projectId,
+        conversationId: freshConversation.id,
+        fileName: null,
+      });
+      return true;
+    },
+    [],
+  );
+
   const handleTouchProject = useCallback(() => {
     const projectId = route.kind === 'project' ? route.projectId : null;
     if (!projectId) return;
@@ -1208,6 +1232,7 @@ export function App() {
         projectsLoading={projectsLoading}
         promptTemplatesLoading={promptTemplatesLoading}
         onCreateProject={handleCreateProject}
+        onStartProjectConversation={handleStartProjectConversation}
         onCreatePluginShareProject={handleCreatePluginShareProject}
         onImportClaudeDesign={handleImportClaudeDesign}
         onImportFolder={handleImportFolder}

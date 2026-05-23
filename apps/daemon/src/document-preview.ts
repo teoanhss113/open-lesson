@@ -1,9 +1,10 @@
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import JSZip from 'jszip';
+import { EXTRACTED_DOCUMENT_MEDIA_DIR } from '@open-design/contracts';
 import { kindFor } from './projects.js';
 
 const execFileP = promisify(execFile);
@@ -44,9 +45,8 @@ async function extractAndSaveZipImages(
   mediaFolder: string,
 ): Promise<string[]> {
   const extractedFiles: string[] = [];
-  const cleanPrefix = path
-    .basename(originalFilename, path.extname(originalFilename))
-    .replace(/[^a-zA-Z0-9_-]/g, '_');
+  const sourceSlug = sourceMediaSlug(originalFilename);
+  const targetDir = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, sourceSlug);
 
   const mediaEntries = Object.keys(zip.files).filter((name) => {
     const entry = zip.files[name];
@@ -61,24 +61,190 @@ async function extractAndSaveZipImages(
     return [];
   }
 
+  await rm(targetDir, { recursive: true, force: true }).catch(() => {});
+
   for (const entryName of mediaEntries) {
     const entry = zip.file(entryName);
     if (!entry) continue;
 
-    const baseName = path.basename(entryName);
-    const targetFileName = `${cleanPrefix}-media-${baseName}`;
-    const targetPath = path.join(projectDir, targetFileName);
+    const baseName = sanitizeMediaAssetName(path.basename(entryName));
+    const targetFileName = await uniqueMediaAssetName(targetDir, baseName);
+    const targetPath = path.join(targetDir, targetFileName);
+    const relativeTarget = path.posix.join(EXTRACTED_DOCUMENT_MEDIA_DIR, sourceSlug, targetFileName);
 
     try {
       const buffer = await entry.async('nodebuffer');
+      await mkdir(targetDir, { recursive: true });
       await writeFile(targetPath, buffer);
-      extractedFiles.push(targetFileName);
+      extractedFiles.push(relativeTarget);
     } catch (err) {
       console.error(`Failed to extract zip media entry ${entryName}:`, err);
     }
   }
 
   return extractedFiles;
+}
+
+function sourceMediaSlug(originalFilename: string): string {
+  const ext = path.extname(originalFilename).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const base = path.basename(originalFilename, path.extname(originalFilename));
+  const stem = base.normalize('NFC').replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^_+|_+$/g, '');
+  if (stem) return ext ? `${stem}-${ext}` : stem;
+  return ext || 'document';
+}
+
+/** Backward-compatible slug without extension — used to find media
+ *  created before the ext-suffix was added. */
+function sourceMediaSlugLegacy(originalFilename: string): string {
+  const base = path.basename(originalFilename, path.extname(originalFilename));
+  return base.normalize('NFC').replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^_+|_+$/g, '') || 'document';
+}
+
+function sanitizeMediaAssetName(raw: string): string {
+  const parsed = path.parse(raw);
+  const name = (parsed.name || 'image')
+    .normalize('NFC')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/^_+|_+$/g, '') || 'image';
+  const ext = parsed.ext.replace(/[^a-zA-Z0-9.]/g, '').toLowerCase();
+  return `${name}${ext || '.bin'}`;
+}
+
+async function uniqueMediaAssetName(dir: string, preferredName: string): Promise<string> {
+  const parsed = path.parse(preferredName);
+  let candidate = preferredName;
+  for (let i = 2; ; i += 1) {
+    try {
+      await readFile(path.join(dir, candidate));
+      candidate = `${parsed.name}-${i}${parsed.ext}`;
+    } catch (err: any) {
+      if (err?.code === 'ENOENT') return candidate;
+      return candidate;
+    }
+  }
+}
+
+async function extractAndSavePdfImages(
+  buffer: Buffer,
+  originalFilename: string,
+  projectDir: string,
+): Promise<string[]> {
+  const tmpDir = await mkdtemp(path.join(tmpdir(), 'od-pdf-media-'));
+  const inputFile = path.join(tmpDir, 'input.pdf');
+  const extractedFiles: string[] = [];
+  const sourceSlug = sourceMediaSlug(originalFilename);
+  const targetDir = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, sourceSlug);
+
+  try {
+    await writeFile(inputFile, buffer, { flag: 'wx' });
+
+    // Strategy 1: pdfimages extracts embedded image objects (photos, logos).
+    let entries: string[] = [];
+    try {
+      const prefix = path.join(tmpDir, 'image');
+      await execFileP('pdfimages', ['-png', inputFile, prefix], {
+        timeout: 15_000,
+        maxBuffer: 2 * 1024 * 1024,
+      });
+      entries = (await readdir(tmpDir))
+        .filter((name) => /^image-\d+\.(?:png|ppm|pbm|jpg|jpeg)$/i.test(name))
+        .sort(numericPathSort);
+    } catch {
+      // pdfimages not available — try pdftoppm (also from poppler-utils)
+    }
+
+    // Strategy 2: pdftoppm renders each page as a PNG (great for slide previews).
+    if (entries.length === 0) {
+      try {
+        const prefix = path.join(tmpDir, 'slide');
+        await execFileP('pdftoppm', ['-png', '-r', '150', inputFile, prefix], {
+          timeout: 30_000,
+          maxBuffer: 8 * 1024 * 1024,
+        });
+        entries = (await readdir(tmpDir))
+          .filter((name) => /slide-\d+\.\w+/.test(name))
+          .sort(numericPathSort);
+      } catch {
+        console.warn(
+          'PDF image extraction requires poppler-utils.\n' +
+          '  Install it with:  brew install poppler   (macOS)\n' +
+          '  or:               apt install poppler-utils  (Linux)\n' +
+          '  Will skip PDF image extraction for:', originalFilename,
+        );
+      }
+    }
+
+    if (entries.length > 0) {
+      await rm(targetDir, { recursive: true, force: true }).catch(() => {});
+    }
+
+    for (const entry of entries) {
+      const parsed = path.parse(entry);
+      const ext = parsed.ext.toLowerCase().replace(/\.ppm$|\.pbm$/, '.png');
+      const preferredName = sanitizeMediaAssetName(`${parsed.name}${ext}`);
+      const targetFileName = await uniqueMediaAssetName(targetDir, preferredName);
+      const targetPath = path.join(targetDir, targetFileName);
+      const relativeTarget = path.posix.join(EXTRACTED_DOCUMENT_MEDIA_DIR, sourceSlug, targetFileName);
+      await mkdir(targetDir, { recursive: true });
+      await writeFile(targetPath, await readFile(path.join(tmpDir, entry)));
+      extractedFiles.push(relativeTarget);
+    }
+  } catch {
+    return [];
+  } finally {
+    rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+
+  return extractedFiles;
+}
+
+function extractedMediaSection(sourceKind: string, extracted: string[]): PreviewSection {
+  return {
+    title: 'MANDATORY Extracted Assets & Images — MUST USE',
+    lines: [
+      `CRITICAL INSTRUCTION FOR GENERATING HTML/LESSONS:`,
+      `This source ${sourceKind} contains actual images/diagrams/slides that have been extracted and saved to the project directory.`,
+      `When generating HTML/CSS materials for this document, you MUST include and embed ALL these images in the generated HTML.`,
+      `DO NOT use placeholders, DO NOT use blank divs, and DO NOT ignore them.`,
+      `To use them, insert these exact <img> tags directly into your HTML:`,
+      '',
+      ...extracted.map((img) => `- <img src="${img}" alt="${path.basename(img)}" />`),
+      '',
+      `Each of these images corresponds to a page, slide, or diagram in the original file. Ensure they are displayed in a clean, logical grid or flow in the final output so teachers and students can see them.`,
+    ],
+  };
+}
+
+/**
+ * Lightweight extraction-only path: extracts embedded images from a document
+ * and writes them to `_document_media/{slug}/` without building or returning
+ * any text-preview sections. Safe to call fire-and-forget at upload time so
+ * the `.df-preview` media grid is populated immediately.
+ *
+ * Returns the list of relative paths written (empty if extraction fails or the
+ * file type has no embedded images).
+ */
+export async function extractDocumentMediaOnly(
+  file: PreviewFile,
+  projectDir: string,
+): Promise<string[]> {
+  const kind = kindFor(file.name);
+  if (kind === 'pdf') {
+    return extractAndSavePdfImages(file.buffer, file.name, projectDir).catch(() => []);
+  }
+  if (!['document', 'presentation', 'spreadsheet'].includes(kind)) return [];
+  try {
+    assertPreviewInputSize(file.buffer.length);
+    const zip = await JSZip.loadAsync(file.buffer);
+    assertZipPreviewSize(zip);
+    const mediaFolder =
+      kind === 'document' ? 'word/media/' :
+      kind === 'presentation' ? 'ppt/media/' :
+      'xl/media/';
+    return extractAndSaveZipImages(zip, file.name, projectDir, mediaFolder).catch(() => []);
+  } catch {
+    return [];
+  }
 }
 
 export async function buildDocumentPreview(file: PreviewFile, projectDir?: string) {
@@ -92,7 +258,7 @@ export async function buildDocumentPreview(file: PreviewFile, projectDir?: strin
     return {
       kind: previewKind,
       title: path.basename(file.name),
-      sections: await pdfPreviewQueue(() => previewPdf(file.buffer)),
+      sections: await pdfPreviewQueue(() => previewPdf(file.buffer, projectDir, file.name)),
     };
   }
 
@@ -116,11 +282,15 @@ export async function buildDocumentPreview(file: PreviewFile, projectDir?: strin
   return {
     kind: previewKind,
     title: path.basename(file.name),
-    sections: await previewXlsx(zip),
+    sections: await previewXlsx(zip, projectDir, file.name),
   };
 }
 
-async function previewPdf(buffer: Buffer): Promise<PreviewSection[]> {
+async function previewPdf(
+  buffer: Buffer,
+  projectDir?: string,
+  originalFilename?: string,
+): Promise<PreviewSection[]> {
   assertPreviewInputSize(buffer.length);
   const tmpDir = await mkdtemp(path.join(tmpdir(), 'od-preview-'));
   const tmpFile = path.join(tmpDir, 'input.pdf');
@@ -134,12 +304,19 @@ async function previewPdf(buffer: Buffer): Promise<PreviewSection[]> {
       .split(/\r?\n/)
       .map((line) => line.trimEnd())
       .filter((line) => line.trim().length > 0);
-    return [
+    const sections: PreviewSection[] = [
       {
         title: 'PDF',
         lines: lines.length > 0 ? lines : ['No readable text found.'],
       },
     ];
+    if (projectDir && originalFilename) {
+      const extracted = await extractAndSavePdfImages(buffer, originalFilename, projectDir);
+      if (extracted.length > 0) {
+        sections.push(extractedMediaSection('PDF', extracted));
+      }
+    }
+    return sections;
   } catch {
     return [
       {
@@ -169,15 +346,7 @@ async function previewDocx(
   if (projectDir && originalFilename) {
     const extracted = await extractAndSaveZipImages(zip, originalFilename, projectDir, 'word/media/');
     if (extracted.length > 0) {
-      sections.push({
-        title: 'Extracted Reference Images',
-        lines: [
-          'This document contains reference images that have been extracted and saved to your project assets directory.',
-          'You can reuse these images directly in your generated HTML documents by referencing their clean file name via <img> tags:',
-          '',
-          ...extracted.map((img) => `- <img src="${img}" alt="${img}">`),
-        ],
-      });
+      sections.push(extractedMediaSection('document', extracted));
     }
   }
 
@@ -209,22 +378,18 @@ async function previewPptx(
   if (projectDir && originalFilename) {
     const extracted = await extractAndSaveZipImages(zip, originalFilename, projectDir, 'ppt/media/');
     if (extracted.length > 0) {
-      finalSections.push({
-        title: 'Extracted Reference Images',
-        lines: [
-          'This presentation contains reference images that have been extracted and saved to your project assets directory.',
-          'You can reuse these images directly in your generated HTML documents by referencing their clean file name via <img> tags:',
-          '',
-          ...extracted.map((img) => `- <img src="${img}" alt="${img}">`),
-        ],
-      });
+      finalSections.push(extractedMediaSection('presentation', extracted));
     }
   }
 
   return finalSections;
 }
 
-async function previewXlsx(zip: JSZip): Promise<PreviewSection[]> {
+async function previewXlsx(
+  zip: JSZip,
+  projectDir?: string,
+  originalFilename?: string,
+): Promise<PreviewSection[]> {
   const sharedStrings = await readSharedStrings(zip);
   const workbook = await readWorkbook(zip);
   const sections: PreviewSection[] = [];
@@ -236,9 +401,18 @@ async function previewXlsx(zip: JSZip): Promise<PreviewSection[]> {
       lines: lines.length > 0 ? lines : ['No readable cell values found.'],
     });
   }
-  return sections.length > 0
+  const finalSections = sections.length > 0
     ? sections
     : [{ title: 'Spreadsheet', lines: ['No readable sheets found.'] }];
+
+  if (projectDir && originalFilename) {
+    const extracted = await extractAndSaveZipImages(zip, originalFilename, projectDir, 'xl/media/');
+    if (extracted.length > 0) {
+      finalSections.push(extractedMediaSection('spreadsheet', extracted));
+    }
+  }
+
+  return finalSections;
 }
 
 async function readSharedStrings(zip: JSZip): Promise<string[]> {

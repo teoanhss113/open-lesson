@@ -287,24 +287,26 @@ describe('ProjectView daemon cleanup', () => {
     listActiveChatRuns.mockResolvedValue([]);
     streamViaDaemon.mockResolvedValue(undefined);
 
+    const testProject = {
+      id: 'project-2',
+      name: 'Project',
+      skillId: null,
+      designSystemId: null,
+      pendingPrompt: 'design a landing page for a coffee shop',
+    };
+
     chatPaneSpy.mockClear();
     window.sessionStorage.setItem('od:auto-send-first:project-2', '1');
 
     try {
       render(
         <ProjectView
-          project={{
-            id: 'project-2',
-            name: 'Project',
-            skillId: null,
-            designSystemId: null,
-            pendingPrompt: 'design a landing page for a coffee shop',
-          } as never}
+          project={testProject as never}
           routeFileName={null}
           config={{ mode: 'daemon', agentId: 'agent-1', notifications: undefined, agentModels: {} } as never}
           agents={[{ id: 'agent-1', name: 'OpenCode', models: [] } as never]}
           skills={[]}
-        designTemplates={[]}
+          designTemplates={[]}
           designSystems={[]}
           daemonLive
           onModeChange={() => {}}
@@ -313,7 +315,9 @@ describe('ProjectView daemon cleanup', () => {
           onRefreshAgents={() => {}}
           onOpenSettings={() => {}}
           onBack={() => {}}
-          onClearPendingPrompt={() => {}}
+          onClearPendingPrompt={() => {
+            testProject.pendingPrompt = null as any;
+          }}
           onTouchProject={() => {}}
           onProjectChange={() => {}}
           onProjectsRefresh={() => {}}

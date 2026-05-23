@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { Icon } from './Icon';
 import { Toggle } from './Toggle';
+import { FlexGrow, FlexRow } from './UiPrimitives';
 import { useT } from '../i18n';
 
 type Translate = ReturnType<typeof useT>;
@@ -684,28 +685,10 @@ export function MemorySection() {
       {editing ? (
         <div
           ref={editorRef}
-          className="library-card"
-          style={{
-            flexDirection: 'column',
-            alignItems: 'stretch',
-            gap: 'var(--spacing-sm)',
-            padding: 'var(--spacing-sm)',
-            background: 'var(--surface-subtle, rgba(0,0,0,0.02))',
-            border: '1px solid var(--border-subtle, rgba(0,0,0,0.08))',
-            borderRadius: 'var(--rounded-lg)',
-          }}
+          className="memory-card"
         >
           {!editing.id ? (
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: 'var(--spacing-xs)',
-                paddingBottom: 'var(--spacing-xs)',
-                borderBottom: '1px solid var(--border-subtle, rgba(0,0,0,0.06))',
-              }}
-            >
+            <div className="memory-starters-row">
               <span
                 style={{
                   ...FIELD_LABEL_STYLE,
@@ -720,7 +703,7 @@ export function MemorySection() {
                 <button
                   key={starter.nameKey}
                   type="button"
-                  className="filter-pill"
+                  className="filter-pill filter-pill-inner"
                   onClick={() =>
                     setEditing({
                       id: editing.id,
@@ -731,7 +714,6 @@ export function MemorySection() {
                     })
                   }
                   title={t(starter.descKey)}
-                  style={{ display: 'inline-flex', alignItems: 'center' }}
                 >
                   {t(starter.nameKey)}
                 </button>
@@ -739,15 +721,10 @@ export function MemorySection() {
             </div>
           ) : null}
           <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--spacing-sm)',
-              width: '100%',
-            }}
+            className="memory-editor"
           >
-            <div style={{ display: 'flex', gap: 'var(--spacing-xs)', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="editor-row">
+              <FlexGrow>
                 <label style={FIELD_LABEL_STYLE}>
                   {t('settings.memoryNameLabel')}
                 </label>
@@ -759,10 +736,10 @@ export function MemorySection() {
                   onChange={(e) =>
                     setEditing({ ...editing, name: e.target.value })
                   }
-                  style={{ width: '100%' }}
+                  className="w-full"
                 />
-              </div>
-              <div style={{ flex: '0 0 auto', minWidth: 120 }}>
+              </FlexGrow>
+              <div className="editor-help">
                 <label style={FIELD_LABEL_STYLE}>
                   {t('settings.memoryTypeLabel')}
                 </label>
@@ -774,7 +751,7 @@ export function MemorySection() {
                       type: e.target.value as MemoryType,
                     })
                   }
-                  style={{ width: '100%' }}
+                  className="w-full"
                 >
                   {TYPES.map((tt) => (
                     <option key={tt} value={tt}>
@@ -795,7 +772,7 @@ export function MemorySection() {
                 onChange={(e) =>
                   setEditing({ ...editing, description: e.target.value })
                 }
-                style={{ width: '100%' }}
+                className="w-full"
               />
             </div>
             <div>
@@ -809,38 +786,22 @@ export function MemorySection() {
                   setEditing({ ...editing, body: e.target.value })
                 }
                 rows={7}
-                style={{
-                  width: '100%',
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  lineHeight: 1.5,
-                }}
+                className="editor-textarea-mono"
               />
-              <p className="hint" style={{ fontSize: 11, marginTop: 'var(--spacing-xxs)' }}>
+              <p className="hint hint-compact">
                 {t('settings.memoryBodyHint')}
               </p>
             </div>
           </div>
           <div
-            style={{
-              display: 'flex',
-              gap: 'var(--spacing-xs)',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-            }}
+            className="editor-footer"
           >
             <span
-              className="hint"
-              style={{
-                fontSize: 11,
-                margin: 0,
-                color: 'var(--text-muted, #888)',
-              }}
+              className="hint-label"
             >
               {t('settings.memorySaveHint')}
             </span>
-            <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
+            <FlexRow align="center">
               <button type="button" className="ghost" onClick={cancelEdit}>
                 {t('common.cancel')}
               </button>
@@ -852,7 +813,7 @@ export function MemorySection() {
               >
                 {editing.id ? t('common.save') : t('common.create')}
               </button>
-            </div>
+            </FlexRow>
           </div>
         </div>
       ) : null}
@@ -929,7 +890,7 @@ export function MemorySection() {
                     <Icon name="close" size={14} />
                   </button>
                   {previewId === entry.id && (
-                    <div className="library-preview" style={{ width: '100%' }}>
+                    <div className="library-preview w-full">
                       {previewBody === null ? (
                         <p>{t('common.loading')}</p>
                       ) : previewBody ? (
@@ -967,19 +928,12 @@ export function MemorySection() {
           ) : null}
         </summary>
         <div
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 'var(--spacing-xs)',
-            marginTop: 'var(--spacing-xs)',
-            marginBottom: 'var(--spacing-xs)',
-          }}
+          className="memory-row"
         >
-          <span style={{ flex: 1, fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+          <span className="memory-label">
             {t('settings.memoryExtractionsHint')}
           </span>
-          <div style={{ display: 'flex', gap: 'var(--spacing-xs)', flexShrink: 0 }}>
+          <div className="memory-actions">
           {extractions.length > 0 ? (
             <button
               type="button"
@@ -988,7 +942,7 @@ export function MemorySection() {
               title={t('settings.memoryExtractionsClearTitle')}
             >
               <Icon name="close" size={12} />{' '}
-              <span style={{ marginLeft: 'var(--spacing-xxs)' }}>
+              <span className="memory-name">
                 {t('settings.memoryExtractionsClear')}
               </span>
             </button>
@@ -1001,7 +955,7 @@ export function MemorySection() {
             title={t('settings.memoryExtractionsRefresh')}
           >
             <Icon name="refresh" size={12} className={isRefreshing ? 'icon-spin' : ''} />{' '}
-            <span style={{ marginLeft: 'var(--spacing-xxs)' }}>
+            <span className="memory-name">
               {isRefreshing ? t('settings.memoryExtractionsRefreshing') : t('settings.memoryExtractionsRefresh')}
             </span>
           </button>
@@ -1052,11 +1006,10 @@ export function MemorySection() {
                     ) : null}
                     <button
                       type="button"
-                      className="ghost memory-extraction-delete"
+                      className="ghost memory-extraction-delete memory-delete-btn"
                       onClick={() => void onDeleteExtraction(record.id)}
                       title={t('settings.memoryExtractionDelete')}
                       aria-label={t('settings.memoryExtractionDelete')}
-                      style={{ marginLeft: 'auto', padding: '2px var(--spacing-xs)' }}
                     >
                       <Icon name="close" size={12} />
                     </button>
@@ -1122,17 +1075,11 @@ export function MemorySection() {
           value={indexDraft ?? index}
           onChange={(e) => setIndexDraft(e.target.value)}
           rows={8}
-          style={{ width: '100%', marginTop: 'var(--spacing-xs)', fontFamily: 'monospace' }}
+          className="memory-textarea"
         />
         <div
-          style={{
-            display: 'flex',
-            gap: 'var(--spacing-xs)',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginTop: 'var(--spacing-xs)',
-            flexWrap: 'wrap',
-          }}
+          className="editor-footer"
+          style={{ marginTop: 'var(--spacing-xs)' }}
         >
           <span
             className="hint"
@@ -1150,7 +1097,7 @@ export function MemorySection() {
               ? `● ${t('settings.memoryIndexUnsaved')} — ${t('settings.memoryIndexSaveHint')}`
               : t('settings.memoryIndexSaveHint')}
           </span>
-          <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
+          <FlexRow align="center">
             <button
               type="button"
               className="ghost"
@@ -1167,7 +1114,7 @@ export function MemorySection() {
             >
               {t('settings.memoryIndexSave')}
             </button>
-          </div>
+          </FlexRow>
         </div>
       </details>
     </section>

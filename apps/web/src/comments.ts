@@ -253,13 +253,16 @@ export function simplePositionLabel(position: PreviewComment['position']): strin
 
 export function selectionKindLabel(
   selectionKind: ChatCommentSelectionKind | undefined,
-  memberCount?: number,
+  memberCount: number | undefined,
+  t: (key: any, vars?: any) => string,
 ): string {
-  if (selectionKind === 'visual') return 'Visual mark';
+  if (selectionKind === 'visual') return t('chat.comments.selectionVisual');
   if (selectionKind === 'pod') {
-    return memberCount && memberCount > 0 ? `Pod · ${memberCount} items` : 'Pod';
+    return memberCount && memberCount > 0
+      ? t('chat.comments.selectionPodMany', { n: memberCount })
+      : t('chat.comments.selectionPod');
   }
-  return 'Element';
+  return t('chat.comments.selectionElement');
 }
 
 export function trimContextText(value: string): string {

@@ -11,9 +11,9 @@ import { useEffect, useState } from 'react';
 // state isn't trapped behind a `useState` boundary.
 export type EntryHomeView =
   | 'home'
-  | 'projects'
   | 'tasks'
   | 'plugins'
+  | 'templates'
   | 'design-systems'
   | 'integrations';
 
@@ -65,7 +65,10 @@ export function parseRoute(pathname: string): Route {
       }
       return { kind: 'project', projectId, conversationId: null, fileName: null };
     }
-    return { kind: 'home', view: 'projects' };
+    return { kind: 'home', view: 'home' };
+  }
+  if (parts[0] === 'templates') {
+    return { kind: 'home', view: 'templates' };
   }
   if (parts[0] === 'design-systems') {
     return { kind: 'home', view: 'design-systems' };
@@ -95,9 +98,9 @@ export function parseRoute(pathname: string): Route {
 
 export function buildPath(route: Route): string {
   if (route.kind === 'home') {
-    if (route.view === 'projects') return '/projects';
     if (route.view === 'tasks') return '/automations';
     if (route.view === 'plugins') return '/plugins';
+    if (route.view === 'templates') return '/templates';
     if (route.view === 'design-systems') return '/design-systems';
     if (route.view === 'integrations') return '/integrations';
     return '/';
@@ -133,11 +136,28 @@ export function navigate(route: Route, opts: { replace?: boolean } = {}): void {
 }
 
 export function useRoute(): Route {
-  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.pathname));
+  const [route, setRoute] = useState<Route>(() => {
+    const parsed = parseRoute(window.location.pathname);
+    replaceLegacyEntryPath(parsed);
+    return parsed;
+  });
   useEffect(() => {
-    const onPop = () => setRoute(parseRoute(window.location.pathname));
+    const onPop = () => {
+      const parsed = parseRoute(window.location.pathname);
+      replaceLegacyEntryPath(parsed);
+      setRoute(parsed);
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
   return route;
+}
+
+function replaceLegacyEntryPath(route: Route): void {
+  if (typeof window === 'undefined') return;
+  if (route.kind !== 'home') return;
+  const current = window.location.pathname;
+  if (current !== '/projects') return;
+  const target = buildPath(route);
+  if (target !== current) window.history.replaceState(null, '', target);
 }

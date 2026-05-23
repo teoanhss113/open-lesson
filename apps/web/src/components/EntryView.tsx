@@ -93,6 +93,10 @@ interface Props {
       pendingFiles?: File[];
     },
   ) => boolean | void | Promise<boolean | void>;
+  onStartProjectConversation: (
+    projectId: string,
+    prompt: string,
+  ) => boolean | Promise<boolean>;
   onCreatePluginShareProject: (
     pluginId: string,
     action: PluginShareAction,
@@ -249,6 +253,7 @@ export function EntryView({
   projectsLoading = false,
   promptTemplatesLoading: _promptTemplatesLoading = false,
   onCreateProject,
+  onStartProjectConversation,
   onCreatePluginShareProject,
   onImportClaudeDesign,
   onImportFolder,
@@ -314,6 +319,7 @@ export function EntryView({
   return (
     <EntryShell
       skills={skills}
+      designTemplates={designTemplates}
       designSystems={designSystems}
       projects={projects}
       templates={templates}
@@ -336,6 +342,7 @@ export function EntryView({
       onApiModelChange={onApiModelChange}
       onThemeChange={onThemeChange}
       onCreateProject={onCreateProject}
+      onStartProjectConversation={onStartProjectConversation}
       onCreatePluginShareProject={onCreatePluginShareProject}
       onImportClaudeDesign={onImportClaudeDesign}
       {...(onImportFolder ? { onImportFolder } : {})}

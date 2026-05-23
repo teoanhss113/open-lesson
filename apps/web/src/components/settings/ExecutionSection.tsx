@@ -783,7 +783,7 @@ export function ExecutionSection({
                             }
                           }}
                         >
-                          {renderModelOptions(selected.models!)}
+                          {renderModelOptions(selected.models!, t('settings.modelDefaultCli'))}
                           <option value={CUSTOM_MODEL_SENTINEL}>
                             {t('settings.modelCustom')}
                           </option>
@@ -919,7 +919,7 @@ export function ExecutionSection({
         <section className="settings-section settings-section-card settings-section-byok">
           <div className="section-head">
             <div>
-              <h3>{API_PROTOCOL_LABELS[apiProtocol]}</h3>
+              <h3>{t(API_PROTOCOL_LABELS[apiProtocol])}</h3>
             </div>
             <div className="section-head-actions">
               {(() => {
@@ -1064,7 +1064,7 @@ export function ExecutionSection({
             <div className="field-row">
               <input
                 type={showApiKey ? 'text' : 'password'}
-                placeholder={API_KEY_PLACEHOLDERS[apiProtocol]}
+                placeholder={t(API_KEY_PLACEHOLDERS[apiProtocol])}
                 value={cfg.apiKey}
                 onChange={(e) => updateApiConfig({ apiKey: e.target.value })}
                 onFocus={() => {

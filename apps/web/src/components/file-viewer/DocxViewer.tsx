@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, SyntheticEvent } from 'react';
+import { useT } from '../../i18n';
 import { projectFileUrl } from '../../providers/registry';
 import { buildSrcdoc } from '../../runtime/srcdoc';
+import { FlexCol } from '../UiPrimitives';
 
 export function DocxViewer({
   projectId,
@@ -15,6 +17,7 @@ export function DocxViewer({
   selectedPalette: string | null;
   onLoad?: () => void;
 }) {
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -88,7 +91,7 @@ export function DocxViewer({
 
     Promise.all([
       fetch(fileUrl).then((res) => {
-        if (!res.ok) throw new Error('Không thể tải tệp tin');
+        if (!res.ok) throw new Error(t('fileViewer.previewUnavailable'));
         return res.arrayBuffer();
       }),
       import('docx-preview'),
@@ -158,6 +161,22 @@ export function DocxViewer({
             let fallbackIndex = 0;
             const skipTags = new Set(['script', 'style', 'template', 'noscript', 'br']);
             
+            const measureWidth = () => {
+              if (!currentContainer) return;
+              const docxElements = currentContainer.querySelectorAll('.docx');
+              let maxWidth = 0;
+              docxElements.forEach((el: any) => {
+                const w = el.getBoundingClientRect().width;
+                if (w > maxWidth) maxWidth = w;
+              });
+              if (maxWidth > 0) {
+                window.parent.postMessage({
+                  type: 'od:docx-width',
+                  width: maxWidth + 48,
+                }, '*');
+              }
+            };
+
             const annotate = () => {
               if (!currentContainer) return;
               const allElements = currentContainer.querySelectorAll('*');
@@ -169,6 +188,7 @@ export function DocxViewer({
                 el.setAttribute('data-od-id', `docx-${tag}-${fallbackIndex++}`);
                 changed = true;
               });
+              measureWidth();
               if (changed && onLoad) {
                 onLoad();
               }
@@ -213,7 +233,7 @@ export function DocxViewer({
         if (currentIframe) {
           currentIframe.removeAttribute('data-docx-loaded');
         }
-        setError(err.message || 'Lỗi khi hiển thị tài liệu');
+        setError(err.message || t('fileViewer.previewUnavailable'));
         setLoading(false);
       });
   };
@@ -230,15 +250,14 @@ export function DocxViewer({
   }, [projectId, fileName, loading]);
 
   return (
-    <div
+    <FlexCol
+      gap={0}
       style={{
         position: 'relative',
         width: '100%',
         height: '100%',
         overflow: 'hidden',
         background: 'var(--bg-panel, #f3f4f6)',
-        display: 'flex',
-        flexDirection: 'column',
       }}
     >
       {loading && (
@@ -254,7 +273,7 @@ export function DocxViewer({
             zIndex: 10,
           }}
         >
-          Đang chuẩn bị hiển thị tài liệu...
+          {t('docxViewer.preparing')}
         </div>
       )}
       {error && (
@@ -289,6 +308,6 @@ export function DocxViewer({
           background: 'var(--bg-panel, #f3f4f6)',
         }}
       />
-    </div>
+    </FlexCol>
   );
 }

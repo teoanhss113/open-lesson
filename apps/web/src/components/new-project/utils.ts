@@ -359,6 +359,44 @@ export function buildMetadata(input: {
   return { kind: 'other', ...base, ...inspirations };
 }
 
+export function inferUnifiedCreateSurface(text: string): {
+  tab: CreateTab;
+  mediaSurface: MediaSurface;
+  curriculumKind?: CurriculumKind;
+} {
+  const value = text.trim().toLowerCase();
+  if (!value) return { tab: 'live-artifact', mediaSurface: 'image' };
+
+  const has = (pattern: RegExp) => pattern.test(value);
+  const curriculumKind: CurriculumKind | undefined =
+    has(/\b(homework|worksheet|exercise|assignment)\b|bài tập|bai tap/i)
+      ? 'homework'
+      : has(/\b(slides?|deck|ppt|powerpoint)\b|slide|bài giảng|bai giang/i)
+        ? 'slides'
+        : has(/\b(teaching guide|teacher guide)\b|giáo án dạy|giao an day/i)
+          ? 'teaching-guide'
+          : has(/\b(review|validation|rollout)\b|rà soát|ra soat|thẩm định|tham dinh/i)
+            ? 'curriculum-review'
+            : undefined;
+
+  if (has(/\b(video|mp4|movie|clip)\b/i)) return { tab: 'media', mediaSurface: 'video', curriculumKind };
+  if (has(/\b(audio|voice|speech|podcast|mp3|sound)\b/i)) return { tab: 'media', mediaSurface: 'audio', curriculumKind };
+  if (has(/\b(image|poster|illustration|thumbnail|cover)\b|ảnh|anh minh họa|anh minh hoa/i)) {
+    return { tab: 'media', mediaSurface: 'image', curriculumKind };
+  }
+  if (has(/\b(template|starter)\b|mẫu|mau/i)) return { tab: 'template', mediaSurface: 'image', curriculumKind };
+  if (has(/\b(slides?|deck|ppt|powerpoint)\b|slide|bài giảng|bai giang/i)) {
+    return { tab: 'deck', mediaSurface: 'image', curriculumKind };
+  }
+  if (
+    has(/\b(web|website|prototype|html|interactive|quiz|simulator|calculator)\b|trực quan|tuong tac|tương tác|làm bài tập|lam bai tap|trắc nghiệm|trac nghiem/i)
+  ) {
+    return { tab: 'prototype', mediaSurface: 'image', curriculumKind };
+  }
+  if (has(/\b(other|misc|freeform)\b|khác|khac/i)) return { tab: 'other', mediaSurface: 'image', curriculumKind };
+  return { tab: 'live-artifact', mediaSurface: 'image', curriculumKind };
+}
+
 export function titleForTab(
   tab: CreateTab,
   mediaSurface: MediaSurface,
@@ -424,4 +462,44 @@ export function defaultCurriculumWorkspaceSkillId(skills: Array<{ id: string; mo
   return prototypes.find((s) => s.defaultFor?.includes('prototype'))?.id
     ?? prototypes[0]?.id
     ?? null;
+}
+
+export function defaultUnifiedCreateSkillId(
+  skills: Array<{ id: string; mode?: string; surface?: string; defaultFor?: string[]; name?: string }>,
+  tab: CreateTab,
+  mediaSurface: MediaSurface,
+): string | null {
+  const byId = (...ids: string[]) => {
+    for (const id of ids) {
+      const skill = skills.find((s) => s.id === id);
+      if (skill) return skill.id;
+    }
+    return null;
+  };
+
+  if (tab === 'live-artifact') return defaultCurriculumWorkspaceSkillId(skills);
+  if (tab === 'prototype') {
+    return byId('web-prototype')
+      ?? skills.find((s) => s.defaultFor?.includes('prototype') && s.surface === 'web')?.id
+      ?? skills.find((s) => s.mode === 'prototype' && s.surface === 'web')?.id
+      ?? skills.find((s) => s.defaultFor?.includes('prototype'))?.id
+      ?? skills.find((s) => s.mode === 'prototype')?.id
+      ?? defaultCurriculumWorkspaceSkillId(skills);
+  }
+  if (tab === 'deck') {
+    return skills.find((s) => s.defaultFor?.includes('deck'))?.id
+      ?? skills.find((s) => s.mode === 'deck')?.id
+      ?? null;
+  }
+  if (tab === 'template') {
+    return skills.find((s) => s.defaultFor?.includes('template'))?.id
+      ?? skills.find((s) => s.mode === 'template')?.id
+      ?? null;
+  }
+  if (tab === 'media') {
+    return skills.find((s) => s.surface === mediaSurface)?.id
+      ?? skills.find((s) => s.mode === mediaSurface)?.id
+      ?? null;
+  }
+  return null;
 }

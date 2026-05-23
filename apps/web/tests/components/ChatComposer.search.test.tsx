@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChatComposer } from '../../src/components/ChatComposer';
 import { ANNOTATION_EVENT } from '../../src/components/PreviewDrawOverlay';
 import { uploadProjectFiles } from '../../src/providers/registry';
-import type { ChatAttachment, ChatCommentAttachment } from '../../src/types';
+import type { ChatAttachment, ChatCommentAttachment, SkillSummary } from '../../src/types';
 
 vi.mock('../../src/providers/registry', async () => {
   const actual = await vi.importActual<typeof import('../../src/providers/registry')>(
@@ -28,6 +28,42 @@ afterEach(() => {
 });
 
 describe('ChatComposer /search command', () => {
+  it('routes web requests through the interactive prototype template for that turn', async () => {
+    const onSend = vi.fn();
+
+    render(
+      <ChatComposer
+        projectId="project-1"
+        projectFiles={[]}
+        streaming={false}
+        onEnsureProject={async () => 'project-1'}
+        onSend={onSend}
+        onStop={vi.fn()}
+        skills={[skill({ id: 'lesson-plan-generator', name: 'Lesson plan generator', mode: 'prototype' })]}
+        designTemplates={[skill({
+          id: 'web-prototype',
+          name: 'Web prototype',
+          mode: 'prototype',
+          surface: 'web',
+          defaultFor: ['prototype'],
+        })]}
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId('chat-composer-input'), {
+      target: { value: '@[ARMA - Homework] Tổng hợp.pdf Giúp tôi tạo web trực quan để làm bài tập cho tệp này' },
+    });
+    fireEvent.click(screen.getByTestId('chat-send'));
+
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
+    expect(onSend).toHaveBeenCalledWith(
+      '@[ARMA - Homework] Tổng hợp.pdf Giúp tôi tạo web trực quan để làm bài tập cho tệp này',
+      [],
+      [],
+      { skillIds: ['web-prototype'] },
+    );
+  });
+
   it('sends staged file attachments even when the text draft is empty', async () => {
     const onSend = vi.fn();
     mockedUploadProjectFiles.mockResolvedValue({
@@ -512,6 +548,22 @@ describe('ChatComposer /search command', () => {
     expect((input as HTMLTextAreaElement).value).toBe('keep this draft');
   });
 });
+
+function skill(overrides: Partial<SkillSummary> & Pick<SkillSummary, 'id' | 'name'>): SkillSummary {
+  return {
+    description: '',
+    triggers: [],
+    mode: 'prototype',
+    previewType: 'html',
+    designSystemRequired: false,
+    defaultFor: [],
+    upstream: null,
+    hasBody: true,
+    examplePrompt: '',
+    aggregatesExamples: false,
+    ...overrides,
+  };
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

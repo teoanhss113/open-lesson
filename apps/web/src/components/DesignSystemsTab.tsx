@@ -6,6 +6,7 @@ import {
 } from '../i18n/content';
 import { fetchDesignSystemShowcase } from '../providers/registry';
 import { buildSrcdoc } from '../runtime/srcdoc';
+import { Icon } from './Icon';
 import type { DesignSystemSummary, Surface } from '../types';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 }
 
 const CATEGORY_ORDER = [
+  'Slide',
   'Starter',
   'AI & LLM',
   'Developer Tools',
@@ -30,8 +32,9 @@ const CATEGORY_ORDER = [
 
 type SurfaceFilter = 'all' | Surface;
 
-const SURFACE_PILLS: { value: SurfaceFilter; labelKey: 'examples.modeAll' | 'ds.surfaceWeb' | 'ds.surfaceImage' | 'ds.surfaceVideo' | 'ds.surfaceAudio' }[] = [
+const SURFACE_PILLS: { value: SurfaceFilter; labelKey: 'examples.modeAll' | 'ds.surfaceWeb' | 'ds.surfaceImage' | 'ds.surfaceVideo' | 'ds.surfaceAudio' | 'ds.surfaceDeck' }[] = [
   { value: 'all', labelKey: 'examples.modeAll' },
+  { value: 'deck', labelKey: 'ds.surfaceDeck' },
   { value: 'web', labelKey: 'ds.surfaceWeb' },
   { value: 'image', labelKey: 'ds.surfaceImage' },
   { value: 'video', labelKey: 'ds.surfaceVideo' },
@@ -44,9 +47,12 @@ function surfaceOf(system: DesignSystemSummary): Surface {
 
 export function DesignSystemsTab({ systems, selectedId, onSelect, onPreview }: Props) {
   const { locale, t } = useI18n();
+
   const [filter, setFilter] = useState('');
   const [surfaceFilter, setSurfaceFilter] = useState<SurfaceFilter>('all');
   const [category, setCategory] = useState<string>('All');
+
+
   // Cache fetched showcase HTML across re-renders so cards never re-flicker
   // when the user filters / scrolls back. null = "in flight"; undefined =
   // "not yet requested". Mirrors the pattern used by ExamplesTab.
@@ -58,7 +64,7 @@ export function DesignSystemsTab({ systems, selectedId, onSelect, onPreview }: P
   );
 
   const surfaceCounts = useMemo(() => {
-    const counts: Record<SurfaceFilter, number> = { all: systems.length, web: 0, image: 0, video: 0, audio: 0 };
+    const counts: Record<SurfaceFilter, number> = { all: systems.length, deck: 0, web: 0, image: 0, video: 0, audio: 0 };
     for (const s of systems) counts[surfaceOf(s)]++;
     return counts;
   }, [systems]);
@@ -124,18 +130,25 @@ export function DesignSystemsTab({ systems, selectedId, onSelect, onPreview }: P
   return (
     <div className="tab-panel">
       <div className="tab-panel-toolbar">
-        <input
-          placeholder={t('ds.searchPlaceholder')}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+        <div className="toolbar-search">
+          <span className="search-icon" aria-hidden>
+            <Icon name="search" size={13} />
+          </span>
+          <input
+            placeholder={t('ds.searchPlaceholder')}
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
+        <div className="toolbar-right">
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
           {categories.map((c) => (
             <option key={c} value={c}>
               {renderCategory(c)}
             </option>
           ))}
-        </select>
+          </select>
+        </div>
       </div>
       <div
         className="examples-filter-row"

@@ -74,6 +74,7 @@ export function MentionPopover({
   mcpServers,
   query,
   currentSkillId,
+  t,
   onPickFile,
   onPickPlugin,
   onPickSkill,
@@ -85,6 +86,7 @@ export function MentionPopover({
   mcpServers: McpServerConfig[];
   query: string;
   currentSkillId: string | null;
+  t: TranslateFn;
   onPickFile: (path: string) => void;
   onPickPlugin: (record: InstalledPluginRecord) => void;
   onPickSkill: (skill: SkillSummary) => void;
@@ -93,11 +95,11 @@ export function MentionPopover({
   const ref = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<MentionTab>('all');
   const tabs: Array<{ id: MentionTab; label: string }> = [
-    { id: 'all', label: 'All' },
-    { id: 'plugins', label: 'Plugins' },
-    { id: 'skills', label: 'Skills' },
-    { id: 'mcp', label: 'MCP' },
-    { id: 'files', label: 'Design files' },
+    { id: 'all', label: t('chat.mentionTabAll') },
+    { id: 'plugins', label: t('chat.mentionTabPlugins') },
+    { id: 'skills', label: t('chat.mentionTabSkills') },
+    { id: 'mcp', label: t('chat.mentionTabMcp') },
+    { id: 'files', label: t('chat.mentionTabFiles') },
   ];
   const showPlugins = tab === 'all' || tab === 'plugins';
   const showSkills = tab === 'all' || tab === 'skills';
@@ -113,7 +115,7 @@ export function MentionPopover({
   }, [files, plugins, skills, mcpServers, tab]);
   return (
     <div className="mention-popover" data-testid="mention-popover">
-      <div className="mention-tabs" role="tablist" aria-label="Mention surfaces">
+      <div className="mention-tabs" role="tablist" aria-label={t('chat.mentionTabsAria')}>
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -132,9 +134,9 @@ export function MentionPopover({
         {!hasVisibleResults ? (
           <div className="mention-empty">
             {query ? (
-              <>No results for “{query}”.</>
+              <>{t('chat.mentionNoResults', { query })}</>
             ) : (
-              <>Search plugins, skills, MCP servers, and Design Files.</>
+              <>{t('chat.mentionSearchHint')}</>
             )}
           </div>
         ) : null}

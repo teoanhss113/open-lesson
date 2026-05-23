@@ -21,7 +21,7 @@ interface Props {
 
 export function DesignSystemsSection({ cfg, setCfg }: Props) {
   const t = useT();
-  const [designSystems, setDesignSystems] = useState<DesignSystemSummary[]>([]);
+  const [allDesignSystems, setAllDesignSystems] = useState<DesignSystemSummary[]>([]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -29,13 +29,16 @@ export function DesignSystemsSection({ cfg, setCfg }: Props) {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
-    fetchDesignSystems().then(setDesignSystems);
+    fetchDesignSystems().then(setAllDesignSystems);
   }, []);
+
+  const designSystems = allDesignSystems;
 
   const disabledDS = useMemo(
     () => new Set(cfg.disabledDesignSystems ?? []),
     [cfg.disabledDesignSystems],
   );
+
 
   const categories = useMemo(() => {
     const cats = new Set(designSystems.map((d) => d.category));

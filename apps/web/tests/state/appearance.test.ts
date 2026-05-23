@@ -90,6 +90,6 @@ describe('applyAppearanceToDocument', () => {
     applyAppearanceToDocument({ theme: 'system', accentColor: 'not-a-color' });
 
     expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe(DEFAULT_ACCENT_COLOR);
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('');
   });
 });

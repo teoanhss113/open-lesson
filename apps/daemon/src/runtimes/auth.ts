@@ -7,7 +7,7 @@ export type AgentAuthProbeResult = {
 };
 
 const CURSOR_AUTH_GUIDANCE =
-  'Cursor Agent is not authenticated. Run `cursor-agent login`, then `cursor-agent status`, and retry. For automation, ensure CURSOR_API_KEY is set in the Open Design process environment.';
+  'Cursor Agent is not authenticated. Run `cursor-agent login`, then `cursor-agent status`, and retry. For automation, ensure CURSOR_API_KEY is set in the Curriculum Workspace process environment.';
 
 export function cursorAuthGuidance(): string {
   return CURSOR_AUTH_GUIDANCE;

@@ -46,6 +46,7 @@ import {
   SUGGESTED_MODELS_BY_PROTOCOL,
 } from '../state/apiProtocols';
 import { CUSTOM_MODEL_SENTINEL } from './modelOptions';
+import { FlexRow } from './UiPrimitives';
 
 interface Props {
   mode: ExecMode;
@@ -429,10 +430,7 @@ export function MemoryModelInline({
         </option>
       </select>
       {customActive ? (
-        <div
-          className="field-row"
-          style={{ marginTop: 'var(--spacing-xs)', display: 'flex', gap: 'var(--spacing-xs)' }}
-        >
+        <FlexRow className="field-row" style={{ marginTop: 'var(--spacing-xs)' }}>
           <input
             type="text"
             aria-label={t('settings.memoryModelInlineLabel')}
@@ -454,7 +452,7 @@ export function MemoryModelInline({
           >
             {t('common.save')}
           </button>
-        </div>
+        </FlexRow>
       ) : null}
       <p className="hint" style={{ marginTop: 'var(--spacing-xxs)', fontSize: 11 }}>
         {mode === 'api'

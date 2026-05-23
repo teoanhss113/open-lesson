@@ -13,6 +13,14 @@ import {
   FR_SKILL_COPY,
 } from './content.fr';
 import {
+  VI_DESIGN_SYSTEM_CATEGORIES,
+  VI_DESIGN_SYSTEM_SUMMARIES,
+  VI_PROMPT_TEMPLATE_CATEGORIES,
+  VI_PROMPT_TEMPLATE_COPY,
+  VI_PROMPT_TEMPLATE_TAGS,
+  VI_SKILL_COPY,
+} from './content.vi';
+import {
   RU_DESIGN_SYSTEM_CATEGORIES,
   RU_DESIGN_SYSTEM_SUMMARIES,
   RU_PROMPT_TEMPLATE_CATEGORIES,
@@ -21,7 +29,7 @@ import {
   RU_SKILL_COPY,
 } from './content.ru';
 
-type LocalizedSkillCopy = { description?: string; examplePrompt?: string };
+export type LocalizedSkillCopy = { description?: string; examplePrompt?: string };
 type LocalizedPromptTemplateCopy = Partial<Pick<PromptTemplateSummary, 'summary' | 'title'>>;
 type LocalizedContentIds = {
   skills: string[];
@@ -49,9 +57,9 @@ const DE_SKILL_COPY: Record<string, LocalizedSkillCopy> = {
   },
   'agent-browser': {
     examplePrompt:
-      'Verifizieren Sie die lokale Open-Design-Vorschau mit agent-browser: starten oder verbinden Sie CDP Chrome, öffnen Sie http://127.0.0.1:17573/, melden Sie Titel, URL, sichtbare Texte und speichern Sie einen Screenshot.',
+      'Verifizieren Sie die lokale Curriculum-Workspace-Vorschau mit agent-browser: starten oder verbinden Sie CDP Chrome, öffnen Sie http://127.0.0.1:17573/, melden Sie Titel, URL, sichtbare Texte und speichern Sie einen Screenshot.',
     description:
-      'Browser-Automation für lokale Open-Design-Preview-Validierung. Verbindet sich mit einem geprüften CDP-Chrome-Endpunkt, liest gerenderten Seitenzustand, kann bei Bedarf klicken/tippen und speichert einen Screenshot.',
+      'Browser-Automation für lokale Curriculum-Workspace-Preview-Validierung. Verbindet sich mit einem geprüften CDP-Chrome-Endpunkt, liest gerenderten Seitenzustand, kann bei Bedarf klicken/tippen und speichert einen Screenshot.',
   },
   'blog-post': {
     examplePrompt:
@@ -80,11 +88,11 @@ const DE_SKILL_COPY: Record<string, LocalizedSkillCopy> = {
   },
   'open-design-landing': {
     examplePrompt:
-      'Entwerfen Sie die Open-Design-Marketing-Landingpage im Atelier-Zero- / Monocle-Stil — warme Papierleinwand, surreale Plaster-und-Architektur-Collage, übergroße gemischte Italic-Serif-Display-Type, römische Ziffern als Sektionsmarker und ein einziger Korallenakzent.',
+      'Entwerfen Sie die Curriculum-Workspace-Marketing-Landingpage im Atelier-Zero- / Monocle-Stil — warme Papierleinwand, surreale Plaster-und-Architektur-Collage, übergroße gemischte Italic-Serif-Display-Type, römische Ziffern als Sektionsmarker und ein einziger Korallenakzent.',
   },
   'open-design-landing-deck': {
     examplePrompt:
-      'Erstellen Sie das Open-Design-Pitch-Deck im Atelier-Zero-Stil — Cover mit Hero-Plate, römische Sektions-Trenner, Stats-Slide (31 Skills · 72 Systeme · 12 CLIs), Kundenzitat, CTA und Mega-Italic-Serif-End-Card. Horizontal-Swipe-Pagination wie eine Print-Magazine.',
+      'Erstellen Sie das Curriculum-Workspace-Pitch-Deck im Atelier-Zero-Stil — Cover mit Hero-Plate, römische Sektions-Trenner, Stats-Slide (31 Skills · 72 Systeme · 12 CLIs), Kundenzitat, CTA und Mega-Italic-Serif-End-Card. Horizontal-Swipe-Pagination wie eine Print-Magazine.',
     description:
       'Erstellt ein Single-File-Slide-Deck im Atelier-Zero-Stil (warmes Papier, italic-serif Akzent-Spans, korallenfarbene Schluss-Dots, surreale Collage-Platten). Horizontale Magazin-Pagination mit Pfeiltasten- und Leertaste-Navigation, Live-HUD mit Slide-Zähler und Fortschrittsbalken; teilt sich Stylesheet und 16-Slot-Bildbibliothek mit der Schwester-Skill `open-design-landing`.',
   },
@@ -340,6 +348,7 @@ const DE_DESIGN_SYSTEM_SUMMARIES: Record<string, string> = {
 };
 
 const DE_DESIGN_SYSTEM_CATEGORIES: Record<string, string> = {
+  Slide: 'Slide',
   Starter: 'Starter',
   'AI & LLM': 'AI & LLM',
   'Bold & Expressive': 'Mutig & Ausdrucksstark',
@@ -976,6 +985,14 @@ const LOCALIZED_CONTENT: Partial<Record<Locale, LocalizedContentBundle>> = {
     promptTemplateTags: FR_PROMPT_TEMPLATE_TAGS,
     promptTemplateCopy: FR_PROMPT_TEMPLATE_COPY,
   },
+  vi: {
+    skillCopy: VI_SKILL_COPY,
+    designSystemSummaries: VI_DESIGN_SYSTEM_SUMMARIES,
+    designSystemCategories: VI_DESIGN_SYSTEM_CATEGORIES,
+    promptTemplateCategories: VI_PROMPT_TEMPLATE_CATEGORIES,
+    promptTemplateTags: VI_PROMPT_TEMPLATE_TAGS,
+    promptTemplateCopy: VI_PROMPT_TEMPLATE_COPY,
+  },
 };
 
 function buildLocalizedContentIds(content: LocalizedContentBundle): LocalizedContentIds {
@@ -993,7 +1010,8 @@ export const LOCALIZED_CONTENT_IDS = {
   de: buildLocalizedContentIds(LOCALIZED_CONTENT.de!),
   ru: buildLocalizedContentIds(LOCALIZED_CONTENT.ru!),
   fr: buildLocalizedContentIds(LOCALIZED_CONTENT.fr!),
-} satisfies Record<'de' | 'ru' | 'fr', LocalizedContentIds>;
+  vi: buildLocalizedContentIds(LOCALIZED_CONTENT.vi!),
+} satisfies Record<'de' | 'ru' | 'fr' | 'vi', LocalizedContentIds>;
 
 export const GERMAN_CONTENT_IDS = LOCALIZED_CONTENT_IDS.de;
 export const RUSSIAN_CONTENT_IDS = LOCALIZED_CONTENT_IDS.ru;

@@ -31,6 +31,7 @@ import type {
   PluginConnectorRef,
   PluginManifest,
 } from '@open-design/contracts';
+import { useT } from '../../i18n';
 import { Icon } from '../Icon';
 import { authorInitials, derivePluginSourceLinks } from '../../runtime/plugin-source';
 import { resolvePluginQueryFallback } from '../../state/projects';
@@ -69,6 +70,7 @@ interface Props {
 }
 
 export function PluginMetaSections({ record, omit, compact, heading }: Props) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   const manifest: PluginManifest = record.manifest ?? ({} as PluginManifest);
@@ -150,7 +152,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
         </header>
       ) : null}
       {!omit?.byline && hasAuthorBlock ? (
-        <Section title="Author">
+        <Section title={t('plugins.details.author')}>
           <div
             className="plugin-details-modal__byline"
             data-testid="plugin-details-author"
@@ -158,11 +160,12 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
             <AuthorAvatar
               name={links.authorName}
               avatarUrl={links.authorAvatarUrl}
+              t={t}
             />
             <div className="plugin-details-modal__byline-meta">
               {links.authorName ? (
                 <div className="plugin-details-modal__byline-name">
-                  <span className="plugin-details-modal__byline-prefix">by</span>
+                  <span className="plugin-details-modal__byline-prefix">{t('plugins.details.by')}</span>
                   <span className="plugin-details-modal__author-name">
                     {links.authorName}
                   </span>
@@ -184,7 +187,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
                     icon="external-link"
                     testId="plugin-details-author-homepage"
                   >
-                    Homepage
+                    {t('plugins.details.homepage')}
                   </ExternalLink>
                 ) : null}
               </div>
@@ -194,14 +197,14 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
       ) : null}
 
       {showDescription ? (
-        <Section title="About">
+        <Section title={t('plugins.details.about')}>
           <p className="plugin-details-modal__description">{description}</p>
         </Section>
       ) : null}
 
       {showQuery ? (
         <Section
-          title="Example query"
+          title={t('plugins.details.exampleQuery')}
           hint="Inserted into the prompt textarea when you apply this plugin."
           action={
             <button
@@ -210,7 +213,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
               onClick={copyQuery}
             >
               <Icon name="copy" size={12} />
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? t('plugins.details.copied') : t('plugins.details.copy')}
             </button>
           }
         >
@@ -220,7 +223,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
 
       {showInputs ? (
         <Section
-          title="Inputs"
+          title={t('plugins.details.inputs')}
           count={inputs.length}
           hint="Variables substituted into the example query at apply time."
         >
@@ -231,7 +234,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
                   <code>{field.name}</code>
                   {field.required ? (
                     <span className="plugin-details-modal__badge is-required">
-                      required
+                      {t('plugins.details.required')}
                     </span>
                   ) : null}
                   {field.type ? (
@@ -272,7 +275,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
 
       {hasContext ? (
         <Section
-          title="Context bundles"
+          title={t('plugins.details.contextBundles')}
           hint="Skills, design systems, MCP servers and other refs the plugin will pull in at apply time."
         >
           <div className="plugin-details-modal__context">
@@ -291,7 +294,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
                   {refLabel(ctx.designSystem as ContextRef)}
                   {(ctx.designSystem as ContextRef).primary ? (
                     <span className="plugin-details-modal__badge is-primary">
-                      primary
+                      {t('plugins.details.primary')}
                     </span>
                   ) : null}
                 </span>
@@ -354,7 +357,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
 
       {stages.length > 0 ? (
         <Section
-          title="Workflow"
+          title={t('plugins.details.workflow')}
           count={stages.length}
           hint="Pipeline stages run in order. Atoms inside a stage run sequentially unless the stage repeats."
         >
@@ -366,12 +369,12 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
                   <code className="plugin-details-modal__stage-id">{stage.id}</code>
                   {stage.repeat ? (
                     <span className="plugin-details-modal__badge is-repeat">
-                      repeat
+                      {t('plugins.details.repeat')}
                     </span>
                   ) : null}
                   {stage.onFailure ? (
                     <span className="plugin-details-modal__badge is-failure">
-                      on failure: {stage.onFailure}
+                      {t('plugins.details.onFailure')}: {stage.onFailure}
                     </span>
                   ) : null}
                 </div>
@@ -389,7 +392,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
                 ) : null}
                 {stage.until ? (
                   <div className="plugin-details-modal__muted plugin-details-modal__small">
-                    until: <code>{stage.until}</code>
+                    {t('plugins.details.until')}: <code>{stage.until}</code>
                   </div>
                 ) : null}
               </li>
@@ -400,7 +403,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
 
       {surfaces.length > 0 ? (
         <Section
-          title="GenUI surfaces"
+          title={t('plugins.details.genuiSurfaces')}
           count={surfaces.length}
           hint="Interactive prompts the plugin may surface during a run."
         >
@@ -414,7 +417,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
                   </span>
                   {s.persist ? (
                     <span className="plugin-details-modal__muted plugin-details-modal__small">
-                      persists at <code>{s.persist}</code>
+                      {t('plugins.details.persistsAt')} <code>{s.persist}</code>
                     </span>
                   ) : null}
                 </div>
@@ -430,7 +433,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
       ) : null}
 
       {required.length > 0 || optional.length > 0 ? (
-        <Section title="Connectors">
+        <Section title={t('plugins.details.connectors')}>
           {required.length > 0 ? (
             <ConnectorList label="Required" items={required} variant="required" />
           ) : null}
@@ -442,7 +445,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
 
       {capabilities.length > 0 ? (
         <Section
-          title="Capabilities"
+          title={t('plugins.details.capabilities')}
           count={capabilities.length}
           hint="Permissions the plugin requests when applied."
         >
@@ -457,7 +460,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
       ) : null}
 
       <Section
-        title="Source"
+        title={t('plugins.details.source')}
         action={
           links.contributeUrl ? (
             <a
@@ -476,14 +479,14 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
                 name={links.contributeOnGithub ? 'github' : 'external-link'}
                 size={12}
               />
-              Contribute
+              {t('plugins.details.contribute')}
             </a>
           ) : undefined
         }
       >
         <dl className="plugin-details-modal__source">
           <div>
-            <dt>Origin</dt>
+            <dt>{t('plugins.details.origin')}</dt>
             <dd>
               <span className="plugin-details-modal__source-kind">
                 {links.sourceKindLabel}
@@ -504,27 +507,27 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
             </dd>
           </div>
           <div>
-            <dt>Path</dt>
+            <dt>{t('plugins.details.path')}</dt>
             <dd>
               <code>{record.fsPath}</code>
             </dd>
           </div>
           <div>
-            <dt>Version</dt>
+            <dt>{t('plugins.details.version')}</dt>
             <dd>
               <code>v{record.version}</code>
             </dd>
           </div>
           {specVersion ? (
             <div>
-              <dt>Spec</dt>
+              <dt>{t('plugins.details.spec')}</dt>
               <dd>
                 <code>v{specVersion}</code>
               </dd>
             </div>
           ) : null}
           <div>
-            <dt>Trust</dt>
+            <dt>{t('plugins.details.trust')}</dt>
             <dd>
               <span className={`plugin-details-modal__trust trust-${record.trust}`}>
                 {record.trust}
@@ -533,7 +536,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
           </div>
           {record.pinnedRef ? (
             <div>
-              <dt>Pinned ref</dt>
+              <dt>{t('plugins.details.pinnedRef')}</dt>
               <dd>
                 <code>{record.pinnedRef}</code>
               </dd>
@@ -541,7 +544,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
           ) : null}
           {record.sourceMarketplaceId ? (
             <div>
-              <dt>Marketplace ID</dt>
+              <dt>{t('plugins.details.marketplaceId')}</dt>
               <dd>
                 <code>{record.sourceMarketplaceId}</code>
               </dd>
@@ -549,14 +552,14 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
           ) : null}
           {manifest.license ? (
             <div>
-              <dt>License</dt>
+              <dt>{t('plugins.details.license')}</dt>
               <dd>
                 <code>{manifest.license}</code>
               </dd>
             </div>
           ) : null}
           <div>
-            <dt>Installed</dt>
+            <dt>{t('plugins.details.installed')}</dt>
             <dd>{installedLabel}</dd>
           </div>
         </dl>
@@ -618,16 +621,17 @@ function ContextGroup({ label, count, children }: ContextGroupProps) {
 interface AuthorAvatarProps {
   name: string | null;
   avatarUrl: string | null;
+  t: (key: any) => string;
 }
 
-function AuthorAvatar({ name, avatarUrl }: AuthorAvatarProps) {
+function AuthorAvatar({ name, avatarUrl, t }: AuthorAvatarProps) {
   const [broken, setBroken] = useState(false);
   if (avatarUrl && !broken) {
     return (
       <img
         className="plugin-details-modal__avatar"
         src={avatarUrl}
-        alt={name ? `${name} avatar` : 'Author avatar'}
+        alt={name ? `${name} avatar` : t('plugins.details.authorAvatar')}
         loading="lazy"
         referrerPolicy="no-referrer"
         onError={() => setBroken(true)}
@@ -713,3 +717,4 @@ function ConnectorList({ label, items, variant }: ConnectorListProps) {
     </div>
   );
 }
+

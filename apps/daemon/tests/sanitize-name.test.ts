@@ -6,8 +6,17 @@ describe('sanitizeName', () => {
     expect(sanitizeName('Report_v2.final-1.pdf')).toBe('Report_v2.final-1.pdf');
   });
 
-  it('collapses whitespace runs to a single dash', () => {
-    expect(sanitizeName('Hello World  page.html')).toBe('Hello-World-page.html');
+  it('collapses whitespace runs to a single space', () => {
+    expect(sanitizeName('Hello World  page.html')).toBe('Hello World page.html');
+  });
+
+  it('preserves spaces, brackets and parentheses', () => {
+    expect(sanitizeName(' [PREB - Slides] (Lesson 1) ')).toBe('[PREB - Slides] (Lesson 1)');
+  });
+
+  it('normalizes decomposed Unicode characters (NFD) to NFC', () => {
+    const NFD = 'Buo\u0302\u0309i'; // Buổi in NFD
+    expect(sanitizeName(NFD)).toBe('Buổi');
   });
 
   it('preserves Unicode letters/digits (Chinese, Japanese, Cyrillic, accented)', () => {

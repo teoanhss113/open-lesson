@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
+import { useT } from '../../i18n';
 import { buildSrcdoc } from '../../runtime/srcdoc';
 import { buildClientPptxPreview } from './pptxClientPreview';
+import { FlexCol } from '../UiPrimitives';
 import type {
   PresentationLayout,
   PresentationSlideLayout,
@@ -51,6 +53,7 @@ export function PptxViewer({
   onLoad?: (info: { slideCount: number }) => void;
   initialSlideIndex?: number;
 }) {
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   // Track blob URLs we minted for embedded slide images so we can
@@ -175,9 +178,8 @@ export function PptxViewer({
       }
       const layout = result.preview.slideLayout;
       if (!layout || layout.slides.length === 0) {
-        throw new Error('This presentation has no readable slides.');
+        throw new Error(t('pptxViewer.noSlides'));
       }
-
       root.removeAttribute('data-pptx-empty');
       // Same mount snapshot the srcDoc was baked with — both must
       // agree on which slide starts visible so the bridge's
@@ -206,7 +208,7 @@ export function PptxViewer({
     } catch (err) {
       console.error(err);
       iframe.removeAttribute('data-pptx-loaded');
-      setError(err instanceof Error ? err.message : 'Failed to render presentation');
+      setError(err instanceof Error ? err.message : t('pptxViewer.renderFailed'));
       setLoading(false);
     }
   };
@@ -227,7 +229,8 @@ export function PptxViewer({
   }, [projectId, fileName, loading]);
 
   return (
-    <div
+    <FlexCol
+      gap={0}
       style={{
         position: 'relative',
         width: '100%',
@@ -238,8 +241,6 @@ export function PptxViewer({
         // slides, users now see a clean canvas instead of a flat
         // dark rectangle that masquerades as a broken viewer.
         background: '#ffffff',
-        display: 'flex',
-        flexDirection: 'column',
       }}
     >
       {loading && (
@@ -255,7 +256,7 @@ export function PptxViewer({
             zIndex: 10,
           }}
         >
-          Đang chuẩn bị slide...
+          {t('pptxViewer.preparing')}
         </div>
       )}
       {error && (
@@ -293,7 +294,7 @@ export function PptxViewer({
           background: '#ffffff',
         }}
       />
-    </div>
+    </FlexCol>
   );
 }
 

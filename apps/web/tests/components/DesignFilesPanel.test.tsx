@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DesignFilesPanel } from '../../src/components/DesignFilesPanel';
+import { EXTRACTED_DOCUMENT_MEDIA_DIR } from '@open-design/contracts';
 import type { ProjectFile, ProjectFileKind } from '../../src/types';
 
 function extForKind(kind: ProjectFileKind): string {
@@ -83,10 +84,159 @@ function getSelects(container: HTMLElement) {
   return Array.from(container.querySelectorAll<HTMLSelectElement>('select'));
 }
 
+const DESIGN_FILES_DRAG_MIME = 'application/x-open-design-files';
+
+function createDesignFilesDragDataTransfer(fileNames: string[]) {
+  const store = new Map<string, string>();
+  let readable = false;
+  return {
+    effectAllowed: 'move' as const,
+    dropEffect: 'move' as const,
+    getData: vi.fn((type: string) => (readable ? store.get(type) ?? '' : '')),
+    setData: vi.fn((type: string, value: string) => {
+      store.set(type, value);
+    }),
+    unlockForDrop() {
+      readable = true;
+    },
+    seed(names: string[]) {
+      store.set(DESIGN_FILES_DRAG_MIME, JSON.stringify(names));
+    },
+  };
+}
+
+describe('DesignFilesPanel drag into folders', () => {
+  it('moves a file into a folder row on drop', async () => {
+    const onMoveFiles = vi.fn().mockResolvedValue(undefined);
+    const onRefreshFiles = vi.fn().mockResolvedValue(undefined);
+    const files = [
+      file({ name: 'notes.txt', kind: 'text', mime: 'text/plain' }),
+      file({
+        name: 'my-folder',
+        type: 'dir',
+        size: 0,
+        kind: 'text',
+        mime: 'inode/directory',
+      }),
+    ];
+
+    render(
+      <DesignFilesPanel
+        projectId="test-project"
+        files={files}
+        liveArtifacts={[]}
+        onRefreshFiles={onRefreshFiles}
+        onOpenFile={vi.fn()}
+        onOpenLiveArtifact={vi.fn()}
+        onMoveFiles={onMoveFiles}
+        onRenameFile={vi.fn()}
+        onDeleteFile={vi.fn()}
+        onDeleteFiles={vi.fn()}
+        onUpload={vi.fn()}
+        onUploadFolder={vi.fn()}
+        onUploadFiles={vi.fn()}
+        onPaste={vi.fn()}
+        onNewSketch={vi.fn()}
+      />,
+    );
+
+    const fileRow = screen.getByTestId('design-file-row-notes.txt');
+    const folderRow = screen.getByTestId('design-folder-row-my-folder');
+    const dataTransfer = createDesignFilesDragDataTransfer(['notes.txt']);
+
+    fireEvent.dragStart(fileRow, { dataTransfer });
+    fireEvent.dragOver(folderRow, { dataTransfer });
+    expect(folderRow.className).toContain('drag-over');
+
+    dataTransfer.unlockForDrop();
+    fireEvent.drop(folderRow, { dataTransfer });
+
+    await waitFor(() => expect(onMoveFiles).toHaveBeenCalledWith(['notes.txt'], 'my-folder'));
+    expect(onRefreshFiles).toHaveBeenCalled();
+  });
+});
+
+describe('DesignFilesPanel folder actions', () => {
+  it('uses an in-app modal instead of window.prompt() when creating a folder', async () => {
+    const onCreateFolder = vi.fn().mockResolvedValue(
+      file({
+        name: 'my-folder',
+        type: 'dir',
+        size: 0,
+        kind: 'text',
+        mime: 'inode/directory',
+      }),
+    );
+    const onRefreshFiles = vi.fn().mockResolvedValue(undefined);
+    const promptSpy = vi.spyOn(window, 'prompt');
+
+    render(
+      <DesignFilesPanel
+        projectId="test-project"
+        files={[]}
+        liveArtifacts={[]}
+        onRefreshFiles={onRefreshFiles}
+        onOpenFile={vi.fn()}
+        onOpenLiveArtifact={vi.fn()}
+        onCreateFolder={onCreateFolder}
+        onRenameFile={vi.fn()}
+        onDeleteFile={vi.fn()}
+        onDeleteFiles={vi.fn()}
+        onUpload={vi.fn()}
+        onUploadFolder={vi.fn()}
+        onUploadFiles={vi.fn()}
+        onPaste={vi.fn()}
+        onNewSketch={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('design-files-new-folder'));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    const nameInput = screen.getByLabelText(/folder name/i) as HTMLInputElement;
+    expect(nameInput.value).toBe('New folder');
+    fireEvent.change(nameInput, { target: { value: 'my-folder' } });
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
+
+    await waitFor(() => expect(onCreateFolder).toHaveBeenCalledWith('my-folder'));
+    expect(onRefreshFiles).toHaveBeenCalled();
+    expect(promptSpy).not.toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+});
+
+describe('DesignFilesPanel extracted document media', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('hides extracted media in the table and shows it in the source preview', async () => {
+    const files = [
+      file({ name: 'lesson-plan.docx', kind: 'document', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }),
+      file({ name: `${EXTRACTED_DOCUMENT_MEDIA_DIR}/lesson-plan/image13.png`, kind: 'image', mime: 'image/png' }),
+    ];
+    const { container } = renderPanel(files);
+
+    expect(screen.getByText('lesson-plan.docx')).toBeTruthy();
+    expect(screen.queryByText(`${EXTRACTED_DOCUMENT_MEDIA_DIR}/lesson-plan/image13.png`)).toBeNull();
+
+    const row = screen.getByTestId('design-file-row-lesson-plan.docx');
+    const nameButton = row.querySelector('.df-row-name-btn');
+    expect(nameButton).toBeTruthy();
+    fireEvent.click(nameButton!);
+
+    await waitFor(() => expect(screen.getByTestId('design-file-preview-assets')).toBeTruthy());
+    expect(container.querySelector(`img[src*="${EXTRACTED_DOCUMENT_MEDIA_DIR}"]`)).toBeTruthy();
+  });
+});
+
 describe('DesignFilesPanel upload actions', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('calls onUploadFolder when Upload folder is clicked', () => {
     const onUploadFolder = vi.fn();
-    render(
+    const view = render(
       <DesignFilesPanel
         projectId="test-project"
         files={[]}
@@ -104,8 +254,55 @@ describe('DesignFilesPanel upload actions', () => {
         onNewSketch={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByTestId('design-files-upload-folder-trigger'));
-    expect(onUploadFolder).toHaveBeenCalledTimes(1);
+    fireEvent.click(
+      within(view.container).getByTestId('design-files-upload-folder-trigger'),
+    );
+    expect(onUploadFolder).toHaveBeenCalledWith('');
+  });
+
+  it('passes the current browse path to upload and drop handlers', () => {
+    const onUpload = vi.fn();
+    const onUploadFiles = vi.fn();
+    const files = [
+      file({ name: 'notes.txt', kind: 'text', mime: 'text/plain' }),
+      file({
+        name: 'unit-1',
+        type: 'dir',
+        size: 0,
+        kind: 'text',
+        mime: 'inode/directory',
+      }),
+    ];
+
+    render(
+      <DesignFilesPanel
+        projectId="test-project"
+        files={files}
+        liveArtifacts={[]}
+        onRefreshFiles={vi.fn()}
+        onOpenFile={vi.fn()}
+        onOpenLiveArtifact={vi.fn()}
+        onRenameFile={vi.fn()}
+        onDeleteFile={vi.fn()}
+        onDeleteFiles={vi.fn()}
+        onUpload={onUpload}
+        onUploadFolder={vi.fn()}
+        onUploadFiles={onUploadFiles}
+        onPaste={vi.fn()}
+        onNewSketch={vi.fn()}
+      />,
+    );
+
+    const folderRow = screen.getByTestId('design-folder-row-unit-1');
+    fireEvent.click(folderRow.querySelector('.df-cell-name')!);
+    fireEvent.click(screen.getByTestId('design-files-upload-trigger'));
+    expect(onUpload).toHaveBeenCalledWith('unit-1');
+
+    const dropped = new File(['payload'], 'drop.txt', { type: 'text/plain' });
+    fireEvent.drop(screen.getByTestId('design-files-drop-zone'), {
+      dataTransfer: { files: [dropped] },
+    });
+    expect(onUploadFiles).toHaveBeenCalledWith([dropped], 'unit-1');
   });
 });
 
@@ -600,7 +797,7 @@ describe('DesignFilesPanel large-list regression', () => {
   it('opens the file picker when the drop zone is clicked', () => {
     const { onUpload } = renderPanel(generateFiles(1));
     fireEvent.click(screen.getByTestId('design-files-drop-zone'));
-    expect(onUpload).toHaveBeenCalledTimes(1);
+    expect(onUpload).toHaveBeenCalledWith('');
   });
 
   it('forwards dropped files to onUploadFiles', () => {
@@ -610,6 +807,6 @@ describe('DesignFilesPanel large-list regression', () => {
     fireEvent.drop(dropZone, {
       dataTransfer: { files: [file] },
     });
-    expect(onUploadFiles).toHaveBeenCalledWith([file]);
+    expect(onUploadFiles).toHaveBeenCalledWith([file], '');
   });
 });

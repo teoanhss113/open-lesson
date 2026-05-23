@@ -273,7 +273,7 @@ export function InlineModelSwitcher({
                       })
                     }
                   >
-                    {renderModelOptions(currentAgent.models)}
+                    {renderModelOptions(currentAgent.models, t('settings.modelDefaultCli'))}
                     {currentModelId &&
                     !currentAgent.models.some((m) => m.id === currentModelId) ? (
                       <option value={currentModelId}>

@@ -109,6 +109,16 @@ describe('parseRoute / buildPath (issue #1505)', () => {
 
   it('falls back to home when the URL is unrecognized', () => {
     expect(parseRoute('/something/else')).toEqual({ kind: 'home', view: 'home' });
-    expect(parseRoute('/projects')).toEqual({ kind: 'home', view: 'projects' });
+    expect(parseRoute('/projects')).toEqual({ kind: 'home', view: 'home' });
+  });
+
+  it('round-trips the templates entry view', () => {
+    const route: Route = { kind: 'home', view: 'templates' };
+    expect(roundTrip(route)).toEqual(route);
+    expect(buildPath(route)).toBe('/templates');
+  });
+
+  it('builds /templates for templates view, not legacy /design-systems', () => {
+    expect(buildPath({ kind: 'home', view: 'templates' })).toBe('/templates');
   });
 });

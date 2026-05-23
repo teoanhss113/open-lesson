@@ -148,7 +148,7 @@ export interface DesignSystemSummary {
   category: string;
   summary: string;
   swatches?: string[];
-  surface?: 'web' | 'image' | 'video' | 'audio';
+  surface?: 'web' | 'image' | 'video' | 'audio' | 'deck';
   source?: 'built-in' | 'installed';
 }
 

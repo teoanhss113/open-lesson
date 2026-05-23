@@ -1,6 +1,6 @@
 import type { Dict } from '../types';
 
-export const en: Dict = {
+const enDict = {
   'common.cancel': 'Cancel',
   'common.save': 'Save',
   'common.close': 'Close',
@@ -19,7 +19,9 @@ export const en: Dict = {
   'common.active': 'active',
   'common.offline': 'offline',
   'common.selected': 'selected',
+  'common.selectEllipsis': 'Select...',
   'common.create': 'Create',
+  'common.saveSuccess': 'Saved',
   'common.openPreview': 'Open preview',
   'common.exitFullscreen': 'Exit fullscreen',
   'common.fullscreen': 'Fullscreen',
@@ -38,7 +40,7 @@ export const en: Dict = {
   'common.daysShort': '{n}d',
   'common.untitled': 'Untitled',
 
-  'app.brand': 'Open Design',
+  'app.brand': 'AI Curriculum Workspace',
   'app.brandPill': 'AI Curriculum Space',
   'app.brandSubtitle': 'Curriculum Design & Teacher Assistant',
   'app.welcomeLoading': 'Loading workspace…',
@@ -61,6 +63,7 @@ export const en: Dict = {
   'settings.modeApiMeta': 'BYOK',
   'settings.codeAgent': 'Code agent',
   'settings.codeAgentHint': 'Pick the CLI to route generations through.',
+  'settings.modelDefaultCli': 'Default (CLI configuration)',
   'settings.rescan': '↻ Rescan',
   'settings.rescanTitle': 'Re-scan PATH',
   'settings.rescanRunning': 'Scanning...',
@@ -277,6 +280,12 @@ export const en: Dict = {
   'entry.navPlugins': 'Plugins',
   'entry.navDesignSystems': 'Design systems',
   'entry.navIntegrations': 'Integrations',
+  'templates.projectPickerTitle': 'Start a conversation',
+  'templates.projectPickerSubtitle': 'Choose an existing project. The prompt will open in the composer so you can edit it and tag files before sending.',
+  'templates.selectProject': 'Select project',
+  'templates.noProjects': 'No projects yet. Create one first, then come back to use this prompt.',
+  'templates.startConversation': 'Start a conversation',
+  'templates.projectStartFailed': 'Could not open this project with the selected prompt.',
   'workspaceTabs.label': 'Workspace tabs',
   'workspaceTabs.projectMeta': 'Project',
   'workspaceTabs.pluginDetails': 'Plugin details',
@@ -320,6 +329,17 @@ export const en: Dict = {
   'homeHero.hint.fromFigma': 'Migrate a Figma frame into the active design system.',
   'homeHero.hint.fromFolder': 'Import an existing local folder and continue editing.',
   'homeHero.hint.fromTemplate': 'Start from a bundled template.',
+  'homeHero.contextLoading': 'Loading context…',
+  'homeHero.contextNoResults': 'No results for “{query}”.',
+  'homeHero.contextSearchHint': 'Search plugins, skills, and MCP servers.',
+  'chat.mentionNoResults': 'No results for “{query}”.',
+  'chat.mentionSearchHint': 'Search plugins, skills, MCP servers, and Design Files.',
+  'chat.mentionTabAll': 'All',
+  'chat.mentionTabPlugins': 'Plugins',
+  'chat.mentionTabSkills': 'Skills',
+  'chat.mentionTabMcp': 'MCP',
+  'chat.mentionTabFiles': 'Design files',
+  'chat.mentionTabsAria': 'Mention surfaces',
   'home.recentProjectsTitle': 'Recent projects',
   'home.recentProjectsViewAll': 'View all',
   'home.recentProjectsEmpty': 'No projects yet — type a prompt to start one.',
@@ -877,6 +897,14 @@ export const en: Dict = {
   'designFiles.openInTab': 'Open in tab',
   'designFiles.download': 'Download',
   'designFiles.downloadSelected': 'Download {n} as ZIP',
+  'designFiles.moveSelected': 'Move {n}',
+  'designFiles.moveSelectedPrompt': 'Destination folder',
+  'designFiles.newFolder': 'New folder',
+  'designFiles.newFolderDefault': 'New folder',
+  'designFiles.newFolderPrompt': 'Folder name',
+  'designFiles.extractedMediaFolder': 'Extracted images',
+  'designFiles.dropMoveTitle': '↳ Move here',
+  'designFiles.dropMoveDesc': 'Move file(s) into {folder}',
   'designFiles.deleteSelected': 'Delete {n}',
   'designFiles.clearSelection': 'Clear',
   'designFiles.selectPage': 'Select all on page',
@@ -1925,4 +1953,6 @@ export const en: Dict = {
   'tasks.orbitArtifactMetaOn': 'Refreshes after each run',
   'tasks.orbitArtifactMetaOff': 'Waiting for schedule',
   'tasks.orbitArtifactBody': '# Orbit Daily activity summary\nConnectors checked · successes, skips, and failures\nHighlights become a refreshable live artifact.',
-};
+} satisfies Dict;
+
+export const en: Dict & typeof enDict = enDict;

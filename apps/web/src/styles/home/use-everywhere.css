@@ -347,7 +347,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
   .use-everywhere-chip__label {
     display: none;
   }

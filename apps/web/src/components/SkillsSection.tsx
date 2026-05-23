@@ -359,7 +359,7 @@ export function SkillsSection({ cfg, setCfg }: Props) {
         {/* Row 2: filter dropdowns */}
         <div className="library-filter-selects">
           <label className="library-filter-select">
-            <span className="library-filter-select-label">Source</span>
+            <span className="library-filter-select-label">{t('settings.librarySource')}</span>
             <select
               value={sourceFilter}
               data-active={sourceFilter !== 'all' ? 'true' : undefined}
@@ -379,7 +379,7 @@ export function SkillsSection({ cfg, setCfg }: Props) {
             </select>
           </label>
           <label className="library-filter-select">
-            <span className="library-filter-select-label">Type</span>
+            <span className="library-filter-select-label">{t('settings.libraryType')}</span>
             <select
               value={modeFilter}
               data-active={modeFilter !== 'all' ? 'true' : undefined}
@@ -400,7 +400,7 @@ export function SkillsSection({ cfg, setCfg }: Props) {
               className="library-filter-select"
               data-testid="skills-category-filters"
             >
-              <span className="library-filter-select-label">Category</span>
+              <span className="library-filter-select-label">{t('settings.libraryCategory')}</span>
               <select
                 value={categoryFilter}
                 data-active={categoryFilter !== 'all' ? 'true' : undefined}

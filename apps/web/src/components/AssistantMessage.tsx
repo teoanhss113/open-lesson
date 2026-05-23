@@ -854,7 +854,7 @@ function PluginActionPanel({
                 <span>
                   {busyKey === `contribute:${folder.path}`
                     ? "Sending..."
-                    : "Open Design PR"}
+                    : "Contribution PR"}
                 </span>
               </button>
               {onRequestOpenFile ? (
@@ -936,7 +936,7 @@ function pathMatchesFolderFileBasename(
 }
 
 function hasPluginFinalActionHint(content: string): boolean {
-  return /\b(Add to My plugins|Open Design PR|Publish repo|plugin publish|ready to publish|ready to add)\b/i.test(
+  return /\b(Add to My plugins|Contribution PR|Publish repo|plugin publish|ready to publish|ready to add)\b/i.test(
     content,
   );
 }
@@ -1017,6 +1017,7 @@ function ProseBlock({
   suppressDirectionForms: boolean;
   onSubmitForm: (formId: string, text: string) => void;
 }) {
+  const t = useT();
   const cleaned = useMemo(() => stripArtifact(text), [text]);
   const segments = useMemo(() => splitOnQuestionForms(cleaned), [cleaned]);
   // Each text segment is further split on `<system-reminder>` blocks so
@@ -1060,12 +1061,11 @@ function ProseBlock({
           return (
             <div key={seg.key} className="status-pill">
               <span className="status-label">
-                Active design system selected. Visual direction is already locked.
+                {t('chat.designSystemLocked')}
               </span>
             </div>
           );
-        }
-        return (
+        }        return (
           <FormBlock
             key={seg.key}
             form={seg.form}

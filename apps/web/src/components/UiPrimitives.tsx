@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
 
 export interface PageHeaderBadge {
@@ -117,5 +117,102 @@ export function UiTabs<T extends string>({
         );
       })}
     </nav>
+  );
+}
+
+/* ---- Layout primitives (replace inline display:flex patterns) ---- */
+
+export function FlexRow({
+  children,
+  gap,
+  align,
+  justify,
+  wrap,
+  className = '',
+  style,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  gap?: CSSProperties['gap'];
+  align?: CSSProperties['alignItems'];
+  justify?: CSSProperties['justifyContent'];
+  wrap?: CSSProperties['flexWrap'];
+}) {
+  return (
+    <div
+      {...props}
+      className={`flex-row${className ? ` ${className}` : ''}`}
+      style={{
+        display: 'flex',
+        alignItems: align,
+        gap: gap ?? 'var(--spacing-xs)',
+        justifyContent: justify,
+        flexWrap: wrap,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function FlexCol({
+  children,
+  gap,
+  align,
+  justify,
+  className = '',
+  style,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  gap?: CSSProperties['gap'];
+  align?: CSSProperties['alignItems'];
+  justify?: CSSProperties['justifyContent'];
+}) {
+  return (
+    <div
+      {...props}
+      className={`flex-col${className ? ` ${className}` : ''}`}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: align,
+        gap: gap ?? 'var(--spacing-xs)',
+        justifyContent: justify,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function FlexGrow({
+  children,
+  className = '',
+  style,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...props}
+      className={`flex-grow${className ? ` ${className}` : ''}`}
+      style={{ flex: 1, minWidth: 0, ...style }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function Divider({
+  className = '',
+  style,
+  ...props
+}: React.HTMLAttributes<HTMLHRElement>) {
+  return (
+    <hr
+      {...props}
+      className={`ui-divider${className ? ` ${className}` : ''}`}
+      style={{ border: 'none', borderTop: '1px solid var(--border)', margin: 0, ...style }}
+    />
   );
 }

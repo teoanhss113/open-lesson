@@ -6,7 +6,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
-export type DesignSystemSurface = 'web' | 'image' | 'video' | 'audio';
+export type DesignSystemSurface = 'web' | 'image' | 'video' | 'audio' | 'deck';
 
 export type DesignSystemSummary = {
   id: string;
@@ -206,7 +206,7 @@ function extractCategory(raw: string): string | undefined {
   return m?.[1];
 }
 
-const KNOWN_SURFACES = new Set<DesignSystemSurface>(['web', 'image', 'video', 'audio']);
+const KNOWN_SURFACES = new Set<DesignSystemSurface>(['web', 'image', 'video', 'audio', 'deck']);
 function extractSurface(raw: string): DesignSystemSurface {
   const m = /^>\s*Surface:\s*(.+?)\s*$/im.exec(raw);
   if (!m) return 'web';

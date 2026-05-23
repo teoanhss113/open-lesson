@@ -86,7 +86,7 @@ function buildShareUrl(record: InstalledPluginRecord): string {
 
 function buildMarkdownBadge(record: InstalledPluginRecord): string {
   const url = buildShareUrl(record);
-  return `[![${record.title} — Open Design plugin](https://img.shields.io/badge/Open%20Design-${encodeURIComponent(record.title)}-d65a31?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2C)](${url})`;
+  return `[![${record.title} — plugin](https://img.shields.io/badge/Workspace-${encodeURIComponent(record.title)}-d65a31?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2C)](${url})`;
 }
 
 export function PluginShareMenu({ record, variant = 'default' }: Props) {

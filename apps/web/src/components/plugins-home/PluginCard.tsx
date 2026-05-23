@@ -19,6 +19,7 @@ import { Icon } from '../Icon';
 import { PreviewSurface } from './cards/PreviewSurface';
 import { inferPluginPreview } from './preview';
 import type { PluginUseAction } from './useActions';
+import type { TranslateFn } from '../chat-composer/types';
 
 interface Props {
   record: InstalledPluginRecord;
@@ -27,6 +28,7 @@ interface Props {
   pendingAny: boolean;
   pendingShareAction?: { pluginId: string; action: PluginShareAction } | null;
   isFeatured: boolean;
+  t: TranslateFn;
   onUse: (record: InstalledPluginRecord, action: PluginUseAction) => void;
   onOpenDetails: (record: InstalledPluginRecord) => void;
   onShareAction?: (
@@ -44,6 +46,7 @@ export function PluginCard({
   pendingAny,
   pendingShareAction = null,
   isFeatured,
+  t,
   onUse,
   onOpenDetails,
   onShareAction,
@@ -125,11 +128,11 @@ export function PluginCard({
               type="button"
               className="plugins-home__action plugins-home__action--secondary"
               onClick={() => onOpenDetails(record)}
-              aria-label={`View details for ${record.title}`}
+              aria-label={t('chat.tools.viewPluginDetails', { title: record.title })}
               data-testid={`plugins-home-details-${record.id}`}
             >
               <Icon name="eye" size={12} />
-              <span>Details</span>
+              <span>{t('pluginCard.details')}</span>
             </button>
             <div
               className={`plugins-home__use-menu${hasQuery ? ' has-options' : ''}`}
@@ -148,7 +151,7 @@ export function PluginCard({
                 aria-busy={isPending ? 'true' : undefined}
                 data-testid={`plugins-home-use-${record.id}`}
               >
-                {isPending ? 'Applying…' : 'Use'}
+                {isPending ? t('chat.tools.applying') : t('pluginCard.use')}
               </button>
               {hasQuery ? (
                 <>
@@ -159,7 +162,7 @@ export function PluginCard({
                     disabled={useDisabled}
                     aria-haspopup="menu"
                     aria-expanded={useMenuOpen}
-                    aria-label={`Choose how to use ${record.title}`}
+                    aria-label={t('pluginCard.chooseUse', { title: record.title })}
                     data-testid={`plugins-home-use-menu-${record.id}`}
                   >
                     <Icon name="chevron-down" size={13} />
@@ -168,7 +171,7 @@ export function PluginCard({
                     <div
                       className="plugins-home__use-menu-list"
                       role="menu"
-                      aria-label={`Use options for ${record.title}`}
+                      aria-label={t('pluginCard.useOptions', { title: record.title })}
                     >
                       <button
                         type="button"
@@ -178,7 +181,7 @@ export function PluginCard({
                         onClick={() => pickUseAction('use')}
                         data-testid={`plugins-home-use-context-${record.id}`}
                       >
-                        Use
+                        {t('pluginCard.use')}
                       </button>
                       <button
                         type="button"
@@ -188,7 +191,7 @@ export function PluginCard({
                         onClick={() => pickUseAction('use-with-query')}
                         data-testid={`plugins-home-use-with-query-${record.id}`}
                       >
-                        Use with query
+                        {t('pluginCard.useWithQuery')}
                       </button>
                     </div>
                   ) : null}
@@ -199,7 +202,7 @@ export function PluginCard({
           {onShareAction ? (
             <div
               className="plugins-home__share-actions"
-              aria-label={`Share ${record.title}`}
+              aria-label={t('pluginCard.share', { title: record.title })}
             >
               <button
                 type="button"
@@ -207,15 +210,15 @@ export function PluginCard({
                 onClick={() => onShareAction(record, 'publish-github')}
                 disabled={pendingAny || shareBusy}
                 aria-busy={sharePendingAction === 'publish-github' ? 'true' : undefined}
-                aria-label={`Publish ${record.title} as a GitHub repository`}
-                title="Publish plugin as a GitHub repository"
+                aria-label={t('pluginCard.publishGithubAria', { title: record.title })}
+                title={t('pluginCard.publishGithubTitle')}
                 data-testid={`plugins-home-publish-github-${record.id}`}
               >
                 <Icon
                   name={sharePendingAction === 'publish-github' ? 'spinner' : 'github'}
                   size={12}
                 />
-                <span>{sharePendingAction === 'publish-github' ? 'Starting…' : 'Publish'}</span>
+                <span>{sharePendingAction === 'publish-github' ? t('pluginCard.starting') : t('pluginCard.publish')}</span>
               </button>
               <button
                 type="button"
@@ -223,15 +226,15 @@ export function PluginCard({
                 onClick={() => onShareAction(record, 'contribute-open-design')}
                 disabled={pendingAny || shareBusy}
                 aria-busy={sharePendingAction === 'contribute-open-design' ? 'true' : undefined}
-                aria-label={`Contribute ${record.title} to Open Design`}
-                title="Contribute plugin to Open Design with a pull request"
+                aria-label={t('pluginCard.contributeAria', { title: record.title })}
+                title={t('pluginCard.contributeTitle')}
                 data-testid={`plugins-home-contribute-open-design-${record.id}`}
               >
                 <Icon
                   name={sharePendingAction === 'contribute-open-design' ? 'spinner' : 'share'}
                   size={12}
                 />
-                <span>{sharePendingAction === 'contribute-open-design' ? 'Starting…' : 'Contribute'}</span>
+                <span>{sharePendingAction === 'contribute-open-design' ? t('pluginCard.starting') : t('pluginCard.contribute')}</span>
               </button>
             </div>
           ) : null}

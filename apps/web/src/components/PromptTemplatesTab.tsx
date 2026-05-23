@@ -15,7 +15,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   'heygen-com/hyperframes': 'HyperFrames',
   'YouMind-OpenLab/awesome-seedance-2-prompts': 'Seedance 2',
   'YouMind-OpenLab/awesome-gpt-image-2': 'GPT Image 2',
-  'nexu-io/open-design': 'Open Design',
+  'nexu-io/open-design': 'Curriculum Workspace',
 };
 function providerLabel(source: PromptTemplateSource): string {
   const known = PROVIDER_LABELS[source.repo];
@@ -98,34 +98,41 @@ export function PromptTemplatesTab({ surface, templates, onPreview }: Props) {
   return (
     <div className="tab-panel prompt-templates-panel">
       <div className="tab-panel-toolbar">
-        <input
-          placeholder={t('promptTemplates.searchPlaceholder')}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c === 'All' ? t('common.all') : localizePromptTemplateCategory(locale, c)}
-            </option>
-          ))}
-        </select>
-        {sources.length > 2 ? (
-          <select
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            aria-label={t('promptTemplates.sourceFilterAria')}
-          >
-            {sources.map((s) => (
-              <option key={s} value={s}>
-                {s === 'All' ? t('promptTemplates.allSources') : s}
+        <div className="toolbar-search">
+          <span className="search-icon" aria-hidden>
+            <Icon name="search" size={13} />
+          </span>
+          <input
+            placeholder={t('promptTemplates.searchPlaceholder')}
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
+        <div className="toolbar-right">
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c === 'All' ? t('common.all') : localizePromptTemplateCategory(locale, c)}
               </option>
             ))}
           </select>
-        ) : null}
-        <span className="prompt-templates-count">
-          {t('promptTemplates.countLabel', { n: filtered.length })}
-        </span>
+          {sources.length > 2 ? (
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              aria-label={t('promptTemplates.sourceFilterAria')}
+            >
+              {sources.map((s) => (
+                <option key={s} value={s}>
+                  {s === 'All' ? t('promptTemplates.allSources') : s}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <span className="prompt-templates-count">
+            {t('promptTemplates.countLabel', { n: filtered.length })}
+          </span>
+        </div>
       </div>
       {filtered.length === 0 ? (
         <div className="tab-empty">{t('promptTemplates.emptyNoMatch')}</div>

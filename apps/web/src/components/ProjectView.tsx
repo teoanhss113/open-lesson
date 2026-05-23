@@ -2055,23 +2055,29 @@ export function ProjectView({
       const baseTitle = fileName.replace(/\.html?$/i, '') || fileName;
       const prompt =
         `Export @${fileName} as an editable PPTX file titled "${baseTitle}".\n\n` +
-        `**Generate.** Use python-pptx (preferred — full XML control). Apply the ` +
-        `footer-rail + cursor-flow discipline from \`skills/pptx-html-fidelity-audit/SKILL.md\` ` +
-        `Step 4 from the start: define \`CONTENT_MAX_Y = 6.70"\` and \`FOOTER_TOP = 6.85"\` ` +
-        `as constants, route every content block through a \`Cursor\` that refuses to cross ` +
-        `the rail, and use budget centering (not \`MARGIN_TOP\`) for hero/cover slides. ` +
-        `Preserve \`<em>\` / \`<i>\` as \`italic=True\` on Latin runs only — never on CJK. ` +
-        `Set the \`<a:latin>\` and \`<a:ea>\` typeface slots explicitly so Chinese runs ` +
-        `don't fall back to Microsoft JhengHei.\n\n` +
+        `**Target.** The acceptance target is PowerPoint and Google Slides, not only the ` +
+        `in-app PPTX preview. Read \`skills/pptx-html-fidelity-audit/SKILL.md\` first.\n\n` +
+        `**Generate.** Use python-pptx (preferred — full XML control). For any HTML slide ` +
+        `with gradients, CSS effects, dense absolute layout, custom web fonts, or complex ` +
+        `overlaps, use the hybrid fidelity pattern: capture the slide as a full-slide PNG ` +
+        `background at the exact canvas ratio, then add editable text overlays only where ` +
+        `font, color, line breaks, and position can be matched closely. If an editable ` +
+        `overlay would drift in PowerPoint/Google Slides, keep that visible text in the ` +
+        `background image and add notes or hidden/off-canvas text for accessibility/search. ` +
+        `For native editable text, set explicit RGB colors for every visible run and set ` +
+        `both \`<a:latin>\` and \`<a:ea>\` typeface slots explicitly. Preserve \`<em>\` / ` +
+        `\`<i>\` as \`italic=True\` on Latin runs only — never on CJK.\n\n` +
+        `**Layout discipline.** Define \`CONTENT_MAX_Y = 6.70"\` and ` +
+        `\`FOOTER_TOP = 6.85"\` as constants, route every native text/content block through ` +
+        `a cursor or bounds check that refuses to cross the rail, and use budget centering ` +
+        `(not \`MARGIN_TOP\`) for hero/cover slides.\n\n` +
         `**Verify (mandatory gate).** After writing, run ` +
-        `\`python skills/pptx-html-fidelity-audit/scripts/verify_layout.py "${baseTitle}.pptx"\` ` +
+        `\`python3 skills/pptx-html-fidelity-audit/scripts/verify_layout.py "${baseTitle}.pptx"\` ` +
         `(quote the path — filenames may contain spaces). Zero rail violations is the gate ` +
-        `for "shippable". If violations remain, walk Steps 2-4 of the SKILL.md ` +
-        `(extract dump → audit table → re-export) — do not declare done by eyeballing the ` +
-        `deck. If 🟡 typography issues surface (italic missing, unexpected \`Calibri\` / ` +
-        `\`Microsoft JhengHei\` in the XML), consult ` +
-        `\`skills/pptx-html-fidelity-audit/references/font-discipline.md\` for the ` +
-        `five-layer font audit.\n\n` +
+        `for "shippable"; warnings for theme colors or risky font fallbacks must be fixed ` +
+        `unless they are intentionally invisible/off-canvas accessibility text. Do not ` +
+        `declare fidelity by eyeballing the in-app preview. If typography or color issues ` +
+        `surface, consult \`skills/pptx-html-fidelity-audit/references/font-discipline.md\`.\n\n` +
         `**Customizing rails.** The default \`CONTENT_MAX_Y = 6.70"\` / ` +
         `\`FOOTER_TOP = 6.85"\` constants suit a 16:9 canvas with a slim footer. If the ` +
         `design system needs different rails (wider footer, 4:3 canvas), pass ` +
@@ -2540,6 +2546,7 @@ export function ProjectView({
               hasActiveDesignSystem={!!project.designSystemId}
               projectFileNames={projectFileNames}
               skills={skills}
+              designTemplates={designTemplates}
               onEnsureProject={handleEnsureProject}
               previewComments={previewComments}
               attachedComments={attachedComments}

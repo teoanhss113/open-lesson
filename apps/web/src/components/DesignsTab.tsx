@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useT } from "../i18n";
 import { deleteLiveArtifact, fetchLiveArtifacts, fetchProjectFiles, liveArtifactPreviewUrl, projectFileUrl, updateCurriculumStatus } from "../providers/registry";
 import type {
@@ -62,6 +63,8 @@ interface Props {
 	onDelete: (id: string) => void;
 	onRename?: (id: string, name: string) => void;
 	onProjectsRefresh?: () => void;
+	/** When set, the sticky toolbar portals into this element (Home header). */
+	toolbarPortalTarget?: HTMLElement | null;
 }
 
 export function DesignsTab({
@@ -73,12 +76,12 @@ export function DesignsTab({
 	onDelete,
 	onRename,
 	onProjectsRefresh,
+	toolbarPortalTarget,
 }: Props) {
 	const t = useT();
 	const [validatingProjectId, setValidatingProjectId] = useState<string | null>(null);
 	const [designsTabBlockers, setDesignsTabBlockers] = useState<Record<string, CurriculumRisk[]>>({});
 	const [filter, setFilter] = useState("");
-	const [curriculumKindFilter, setCurriculumKindFilter] = useState<string>("all");
 	const [sub, setSub] = useState<SubTab>("recent");
 	const [liveArtifactsByProject, setLiveArtifactsByProject] = useState<
 		Record<string, LiveArtifactSummary[]>
@@ -291,16 +294,6 @@ export function DesignsTab({
 			list = [...list].sort((a, b) => b.createdAt - a.createdAt);
 		}
 
-		if (curriculumKindFilter !== "all") {
-			list = list.filter((item) => {
-				const kind = item.project.metadata?.curriculumKind;
-				if (curriculumKindFilter === "reviews") {
-					return kind === "curriculum-review" || kind === "rollout-validation";
-				}
-				return kind === curriculumKindFilter;
-			});
-		}
-
 		if (!q) return list;
 		return list.filter((item) => {
 			if (item.project.name.toLowerCase().includes(q)) return true;
@@ -309,7 +302,7 @@ export function DesignsTab({
 				item.liveArtifact.title.toLowerCase().includes(q)
 			);
 		});
-	}, [projects, liveArtifactsByProject, filter, sub, curriculumKindFilter]);
+	}, [projects, liveArtifactsByProject, filter, sub]);
 
 	const filteredProjects = useMemo(
 		() =>
@@ -395,10 +388,7 @@ export function DesignsTab({
 		});
 	};
 
-	return (
-		<div
-			className={`tab-panel${view === "kanban" ? " design-kanban-view" : ""}`}
-		>
+	const toolbar = (
 			<div className="tab-panel-toolbar">
 				<div className="toolbar-left">
 					<div
@@ -490,24 +480,21 @@ export function DesignsTab({
 					</div>
 				</div>
 			</div>
-			<div className="curriculum-filter-chips" style={{ display: 'flex', gap: 'var(--spacing-xs)', padding: '0 0 var(--spacing-xs)', borderBottom: '1px solid var(--border-soft)', flexWrap: 'wrap' }}>
-				{[
-					{ value: 'all', key: 'curriculum.filter.all' },
-					{ value: 'lesson-plan', key: 'curriculum.filter.lessonPlans' },
-					{ value: 'teaching-guide', key: 'curriculum.filter.teachingGuides' },
-					{ value: 'slides', key: 'curriculum.filter.slides' },
-					{ value: 'reviews', key: 'curriculum.filter.reviews' },
-				].map((chip) => (
-					<button
-						key={chip.value}
-						type="button"
-						className={`protocol-chip${curriculumKindFilter === chip.value ? ' active' : ''}`}
-						onClick={() => setCurriculumKindFilter(chip.value)}
-					>
-						{t(chip.key as any)}
-					</button>
-				))}
-			</div>
+	);
+
+	const toolbarMount =
+		toolbarPortalTarget != null
+			? createPortal(toolbar, toolbarPortalTarget)
+			: toolbarPortalTarget === undefined
+				? toolbar
+				: null;
+
+	return (
+		<>
+			{toolbarMount}
+			<div
+				className={`tab-panel${view === "kanban" ? " design-kanban-view" : ""}`}
+			>
 			{filtered.length === 0 ? (
 				<div className="tab-empty">
 					{projects.length === 0
@@ -564,7 +551,6 @@ export function DesignsTab({
 										/>
 									</div>
 									<div className="design-card-meta-block">
-										<ProjectTag category="live-artifact" />
 										<LiveArtifactBadges
 											className="design-card-badges"
 											status={artifact.status}
@@ -669,10 +655,10 @@ export function DesignsTab({
 											</button>
 											{p.metadata?.curriculumKind && (
 												<>
-													<div className="menu-divider" style={{ margin: 'var(--spacing-xxs) 0', borderTop: '1px solid var(--border-soft)' }} />
-													<div className="menu-header" style={{ padding: 'var(--spacing-xxs) var(--spacing-xs)', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold' }}>
-														{t('curriculum.menu.changeStatus' as any) || 'Change Status'}
-													</div>
+<div className="menu-divider-thin" />
+                  <div className="menu-header-uppercase">
+                    {t('curriculum.menu.changeStatus' as any) || 'Change Status'}
+                  </div>
 													{p.metadata.curriculumStatus !== 'draft' && (
 														<button
 															type="button"
@@ -682,7 +668,7 @@ export function DesignsTab({
 																void handleStatusUpdate(p.id, 'draft');
 															}}
 														>
-															<Icon name="pencil" size={12} style={{ color: 'var(--amber)' }} />
+															<Icon name="pencil" size={12} className="icon-amber" />
 															<span>{t('curriculum.status.draft' as any) || 'Draft'}</span>
 														</button>
 													)}
@@ -695,7 +681,7 @@ export function DesignsTab({
 																void handleStatusUpdate(p.id, 'in-review');
 															}}
 														>
-															<Icon name="info" size={12} style={{ color: 'var(--blue)' }} />
+															<Icon name="info" size={12} className="icon-blue" />
 															<span>{t('curriculum.status.in-review' as any) || 'In Review'}</span>
 														</button>
 													)}
@@ -708,7 +694,7 @@ export function DesignsTab({
 																void handleStatusUpdate(p.id, 'approved');
 															}}
 														>
-															<Icon name="check" size={12} style={{ color: 'var(--green)' }} />
+															<Icon name="check" size={12} className="icon-green" />
 															<span>{t('curriculum.status.approved' as any) || 'Approved'}</span>
 														</button>
 													)}
@@ -721,7 +707,7 @@ export function DesignsTab({
 																void handleStatusUpdate(p.id, 'archived');
 															}}
 														>
-															<Icon name="trash" size={12} style={{ color: 'var(--text-muted)' }} />
+															<Icon name="trash" size={12} className="icon-muted" />
 															<span>{t('curriculum.status.archived' as any) || 'Archived'}</span>
 														</button>
 													)}
@@ -759,9 +745,8 @@ export function DesignsTab({
 									) : null}
 								</div>
 								<div className="design-card-meta-block">
-									<ProjectTag category={projectCategory(p)} />
 									{p.metadata?.curriculumKind ? (
-										<div className="design-card-badges" style={{ marginTop: 'var(--spacing-xxs)', marginBottom: 'var(--spacing-xxs)' }}>
+										<div className="design-card-badges">
 											{p.metadata.curriculumStatus && (
 												<CurriculumStatusBadge status={p.metadata.curriculumStatus} />
 											)}
@@ -793,26 +778,17 @@ export function DesignsTab({
 												: ""}
 									</div>
 								</div>
-								{validatingProjectId === p.id && (
-									<div 
-										style={{
-											position: 'absolute',
-											inset: 0,
-											background: 'color-mix(in srgb, var(--bg-elevated) 70%, transparent)',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											zIndex: 15,
-											borderRadius: 'var(--rounded-lg, 8px)',
-										}}
-										onClick={(e) => e.stopPropagation()}
-									>
-										<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--spacing-xs)', color: 'var(--colors-brand-green)' }}>
-											<Icon name="spinner" className="icon-spin" size={24} />
-											<span style={{ fontSize: '11px', fontWeight: 'bold' }}>{t('curriculum.validation.running' as any) || 'Validating Rollout...'}</span>
-										</div>
-									</div>
-								)}
+                  {validatingProjectId === p.id && (
+                    <div
+                      className="validating-overlay"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="validating-spinner">
+                        <Icon name="spinner" className="icon-spin" size={24} />
+                        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{t('curriculum.validation.running' as any) || 'Validating Rollout...'}</span>
+                      </div>
+                    </div>
+                  )}
 								{(() => {
 									const blockers = designsTabBlockers[p.id];
 									if (!blockers || blockers.length === 0) return null;
@@ -910,7 +886,7 @@ export function DesignsTab({
 																	role="menu"
 																	onClick={(e) => e.stopPropagation()}
 																>
-																	<div className="menu-header" style={{ padding: 'var(--spacing-xxs) var(--spacing-xs)', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold' }}>
+                            <div className="menu-header-uppercase">
 																		{t('curriculum.menu.changeStatus' as any) || 'Change Status'}
 																	</div>
 																	{p.metadata.curriculumStatus !== 'draft' && (
@@ -922,7 +898,7 @@ export function DesignsTab({
 																				void handleStatusUpdate(p.id, 'draft');
 																			}}
 																		>
-																			<Icon name="pencil" size={12} style={{ color: 'var(--amber)' }} />
+																			<Icon name="pencil" size={12} className="icon-amber" />
 																			<span>{t('curriculum.status.draft' as any) || 'Draft'}</span>
 																		</button>
 																	)}
@@ -935,7 +911,7 @@ export function DesignsTab({
 																				void handleStatusUpdate(p.id, 'in-review');
 																			}}
 																		>
-																			<Icon name="info" size={12} style={{ color: 'var(--blue)' }} />
+																			<Icon name="info" size={12} className="icon-blue" />
 																			<span>{t('curriculum.status.in-review' as any) || 'In Review'}</span>
 																		</button>
 																	)}
@@ -948,7 +924,7 @@ export function DesignsTab({
 																				void handleStatusUpdate(p.id, 'approved');
 																			}}
 																		>
-																			<Icon name="check" size={12} style={{ color: 'var(--green)' }} />
+																			<Icon name="check" size={12} className="icon-green" />
 																			<span>{t('curriculum.status.approved' as any) || 'Approved'}</span>
 																		</button>
 																	)}
@@ -961,7 +937,7 @@ export function DesignsTab({
 																				void handleStatusUpdate(p.id, 'archived');
 																			}}
 																		>
-																			<Icon name="trash" size={12} style={{ color: 'var(--text-muted)' }} />
+																			<Icon name="trash" size={12} className="icon-muted" />
 																			<span>{t('curriculum.status.archived' as any) || 'Archived'}</span>
 																		</button>
 																	)}
@@ -989,33 +965,24 @@ export function DesignsTab({
 																: ""}
 													</div>
 													{p.metadata?.curriculumKind && p.metadata.curriculumStatus && (
-														<div style={{ marginTop: 'var(--spacing-xxs)' }}>
+    <div className="design-card-badges">
 															<CurriculumStatusBadge
 																status={p.metadata.curriculumStatus}
 																compact
 															/>
 														</div>
 													)}
-													{validatingProjectId === p.id && (
-														<div 
-															style={{
-																position: 'absolute',
-																inset: 0,
-																background: 'color-mix(in srgb, var(--bg-elevated) 70%, transparent)',
-																display: 'flex',
-																alignItems: 'center',
-																justifyContent: 'center',
-																zIndex: 15,
-																borderRadius: 'var(--rounded-lg, 8px)',
-															}}
-															onClick={(e) => e.stopPropagation()}
-														>
-															<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--spacing-xxs)', color: 'var(--colors-brand-green)' }}>
-																<Icon name="spinner" className="icon-spin" size={20} />
-																<span style={{ fontSize: '10px', fontWeight: 'bold' }}>{t('curriculum.validation.running' as any) || 'Validating...'}</span>
-															</div>
-														</div>
-													)}
+                {validatingProjectId === p.id && (
+                    <div
+                      className="validating-overlay"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="validating-spinner-sm">
+                        <Icon name="spinner" className="icon-spin" size={20} />
+                        <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{t('curriculum.validation.running' as any) || 'Validating...'}</span>
+                      </div>
+                    </div>
+                  )}
 													{(() => {
 														const blockers = designsTabBlockers[p.id];
 														if (!blockers || blockers.length === 0) return null;
@@ -1117,7 +1084,8 @@ export function DesignsTab({
 					</div>
 				</div>
 			) : null}
-		</div>
+			</div>
+		</>
 	);
 }
 
@@ -1220,31 +1188,3 @@ function projectCover(
 	return { kind: "fallback", style, initial };
 }
 
-type ProjectCategory = "prototype" | "live-artifact" | "slide" | "media";
-
-function projectCategory(project: Project): ProjectCategory {
-	const meta = project.metadata;
-	if (meta?.intent === "live-artifact" || project.skillId === "live-artifact") {
-		return "live-artifact";
-	}
-	if (meta?.kind === "deck") return "slide";
-	if (meta?.kind === "image" || meta?.kind === "video" || meta?.kind === "audio") {
-		return "media";
-	}
-	return "prototype";
-}
-
-function ProjectTag({ category }: { category: ProjectCategory }) {
-	const t = useT();
-	const label =
-		category === "live-artifact"
-			? t("designs.tagLiveArtifact")
-			: category === "slide"
-				? t("designs.tagSlide")
-				: category === "media"
-					? t("designs.tagMedia")
-					: t("designs.tagPrototype");
-	return (
-		<span className={`design-card-tag tag-${category}`}>{label}</span>
-	);
-}

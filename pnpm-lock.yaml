@@ -62,6 +62,9 @@ importers:
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
+      canvas:
+        specifier: ^3.2.3
+        version: 3.2.3
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -74,6 +77,9 @@ importers:
       multer:
         specifier: ^2.1.1
         version: 2.1.1
+      pdfjs-dist:
+        specifier: ^5.7.284
+        version: 5.7.284
       posthog-node:
         specifier: ^4.18.0
         version: 4.18.0
@@ -107,7 +113,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@20.19.41)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@20.19.41)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   apps/desktop:
     dependencies:
@@ -132,7 +138,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   apps/landing-page:
     dependencies:
@@ -209,7 +215,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   apps/telemetry-worker:
     devDependencies:
@@ -218,7 +224,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   apps/web:
     dependencies:
@@ -282,7 +288,7 @@ importers:
         version: 18.3.7(@types/react@18.3.29)
       jsdom:
         specifier: 29.1.0
-        version: 29.1.0
+        version: 29.1.0(canvas@3.2.3)
       postcss:
         specifier: ^8.5.6
         version: 8.5.15
@@ -294,7 +300,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@20.19.41)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@20.19.41)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   packages/agui-adapter:
     dependencies:
@@ -313,7 +319,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@20.19.41)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@20.19.41)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   packages/contracts:
     dependencies:
@@ -329,7 +335,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   packages/platform:
     devDependencies:
@@ -344,7 +350,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   packages/plugin-runtime:
     dependencies:
@@ -366,7 +372,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@20.19.41)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@20.19.41)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   packages/registry-protocol:
     dependencies:
@@ -382,7 +388,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   packages/sidecar:
     devDependencies:
@@ -397,7 +403,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   packages/sidecar-proto:
     devDependencies:
@@ -412,7 +418,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   tools/dev:
     dependencies:
@@ -480,7 +486,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0)
+        version: 2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0)
 
   tools/pr:
     dependencies:
@@ -1368,6 +1374,81 @@ packages:
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
+
+  '@napi-rs/canvas-android-arm64@0.1.100':
+    resolution: {integrity: sha512-hjhCKhntPv9+t4ckHymdx0phYNcVW+GKQR6Lzw2zE+pOVjOplSmtx9nNNknTjbEDLcuLZqA1y8ufKg1XfgftzQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@napi-rs/canvas-darwin-arm64@0.1.100':
+    resolution: {integrity: sha512-2PcswRaC7Ly645DGt88///zuFDhJxJYdKAs1uU3mfk1atYkXufgcgLfBpk6Tm12nCQBaNt1wpybuPZ4qOhTo8A==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@napi-rs/canvas-darwin-x64@0.1.100':
+    resolution: {integrity: sha512-ePNZtj7pNIva/siZMg+HmbeozkIjqUIYdoymH8HaA3qK7LfzFN4WMBM8G6HQ9ZC+H3+Dnn5pqtiXpgLykaPOhw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@napi-rs/canvas-linux-arm-gnueabihf@0.1.100':
+    resolution: {integrity: sha512-d5cDB48oWFGU8/XPhUOFAlySgb/VAu7D+s8fi55K1Pcfg8aPplHWqMgibhVLU8ky7Pyg/fuiVLz4Nf3JrSTuUA==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@napi-rs/canvas-linux-arm64-gnu@0.1.100':
+    resolution: {integrity: sha512-rDxgxRu69RvDlX/bh9o22DxLsGr8EqsNgotL9+RwQE1S0b0cqeatqsw6aW45mukm0B42DIAaAacKaYQ8cqS1nw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@napi-rs/canvas-linux-arm64-musl@0.1.100':
+    resolution: {integrity: sha512-K3mDW66N+xT2/V439u1alFANiBUjdEx2gLiNYnCmUsva5jZMxWTjafBYwTzYK+EMFMHrUoabuU+T1BIP5CgbYQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@napi-rs/canvas-linux-riscv64-gnu@0.1.100':
+    resolution: {integrity: sha512-mooqUBTIsccZpnoQC4NgrC1v6C1vof39etLNMnBwCY+p0gajWJvAHLGQ6g/gGyS5YrpDW+GefSN4+Cvcr08UWw==}
+    engines: {node: '>= 10'}
+    cpu: [riscv64]
+    os: [linux]
+    libc: [glibc]
+
+  '@napi-rs/canvas-linux-x64-gnu@0.1.100':
+    resolution: {integrity: sha512-1eCvkDCazm7FFhsT7DfGOdSaHgZVK3bt/dSBl5EWHOWmnz+I7j8tPseJqqD81NF+MH21jKUK4wQSDjN0mdhnTg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@napi-rs/canvas-linux-x64-musl@0.1.100':
+    resolution: {integrity: sha512-20arT6lnI19S68qNlii73TSEDbECNgzMz2EpldC1V3mZFuRkeujXkcebRk0LRJe9SEUAooYiLokfMViY8IX7yA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@napi-rs/canvas-win32-arm64-msvc@0.1.100':
+    resolution: {integrity: sha512-DZFFT1wIAg37LJw37yhMRFfjATd3vTQzjZ1Yki8u2vhO6Hi5VE6BVaGQ1aaDu7xb4iMErz+9EOwjpS7xcxFeBw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@napi-rs/canvas-win32-x64-msvc@0.1.100':
+    resolution: {integrity: sha512-MyT1j3mHC2+Lu4pBi9mKyMJhtP6U7k7EldY7sj/uS5gJA65gTXt8MefJQXLJo5d/vZbuWmfxzkEUNc/urV3pHA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@napi-rs/canvas@0.1.100':
+    resolution: {integrity: sha512-xglYA6q3XO5P3BNJYxVZ1IV7DLVjp1Py6nwag88YntrS+3vKHyYcMqXVS4ZztJmwz2uGvz1FWhI/4LgbR5uQDA==}
+    engines: {node: '>= 10'}
 
   '@next/env@16.2.6':
     resolution: {integrity: sha512-gd8HoHN4ufj73WmR3JmVolrpJR47ILK6LouP5xElPglaVxir6e1a7VzvTvDWkOoPXT9rkkTzyCxBu4yeZfZwcw==}
@@ -2298,6 +2379,10 @@ packages:
 
   caniuse-lite@1.0.30001793:
     resolution: {integrity: sha512-iwSsYWaCOoh26cV8NwNRViHlrfUvYsHDfRVcbtmw0Kg6PJIZZXwMkj1442FYLBGkeUf1juAsU3DTfxW579mrPA==}
+
+  canvas@3.2.3:
+    resolution: {integrity: sha512-PzE5nJZPz72YUAfo8oTp0u3fqqY7IzlTubneAihqDYAUcBk7ryeCmBbdJBEdaH0bptSOe2VT2Zwcb3UaFyaSWw==}
+    engines: {node: ^18.12.0 || >= 20.9.0}
 
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
@@ -3701,6 +3786,9 @@ packages:
   node-addon-api@1.7.2:
     resolution: {integrity: sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==}
 
+  node-addon-api@7.1.1:
+    resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
+
   node-api-version@0.2.1:
     resolution: {integrity: sha512-2xP/IGGMmmSQpI1+O/k72jF/ykvZ89JeuKX3TLJAYPDVLUalrshrLHkeVcCCZqG/eEa635cr8IBYzgnDvM2O8Q==}
 
@@ -3854,6 +3942,10 @@ packages:
   pathval@2.0.1:
     resolution: {integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==}
     engines: {node: '>= 14.16'}
+
+  pdfjs-dist@5.7.284:
+    resolution: {integrity: sha512-h4EdYQczmGhbOlqc3PPZwxevn7ApdWPbovAuWXOB/DjIyigSnwfy2oze7c6mRcSr9XgLp3eN3EeL4DyySTPMFw==}
+    engines: {node: '>=22.13.0 || >=24'}
 
   pe-library@0.4.1:
     resolution: {integrity: sha512-eRWB5LBz7PpDu4PUlwT0PhnQfTQJlDDdPa35urV4Osrm0t0AqQFGn+UIkU3klZvwJ8KPO3VbBFsXquA6p6kqZw==}
@@ -5773,6 +5865,54 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@napi-rs/canvas-android-arm64@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-darwin-arm64@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-darwin-x64@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-linux-arm-gnueabihf@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-linux-arm64-gnu@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-linux-arm64-musl@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-linux-riscv64-gnu@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-linux-x64-gnu@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-linux-x64-musl@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-win32-arm64-msvc@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas-win32-x64-msvc@0.1.100':
+    optional: true
+
+  '@napi-rs/canvas@0.1.100':
+    optionalDependencies:
+      '@napi-rs/canvas-android-arm64': 0.1.100
+      '@napi-rs/canvas-darwin-arm64': 0.1.100
+      '@napi-rs/canvas-darwin-x64': 0.1.100
+      '@napi-rs/canvas-linux-arm-gnueabihf': 0.1.100
+      '@napi-rs/canvas-linux-arm64-gnu': 0.1.100
+      '@napi-rs/canvas-linux-arm64-musl': 0.1.100
+      '@napi-rs/canvas-linux-riscv64-gnu': 0.1.100
+      '@napi-rs/canvas-linux-x64-gnu': 0.1.100
+      '@napi-rs/canvas-linux-x64-musl': 0.1.100
+      '@napi-rs/canvas-win32-arm64-msvc': 0.1.100
+      '@napi-rs/canvas-win32-x64-msvc': 0.1.100
+    optional: true
+
   '@next/env@16.2.6': {}
 
   '@next/swc-darwin-arm64@16.2.6':
@@ -6825,6 +6965,11 @@ snapshots:
   camelcase@8.0.0: {}
 
   caniuse-lite@1.0.30001793: {}
+
+  canvas@3.2.3:
+    dependencies:
+      node-addon-api: 7.1.1
+      prebuild-install: 7.1.3
 
   ccount@2.0.1: {}
 
@@ -7937,7 +8082,7 @@ snapshots:
     dependencies:
       argparse: 2.0.1
 
-  jsdom@29.1.0:
+  jsdom@29.1.0(canvas@3.2.3):
     dependencies:
       '@asamuzakjp/css-color': 5.1.11
       '@asamuzakjp/dom-selector': 7.1.1
@@ -7960,6 +8105,8 @@ snapshots:
       whatwg-mimetype: 5.0.0
       whatwg-url: 16.0.1
       xml-name-validator: 5.0.0
+    optionalDependencies:
+      canvas: 3.2.3
     transitivePeerDependencies:
       - '@noble/hashes'
 
@@ -8547,6 +8694,8 @@ snapshots:
   node-addon-api@1.7.2:
     optional: true
 
+  node-addon-api@7.1.1: {}
+
   node-api-version@0.2.1:
     dependencies:
       semver: 7.8.0
@@ -8676,6 +8825,10 @@ snapshots:
   pathe@1.1.2: {}
 
   pathval@2.0.1: {}
+
+  pdfjs-dist@5.7.284:
+    optionalDependencies:
+      '@napi-rs/canvas': 0.1.100
 
   pe-library@0.4.1: {}
 
@@ -9726,7 +9879,7 @@ snapshots:
     optionalDependencies:
       vite: 6.4.2(@types/node@20.19.41)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  vitest@2.1.9(@types/node@20.19.41)(jsdom@29.1.0)(lightningcss@1.32.0):
+  vitest@2.1.9(@types/node@20.19.41)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0):
     dependencies:
       '@vitest/expect': 2.1.9
       '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@20.19.41)(lightningcss@1.32.0))
@@ -9750,7 +9903,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.41
-      jsdom: 29.1.0
+      jsdom: 29.1.0(canvas@3.2.3)
     transitivePeerDependencies:
       - less
       - lightningcss
@@ -9762,7 +9915,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@2.1.9(@types/node@24.12.2)(jsdom@29.1.0)(lightningcss@1.32.0):
+  vitest@2.1.9(@types/node@24.12.2)(jsdom@29.1.0(canvas@3.2.3))(lightningcss@1.32.0):
     dependencies:
       '@vitest/expect': 2.1.9
       '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@24.12.2)(lightningcss@1.32.0))
@@ -9786,7 +9939,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.12.2
-      jsdom: 29.1.0
+      jsdom: 29.1.0(canvas@3.2.3)
     transitivePeerDependencies:
       - less
       - lightningcss

@@ -9,6 +9,8 @@
 import { useT } from '../i18n';
 import type { Project } from '../types';
 import { Icon } from './Icon';
+import { projectFileUrl } from '../providers/registry';
+import type { CSSProperties } from 'react';
 
 interface Props {
   projects: Project[];
@@ -50,41 +52,76 @@ export function RecentProjectsStrip({
         <div className="recent-projects__empty">{t('home.recentProjectsEmpty')}</div>
       ) : (
         <div className="recent-projects__row" role="list">
-          {recent.map((project) => (
-            <button
-              key={project.id}
-              type="button"
-              role="listitem"
-              className="recent-projects__card"
-              onClick={() => onOpen(project.id)}
-              title={project.name}
-              data-project-id={project.id}
-            >
-              <div className="recent-projects__card-thumb" aria-hidden>
-                <span className="recent-projects__card-glyph">
-                  {projectGlyph(project.name)}
-                </span>
-              </div>
-              <div className="recent-projects__card-meta">
-                <div className="recent-projects__card-name">{project.name}</div>
-                <div className="recent-projects__card-time">
-                  {relativeTime(project.updatedAt, t)}
+          {recent.map((project) => {
+            const cover = projectCover(project);
+            return (
+              <button
+                key={project.id}
+                type="button"
+                role="listitem"
+                className="recent-projects__card"
+                onClick={() => onOpen(project.id)}
+                title={project.name}
+                data-project-id={project.id}
+              >
+                <div
+                  className="recent-projects__card-thumb"
+                  aria-hidden
+                  style={cover.kind === 'fallback' ? cover.style : undefined}
+                >
+                  {cover.kind === 'image' ? (
+                    <img
+                      className="recent-projects__card-img"
+                      src={cover.src}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                  <span className="recent-projects__card-glyph">
+                    {cover.initial}
+                  </span>
                 </div>
-              </div>
-            </button>
-          ))}
+                <div className="recent-projects__card-meta">
+                  <div className="recent-projects__card-name">{project.name}</div>
+                  <div className="recent-projects__card-time">
+                    {relativeTime(project.updatedAt, t)}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </section>
   );
 }
 
-function projectGlyph(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return '·';
-  const codePoint = trimmed.codePointAt(0);
-  if (!codePoint) return '·';
-  return String.fromCodePoint(codePoint).toUpperCase();
+function projectCover(project: Project): {
+  kind: 'image' | 'fallback';
+  src?: string;
+  style: CSSProperties;
+  initial: string;
+} {
+  let h = 0;
+  for (let i = 0; i < project.id.length; i++) {
+    h = (h * 31 + project.id.charCodeAt(i)) >>> 0;
+  }
+  const hue = h % 360;
+  const hue2 = (hue + 38) % 360;
+  const style: CSSProperties = {
+    background: `radial-gradient(circle at 30% 28%, hsl(${hue} 70% 78% / 0.55), transparent 42%), linear-gradient(135deg, hsl(${hue} 65% 88%), hsl(${hue2} 70% 90%))`,
+  };
+  const trimmed = project.name.trim();
+  const initial = (trimmed ? Array.from(trimmed)[0]! : '?').toUpperCase();
+  const meta = project.metadata;
+  const entry = meta?.entryFile;
+  if (entry && meta?.kind === 'image') {
+    return { kind: 'image', src: projectFileUrl(project.id, entry), style, initial };
+  }
+  return { kind: 'fallback', style, initial };
 }
 
 function relativeTime(ts: number, t: ReturnType<typeof useT>): string {

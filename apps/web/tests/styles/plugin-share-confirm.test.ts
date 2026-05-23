@@ -8,6 +8,6 @@ describe('plugin share confirmation styles', () => {
     const css = readFileSync(join(process.cwd(), 'src/index.css'), 'utf8');
 
     expect(css).toContain('.plugin-share-confirm .plugin-details-modal__foot');
-    expect(css).toContain('padding: 16px 24px 22px;');
+    expect(css).toContain('padding: var(--spacing-md) var(--spacing-xl) var(--spacing-lg);');
   });
 });

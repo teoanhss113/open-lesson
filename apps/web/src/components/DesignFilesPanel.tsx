@@ -1,21 +1,30 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '../i18n';
 import type { Dict } from '../i18n/types';
-import { projectFileUrl } from '../providers/registry';
+import { fetchExtractedDocumentMedia, projectFileUrl, triggerExtractDocumentMedia } from '../providers/registry';
 import type { LiveArtifactWorkspaceEntry, ProjectFile, ProjectFileKind } from '../types';
 import type { PluginFolderAgentAction } from './design-files/pluginFolderActions';
 import {
   browsePathSegments,
   displayNameForFile,
-  listBrowseDirectory,
+  joinBrowsePath,
   mergeBrowseRows,
-  parentBrowsePath,
+  normalizeBrowsePath,
   type BrowseFolder,
   type BrowsePath,
   type BrowseRow,
 } from './design-files/folderBrowse';
+import {
+  browsePathLabel,
+  extractedMediaForSource,
+  isExtractedDocumentMediaBrowsePath,
+  listDesignFilesDirectory,
+  parentDesignFilesBrowsePath,
+  resolveDesignFilesBrowsePath,
+} from './design-files/extractedMediaBrowse';
 import { getPluginFolderCandidates } from './design-files/pluginFolders';
 import { Icon } from './Icon';
+import { FlexRow } from './UiPrimitives';
 import { LiveArtifactBadges } from './LiveArtifactBadges';
 import { humanBytes } from '../utils/format';
 import { isRenderableSketchJson, SketchPreview } from './SketchPreview';
@@ -45,13 +54,15 @@ interface Props {
   onRefreshFiles: () => Promise<void> | void;
   onOpenFile: (name: string) => void;
   onOpenLiveArtifact: (tabId: LiveArtifactWorkspaceEntry['tabId']) => void;
+  onCreateFolder?: (folderPath: string) => Promise<ProjectFile | null> | ProjectFile | null;
+  onMoveFiles?: (names: string[], destinationFolder: string) => Promise<void> | void;
   onRenameFile: (from: string, to: string) => Promise<ProjectFile | null> | ProjectFile | null;
   onDeleteFile: (name: string) => void;
   onDeleteFiles: (names: string[]) => Promise<void> | void;
-  onUpload: () => void;
-  onUploadFolder: () => void;
-  onUploadFiles: (files: File[]) => void;
-  onPaste: () => void;
+  onUpload: (browsePath: BrowsePath) => void;
+  onUploadFolder: (browsePath: BrowsePath) => void;
+  onUploadFiles: (files: File[], browsePath: BrowsePath) => void;
+  onPaste: (browsePath: BrowsePath) => void;
   onNewSketch: () => void;
   uploadError?: string | null;
   onClearUploadError?: () => void;
@@ -72,6 +83,10 @@ type SortDir = 'asc' | 'desc';
  * accidentally produce the same value.
  */
 type KindFamilyFilter = KindFamily | null;
+type DesignFilesInputModal =
+  | { kind: 'newFolder'; value: string }
+  | { kind: 'moveSelected'; value: string };
+const DESIGN_FILES_DRAG_MIME = 'application/x-open-design-files';
 
 const MODIFIED_SECTION_ORDER: ModifiedSection[] = [
   'today',
@@ -101,6 +116,8 @@ export function DesignFilesPanel({
   onRefreshFiles,
   onOpenFile,
   onOpenLiveArtifact,
+  onCreateFolder,
+  onMoveFiles,
   onRenameFile,
   onDeleteFile,
   onDeleteFiles,
@@ -116,6 +133,10 @@ export function DesignFilesPanel({
   const t = useT();
   const [refreshing, setRefreshing] = useState(false);
   const [draggingFiles, setDraggingFiles] = useState(false);
+  const [draggingMove, setDraggingMove] = useState(false);
+  const [folderDropTarget, setFolderDropTarget] = useState<BrowsePath | null>(null);
+  /** Browsers only expose custom drag MIME data on `drop`, not during `dragover`. */
+  const draggingFileNamesRef = useRef<string[]>([]);
   const dragDepthRef = useRef(0);
   const [hover, setHover] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ name: string; top: number; left: number } | null>(null);
@@ -136,11 +157,14 @@ export function DesignFilesPanel({
     Set<ModifiedSection>
   >(new Set());
   const [renaming, setRenaming] = useState<{ name: string; draft: string; saving: boolean } | null>(null);
+  const [inputModal, setInputModal] = useState<DesignFilesInputModal | null>(null);
   const [dayBoundary, setDayBoundary] = useState(() => Date.now());
   const [browsePath, setBrowsePath] = useState<BrowsePath>('');
+  const uploadBrowsePath = resolveDesignFilesBrowsePath(browsePath);
+  const inExtractedMediaBrowse = isExtractedDocumentMediaBrowsePath(browsePath);
 
   const directoryListing = useMemo(
-    () => listBrowseDirectory(files, browsePath),
+    () => listDesignFilesDirectory(files, browsePath),
     [files, browsePath],
   );
 
@@ -225,6 +249,13 @@ export function DesignFilesPanel({
         .map((row) => row.file),
     [pageBrowseRows],
   );
+  const pageItems = useMemo(
+    () =>
+      pageBrowseRows.map((row) =>
+        row.type === 'folder' ? row.folder.path : row.file.name,
+      ),
+    [pageBrowseRows],
+  );
   const modifiedGroups = useMemo(() => {
     const groups: Record<ModifiedSection, ProjectFile[]> = {
       today: [],
@@ -244,8 +275,8 @@ export function DesignFilesPanel({
   );
   const rangeStart = safePage * effectivePageSize + 1;
   const rangeEnd = Math.min((safePage + 1) * effectivePageSize, filteredBrowseRows.length);
-  const allPageSelected = pageFiles.every((f) => selected.has(f.name));
-  const somePageSelected = !allPageSelected && pageFiles.some((f) => selected.has(f.name));
+  const allPageSelected = pageItems.length > 0 && pageItems.every((item) => selected.has(item));
+  const somePageSelected = !allPageSelected && pageItems.some((item) => selected.has(item));
 
   useEffect(() => {
     setPage(0);
@@ -276,22 +307,44 @@ export function DesignFilesPanel({
     setSelected((prev) => {
       if (prev.size === 0) return prev;
       const names = new Set(files.map((f) => f.name));
+      const folderPaths = new Set(directoryListing.folders.map((f) => f.path));
       const next = new Set(prev);
       let changed = false;
       for (const n of next) {
-        if (!names.has(n)) {
+        if (!names.has(n) && !folderPaths.has(n)) {
           next.delete(n);
           changed = true;
         }
       }
       return changed ? next : prev;
     });
-  }, [files]);
+  }, [files, directoryListing.folders]);
 
   const previewFile = useMemo(
     () => files.find((f) => f.name === preview) ?? null,
     [preview, files],
   );
+  const previewExtractedMedia = useMemo(
+    () => (previewFile ? extractedMediaForSource(files, previewFile.name) : []),
+    [files, previewFile],
+  );
+
+  // When the user selects a document/PDF/PPTX/XLSX file, trigger media
+  // extraction eagerly so the df-preview media grid is populated immediately.
+  // Fire-and-forget: run the extract-media endpoint, then refresh files so
+  // any newly-written _document_media images appear in the grid.
+  const extractionTriggeredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!previewFile || !projectId) return;
+    const kind = previewFile.kind;
+    if (!['document', 'pdf', 'presentation', 'spreadsheet'].includes(kind)) return;
+    // Only trigger once per file per mount to avoid hammering the daemon.
+    if (extractionTriggeredRef.current.has(previewFile.name)) return;
+    extractionTriggeredRef.current.add(previewFile.name);
+    triggerExtractDocumentMedia(projectId, previewFile.name).then(() => {
+      void onRefreshFiles();
+    }).catch(() => {});
+  }, [previewFile, projectId, onRefreshFiles]);
 
   useEffect(() => {
     if (!menuPos) return;
@@ -343,16 +396,18 @@ export function DesignFilesPanel({
     setSelected((prev) => {
       const next = new Set(prev);
       if (allPageSelected) {
-        for (const f of pageFiles) next.delete(f.name);
+        for (const item of pageItems) next.delete(item);
       } else {
-        for (const f of pageFiles) next.add(f.name);
+        for (const item of pageItems) next.add(item);
       }
       return next;
     });
   }
 
   function selectAllFiles() {
-    setSelected(new Set(sortedFiles.map((f) => f.name)));
+    const allNames = sortedFiles.map((f) => f.name);
+    const allFolderPaths = directoryListing.folders.map((f) => f.path);
+    setSelected(new Set([...allNames, ...allFolderPaths]));
   }
 
   function clearSelection() {
@@ -451,6 +506,131 @@ export function DesignFilesPanel({
     setPage(0);
   }
 
+  function openCreateFolderModal() {
+    if (!onCreateFolder) return;
+    setInputModal({ kind: 'newFolder', value: t('designFiles.newFolderDefault') });
+  }
+
+  function openMoveSelectedModal() {
+    if (!onMoveFiles || selected.size === 0) return;
+    setInputModal({ kind: 'moveSelected', value: uploadBrowsePath });
+  }
+
+  function closeInputModal() {
+    setInputModal(null);
+  }
+
+  async function submitInputModal() {
+    if (!inputModal) return;
+    if (inputModal.kind === 'newFolder') {
+      if (!onCreateFolder) return;
+      const trimmed = inputModal.value.trim();
+      if (!trimmed) return;
+      const folderPath = joinBrowsePath(uploadBrowsePath, trimmed);
+      closeInputModal();
+      try {
+        const folder = await onCreateFolder(folderPath);
+        if (!folder) throw new Error('Folder creation failed');
+        await onRefreshFiles();
+        openBrowseFolder(folder.name);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
+    if (!onMoveFiles) return;
+    const fileList = [...selected];
+    if (fileList.length === 0) return;
+    const destination = inputModal.value;
+    closeInputModal();
+    await moveFilesTo(fileList, destination);
+  }
+
+  const inputModalTitle =
+    inputModal?.kind === 'newFolder'
+      ? t('designFiles.newFolder')
+      : inputModal?.kind === 'moveSelected'
+        ? t('designFiles.moveSelected', { n: selected.size })
+        : '';
+  const inputModalLabel =
+    inputModal?.kind === 'newFolder'
+      ? t('designFiles.newFolderPrompt')
+      : inputModal?.kind === 'moveSelected'
+        ? t('designFiles.moveSelectedPrompt')
+        : '';
+  const inputModalSubmitLabel =
+    inputModal?.kind === 'newFolder' ? t('common.create') : t('designFiles.moveSelected', { n: selected.size });
+  const inputModalSubmitDisabled =
+    inputModal?.kind === 'newFolder' ? !inputModal.value.trim() : false;
+
+  function draggedFileNamesFromEvent(ev: React.DragEvent<HTMLElement>): string[] {
+    if (typeof ev.dataTransfer.getData === 'function') {
+      const raw = ev.dataTransfer.getData(DESIGN_FILES_DRAG_MIME);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as unknown;
+          if (Array.isArray(parsed)) {
+            const names = parsed.filter((name): name is string => typeof name === 'string');
+            if (names.length > 0) return names;
+          }
+        } catch {
+          /* fall through to ref */
+        }
+      }
+    }
+    return draggingFileNamesRef.current;
+  }
+
+  async function moveFilesTo(names: string[], destinationFolder: BrowsePath) {
+    if (!onMoveFiles || isExtractedDocumentMediaBrowsePath(destinationFolder)) return;
+    const normalizedDestination = resolveDesignFilesBrowsePath(destinationFolder);
+    const uniqueNames = [...new Set(names)];
+    if (uniqueNames.length === 0) return;
+    await onMoveFiles(uniqueNames, normalizedDestination);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const name of uniqueNames) next.delete(name);
+      return next;
+    });
+    setPreview((curr) => (curr && uniqueNames.includes(curr) ? null : curr));
+    await onRefreshFiles();
+  }
+
+  function startFileDrag(ev: React.DragEvent<HTMLTableRowElement>, name: string) {
+    const names = selected.has(name) ? [...selected] : [name];
+    draggingFileNamesRef.current = names;
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData(DESIGN_FILES_DRAG_MIME, JSON.stringify(names));
+    ev.dataTransfer.setData('text/plain', names.join('\n'));
+    setDraggingMove(true);
+  }
+
+  function endFileDrag() {
+    draggingFileNamesRef.current = [];
+    setDraggingMove(false);
+    setFolderDropTarget(null);
+  }
+
+  function handleFolderDragOver(ev: React.DragEvent<HTMLTableRowElement>, folderPath: BrowsePath) {
+    if (isExtractedDocumentMediaBrowsePath(folderPath)) return;
+    const names = draggedFileNamesFromEvent(ev);
+    if (names.length === 0) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    setFolderDropTarget(folderPath);
+  }
+
+  async function handleFolderDrop(ev: React.DragEvent<HTMLTableRowElement>, folderPath: BrowsePath) {
+    if (isExtractedDocumentMediaBrowsePath(folderPath)) return;
+    const names = draggedFileNamesFromEvent(ev);
+    if (names.length === 0) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    setFolderDropTarget(null);
+    setDraggingMove(false);
+    await moveFilesTo(names, folderPath);
+  }
+
   function folderRowTestId(folderPath: BrowsePath): string {
     return `design-folder-row-${folderPath.replace(/\//g, '--')}`;
   }
@@ -458,17 +638,41 @@ export function DesignFilesPanel({
   function renderFolderRow(folder: BrowseFolder) {
     const rowKey = `folder:${folder.path}`;
     const isHovered = hover === rowKey;
+    const isDropTarget = folderDropTarget === folder.path;
     return (
       <tr
         key={rowKey}
         data-testid={folderRowTestId(folder.path)}
-        className={`df-file-row df-folder-row ${isHovered ? 'active' : ''}`}
+        className={`df-file-row df-folder-row ${isHovered ? 'active' : ''} ${isDropTarget ? 'drag-over' : ''}`}
         onMouseEnter={() => setHover(rowKey)}
         onMouseLeave={() => setHover((c) => (c === rowKey ? null : c))}
+        onDragOver={(ev) => handleFolderDragOver(ev, folder.path)}
+        onDragLeave={(ev) => {
+          if (!ev.currentTarget.contains(ev.relatedTarget as Node | null)) {
+            setFolderDropTarget((curr) => (curr === folder.path ? null : curr));
+          }
+        }}
+        onDrop={(ev) => void handleFolderDrop(ev, folder.path)}
       >
         <td className="df-cell-check">
-          <span className="df-row-check" style={{ opacity: 0.3, pointerEvents: 'none' }} aria-hidden>
-            {'\u2610'}
+          <span
+            className="df-row-check"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSelect(folder.path);
+            }}
+            role="checkbox"
+            aria-checked={selected.has(folder.path)}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSelect(folder.path);
+              }
+            }}
+          >
+            {selected.has(folder.path) ? '\u2611' : '\u2610'}
           </span>
         </td>
         <td
@@ -497,7 +701,11 @@ export function DesignFilesPanel({
             }}
           >
             <span className="df-row-name-wrap">
-              <span className="df-row-name">{folder.name}</span>
+              <span className="df-row-name">
+              {browsePathLabel(folder.path, {
+                extractedMediaFolder: t('designFiles.extractedMediaFolder'),
+              })}
+            </span>
               <span className="df-row-sub">
                 {t('designFiles.folderItemCount', { n: folder.childCount })}
               </span>
@@ -537,6 +745,9 @@ export function DesignFilesPanel({
         key={f.name}
         data-testid={`design-file-row-${f.name}`}
         className={`df-file-row ${active ? 'active' : ''} ${selected.has(f.name) ? 'selected' : ''}`}
+        draggable={!renameState}
+        onDragStart={(ev) => startFileDrag(ev, f.name)}
+        onDragEnd={endFileDrag}
         onMouseEnter={() => setHover(f.name)}
         onMouseLeave={() => setHover((c) => (c === f.name ? null : c))}
       >
@@ -731,7 +942,7 @@ export function DesignFilesPanel({
         onMouseLeave={() => setHover((c) => (c === artifact.tabId ? null : c))}
       >
         <td className="df-cell-check">
-          <span className="df-row-check" style={{ opacity: 0.3, pointerEvents: 'none' }}>
+          <span className="df-row-check df-row-check--disabled">
             {"\u2610"}
           </span>
         </td>
@@ -740,7 +951,7 @@ export function DesignFilesPanel({
           onClick={() => onOpenLiveArtifact(artifact.tabId)}
           onDoubleClick={() => onOpenLiveArtifact(artifact.tabId)}
         >
-          <span className="df-row-icon" data-kind="live-artifact" aria-hidden style={{ color: 'var(--colors-brand-green)' }}>
+          <span className="df-row-icon" data-kind="live-artifact" aria-hidden>
             ◉
           </span>
         </td>
@@ -755,7 +966,7 @@ export function DesignFilesPanel({
             onClick={() => onOpenLiveArtifact(artifact.tabId)}
           >
             <span className="df-row-name-wrap">
-              <span className="df-row-name" style={{ color: 'var(--colors-brand-green)', fontWeight: 500 }}>{artifact.title}</span>
+              <span className="df-row-name df-row-name--live">{artifact.title}</span>
               <span className="df-row-sub">
                 <LiveArtifactBadges
                   compact
@@ -1016,8 +1227,14 @@ export function DesignFilesPanel({
     ev.preventDefault();
     dragDepthRef.current = 0;
     setDraggingFiles(false);
+    setDraggingMove(false);
+    const movingNames = draggedFileNamesFromEvent(ev);
+    if (movingNames.length > 0) {
+      void moveFilesTo(movingNames, uploadBrowsePath);
+      return;
+    }
     const dropped = Array.from(ev.dataTransfer.files ?? []);
-    if (dropped.length > 0) onUploadFiles(dropped);
+    if (dropped.length > 0) onUploadFiles(dropped, uploadBrowsePath);
   }
 
   async function handlePluginFolderAgentAction(
@@ -1058,7 +1275,7 @@ export function DesignFilesPanel({
             <button
               type="button"
               className="icon-only"
-              onClick={() => openBrowseFolder(parentBrowsePath(browsePath))}
+              onClick={() => openBrowseFolder(parentDesignFilesBrowsePath(browsePath))}
               title={t('designFiles.up')}
               aria-label={t('designFiles.up')}
             >
@@ -1086,7 +1303,9 @@ export function DesignFilesPanel({
                     onClick={() => openBrowseFolder(path)}
                     aria-current={isLast ? 'page' : undefined}
                   >
-                    {segment}
+                    {browsePathLabel(path, {
+                      extractedMediaFolder: t('designFiles.extractedMediaFolder'),
+                    })}
                   </button>
                 </span>
               );
@@ -1094,6 +1313,16 @@ export function DesignFilesPanel({
           </nav>
           {selected.size > 0 ? (
             <div className="df-actions">
+              {onMoveFiles ? (
+                <button
+                  type="button"
+                  onClick={openMoveSelectedModal}
+                  title={t('designFiles.moveSelected', { n: selected.size })}
+                >
+                  <Icon name="folder" size={13} />
+                  <span>{t('designFiles.moveSelected', { n: selected.size })}</span>
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => void handleBatchDownload()}
@@ -1115,18 +1344,33 @@ export function DesignFilesPanel({
             </div>
           ) : (
             <div className="df-actions">
+            {onCreateFolder && !inExtractedMediaBrowse ? (
+              <button
+                type="button"
+                data-testid="design-files-new-folder"
+                onClick={openCreateFolderModal}
+                title={t('designFiles.newFolder')}
+              >
+                <Icon name="plus" size={13} />
+                <span>{t('designFiles.newFolder')}</span>
+              </button>
+            ) : null}
             <button type="button" onClick={onNewSketch} title={t('designFiles.newSketch')}>
               <Icon name="pencil" size={13} />
               <span>{t('designFiles.newSketch')}</span>
             </button>
-            <button type="button" onClick={onPaste} title={t('designFiles.paste.title')}>
+            <button
+              type="button"
+              onClick={() => onPaste(uploadBrowsePath)}
+              title={t('designFiles.paste.title')}
+            >
               <Icon name="copy" size={13} />
               <span>{t('designFiles.paste.label')}</span>
             </button>
             <button
               type="button"
               data-testid="design-files-upload-trigger"
-              onClick={onUpload}
+              onClick={() => onUpload(uploadBrowsePath)}
               title={t('designFiles.upload.title')}
             >
               <Icon name="upload" size={13} />
@@ -1135,7 +1379,7 @@ export function DesignFilesPanel({
             <button
               type="button"
               data-testid="design-files-upload-folder-trigger"
-              onClick={onUploadFolder}
+              onClick={() => onUploadFolder(uploadBrowsePath)}
               title={t('designFiles.uploadFolder.title')}
             >
               <Icon name="folder" size={13} />
@@ -1368,7 +1612,7 @@ export function DesignFilesPanel({
                               void handlePluginFolderAgentAction(folder.path, 'contribute')
                             }
                           >
-                            {sharingFolder === `contribute:${folder.path}` ? 'Sending…' : 'Open Design PR'}
+                            {sharingFolder === `contribute:${folder.path}` ? 'Sending…' : 'Contribution PR'}
                           </button>
                         </div>
                       ) : null}
@@ -1536,32 +1780,37 @@ export function DesignFilesPanel({
             </>
           )}
           <div
-            className={`df-drop ${draggingFiles ? 'dragging' : ''}`}
+            className={`df-drop ${draggingFiles || draggingMove ? 'dragging' : ''}`}
             data-testid="design-files-drop-zone"
             role="button"
             tabIndex={0}
             title={t('designFiles.upload.title')}
             aria-label={`${t('designFiles.dropTitle')} ${t('designFiles.dropDesc')}`}
-            onClick={onUpload}
+            onClick={() => onUpload(uploadBrowsePath)}
             onKeyDown={(ev) => {
               if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
-                onUpload();
+                onUpload(uploadBrowsePath);
               }
             }}
             onDragEnter={(ev) => {
               ev.preventDefault();
+              if (draggedFileNamesFromEvent(ev).length > 0) {
+                setDraggingMove(true);
+                return;
+              }
               dragDepthRef.current += 1;
               setDraggingFiles(true);
             }}
             onDragOver={(ev) => {
               ev.preventDefault();
-              ev.dataTransfer.dropEffect = 'copy';
+              ev.dataTransfer.dropEffect = draggedFileNamesFromEvent(ev).length > 0 ? 'move' : 'copy';
             }}
             onDragLeave={(ev) => {
               if (!ev.currentTarget.contains(ev.relatedTarget as Node | null)) {
                 dragDepthRef.current = 0;
                 setDraggingFiles(false);
+                setDraggingMove(false);
                 return;
               }
               dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
@@ -1569,8 +1818,14 @@ export function DesignFilesPanel({
             }}
             onDrop={handleDrop}
           >
-            <span className="label">{t('designFiles.dropTitle')}</span>
-            <span className="desc">{t('designFiles.dropDesc')}</span>
+            <span className="label">
+              {draggingMove ? t('designFiles.dropMoveTitle') : t('designFiles.dropTitle')}
+            </span>
+            <span className="desc">
+              {draggingMove
+                ? t('designFiles.dropMoveDesc', { folder: browsePath || t('designFiles.rootFolder') })
+                : t('designFiles.dropDesc')}
+            </span>
           </div>
         </div>
       </div>
@@ -1578,8 +1833,10 @@ export function DesignFilesPanel({
         <DfPreview
           projectId={projectId}
           file={previewFile}
+          extractedMedia={previewExtractedMedia}
           onOpen={() => onOpenFile(previewFile.name)}
           onClose={() => setPreview(null)}
+          onRefreshFiles={onRefreshFiles}
         />
       ) : null}
       {menuPos ? (
@@ -1610,21 +1867,23 @@ export function DesignFilesPanel({
           >
             {t('common.rename')}
           </button>
-          <a
-            href={projectFileUrl(projectId, menuPos.name)}
-            download={menuPos.name}
-            style={{ textDecoration: 'none' }}
+          <button
+            type="button"
+            className="df-row-popover-link-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuPos(null);
+            }}
           >
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuPos(null);
-              }}
+            <a
+              className="text-decoration-none"
+              href={projectFileUrl(projectId, menuPos.name)}
+              download={menuPos.name}
+              style={{ color: 'inherit', display: 'block', width: '100%', textAlign: 'inherit' }}
             >
               {t('designFiles.download')}
-            </button>
-          </a>
+            </a>
+          </button>
           <button
             type="button"
             className="danger"
@@ -1641,6 +1900,59 @@ export function DesignFilesPanel({
           </button>
         </div>
       ) : null}
+      {inputModal ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={closeInputModal}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="design-files-input-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-head">
+              <h2 id="design-files-input-modal-title">{inputModalTitle}</h2>
+            </div>
+            <label htmlFor="design-files-input-modal-field">
+              <span>{inputModalLabel}</span>
+              <input
+                id="design-files-input-modal-field"
+                type="text"
+                value={inputModal.value}
+                autoFocus
+                onChange={(e) =>
+                  setInputModal((prev) => (prev ? { ...prev, value: e.target.value } : prev))
+                }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !inputModalSubmitDisabled) {
+                    e.preventDefault();
+                    void submitInputModal();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeInputModal();
+                  }
+                }}
+              />
+            </label>
+            <div className="modal-foot">
+              <button type="button" className="ghost" onClick={closeInputModal}>
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={inputModalSubmitDisabled}
+                onClick={() => void submitInputModal()}
+              >
+                {inputModalSubmitLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1648,17 +1960,68 @@ export function DesignFilesPanel({
 function DfPreview({
   projectId,
   file,
+  extractedMedia,
   onOpen,
   onClose,
+  onRefreshFiles,
 }: {
   projectId: string;
   file: ProjectFile;
+  extractedMedia: ProjectFile[];
   onOpen: () => void;
   onClose: () => void;
+  onRefreshFiles?: () => Promise<void> | void;
 }) {
   const t = useT();
   const url = projectFileUrl(projectId, file.name);
   const rendersSketchJson = isRenderableSketchJson(file);
+  const [extracting, setExtracting] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [dynamicMedia, setDynamicMedia] = useState<ProjectFile[]>(extractedMedia);
+
+  useEffect(() => {
+    setDynamicMedia(extractedMedia);
+  }, [extractedMedia]);
+
+  const loadDynamicMedia = useCallback(async () => {
+    const extractedPaths = await fetchExtractedDocumentMedia(projectId, file.name);
+    if (extractedPaths.length > 0) {
+      const mapped = extractedPaths.map((p) => {
+        const existing = extractedMedia.find((f) => f.name === p);
+        if (existing) return existing;
+        return {
+          name: p,
+          path: p,
+          type: 'file' as const,
+          size: 0,
+          mtime: Date.now(),
+          kind: 'image' as const,
+          mime: 'image/png',
+        };
+      });
+      setDynamicMedia(mapped);
+    }
+  }, [projectId, file.name, extractedMedia]);
+
+  useEffect(() => {
+    void loadDynamicMedia();
+  }, [loadDynamicMedia]);
+
+  const handleExtract = async () => {
+    setExtracting(true);
+    try {
+      await triggerExtractDocumentMedia(projectId, file.name);
+      if (onRefreshFiles) {
+        await onRefreshFiles();
+      }
+      await loadDynamicMedia();
+    } catch (err) {
+      console.error('Manual extraction failed:', err);
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   return (
     <aside className="df-preview">
       <div className="df-preview-thumb">
@@ -1680,28 +2043,27 @@ function DfPreview({
         ) : file.kind === 'presentation' ? (
           <SlidePreview projectId={projectId} file={file} compact onOpenInTab={onOpen} />
         ) : (
-          <div
+          <FlexRow
+            gap={0}
+            align="center"
+            justify="center"
             style={{
               width: '100%',
               height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               color: 'var(--text-faint)',
               fontSize: 38,
             }}
           >
             {kindGlyph(file.kind)}
-          </div>
+          </FlexRow>
         )}
       </div>
       <div className="df-preview-meta" data-testid="design-file-preview">
-        <button
-          type="button"
-          className="ghost"
-          onClick={onOpen}
-          style={{ alignSelf: 'flex-start' }}
-        >
+          <button
+            type="button"
+            className="ghost self-flex-start"
+            onClick={onOpen}
+          >
           <Icon name="eye" size={13} />
           <span>{t('designFiles.previewOpen')}</span>
         </button>
@@ -1713,12 +2075,86 @@ function DfPreview({
             size: humanBytes(file.size),
           })}
         </div>
+
+        {['document', 'pdf', 'presentation', 'spreadsheet'].includes(file.kind) ? (
+          <div className="df-preview-assets" data-testid="design-file-preview-assets">
+            <FlexRow
+              className="df-preview-assets-header"
+              gap={0}
+              align="center"
+              justify="space-between"
+              style={{ marginBottom: '8px' }}
+            >
+              <div className="df-preview-assets-title" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-faint)' }}>
+                {t('designFiles.extractedMediaFolder')} · {dynamicMedia.length}
+              </div>
+              <button
+                type="button"
+                className="ghost mini"
+                disabled={extracting}
+                onClick={handleExtract}
+                style={{ padding: '2px 8px', fontSize: '11px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', height: '20px', cursor: 'pointer' }}
+              >
+                {extracting ? (
+                  <>
+                    <Icon name="spinner" size={10} />
+                    <span>Extracting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="reload" size={10} />
+                    <span>{dynamicMedia.length > 0 ? 'Re-extract' : 'Extract images'}</span>
+                  </>
+                )}
+              </button>
+            </FlexRow>
+            
+            {extracting ? (
+              <FlexRow align="center" justify="center" style={{ padding: '24px 0', color: 'var(--text-faint)', fontSize: '12px' }}>
+                <Icon name="spinner" size={16} />
+                <span>Running image extraction...</span>
+              </FlexRow>
+            ) : dynamicMedia.length > 0 ? (
+              <>
+                <div className="df-preview-assets-grid">
+                  {(showAll ? dynamicMedia : dynamicMedia.slice(0, 12)).map((asset) => {
+                    const assetUrl = projectFileUrl(projectId, asset.name);
+                    return (
+                      <a
+                        key={asset.name}
+                        href={assetUrl}
+                        download={asset.name}
+                        title={asset.name}
+                        className="df-preview-asset"
+                      >
+                        <img src={`${assetUrl}?v=${Math.round(asset.mtime)}`} alt={asset.name} />
+                      </a>
+                    );
+                  })}
+                </div>
+                {dynamicMedia.length > 12 && (
+                  <button
+                    type="button"
+                    className="ghost mini df-preview-media-toggle"
+                    onClick={() => setShowAll(!showAll)}
+                  >
+                    {showAll ? 'Show less' : `Show all ${dynamicMedia.length} images`}
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="df-preview-media-empty">
+                No images extracted yet. Click "Extract images" above to retrieve graphics from this document.
+              </div>
+            )}
+          </div>
+        ) : null}
+
         <div className="df-preview-actions">
-          <a
-            className="ghost-link"
-            href={url}
-            download={file.name}
-            style={{ textDecoration: 'none' }}
+            <a
+              className="ghost-link text-decoration-none"
+              href={url}
+              download={file.name}
           >
             {t('designFiles.download')}
           </a>
@@ -1847,5 +2283,3 @@ function relativeTime(ts: number, t: TranslateFn): string {
     return t('designFiles.weeksAgo', { n: Math.floor(diff / (7 * day)) });
   return new Date(ts).toLocaleDateString();
 }
-
-

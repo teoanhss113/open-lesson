@@ -13,9 +13,10 @@ vi.mock('../../src/i18n', () => ({
       'app.brand': 'Open Design',
       'common.close': 'Close',
       'common.untitled': 'Untitled',
-      'entry.navDesignSystems': 'Design systems',
+      'entry.tabTemplates': 'Templates',
       'entry.navHome': 'Home',
       'entry.navProjects': 'Projects',
+      'workspaceTabs.newTab': 'New tab',
     };
     return labels[key] ?? key;
   },

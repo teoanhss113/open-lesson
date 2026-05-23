@@ -821,7 +821,8 @@ function renderMetadataBlock(
       '      }\n' +
       '    }\n' +
       '    ```\n' +
-      '  - **Resource Reuse**: If the system preview reports any reference images under the "Extracted Reference Images" section (e.g., contains the filename suffix `-media-image1.png`), you must reuse them directly using `<img src="[filename]">` in your document headers or main content to preserve the design consistency.\n' +
+      '  - **Resource Reuse**: If the system preview reports any reference images under the "Extracted Reference Images" section (e.g., paths under `_document_media/...` or legacy `-media-image1.png` files), you must reuse them directly using `<img src="[project-relative-path]">` in your document headers or main content to preserve the design consistency.\n' +
+      '    The path shown in the preview (e.g. `_document_media/lesson1-pdf/slide-1.png`) is relative to the project root; in HTML use it as-is in the `src` attribute (e.g. `<img src="_document_media/lesson1-pdf/slide-1.png">`). The daemon serves project files at `/api/projects/{projectId}/raw/*` so the browser resolves relative paths automatically.\n' +
       '  - **Automatic Layout, Structure & Content Separation (Zero-Prompt Automation)**: When the user attaches multiple files, you must automatically classify their roles based on file extension and execute the task as follows:\n' +
       '    1. **Identify Role of Attachments**:\n' +
       '       - **Spreadsheets (.xlsx, .xls, .csv)**: Must be treated strictly as **Content and Data Sources** containing syllabus, lesson details, timeline, or objectives. Do not copy their simple layout/formatting.\n' +

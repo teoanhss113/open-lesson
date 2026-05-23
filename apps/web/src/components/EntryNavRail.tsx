@@ -2,7 +2,7 @@
 //
 // Renders a narrow icon-only column. The first slot is the brand
 // logo (clicking navigates to home), followed by primary
-// actions (new project, home, projects, automations, plugins, design systems, integrations). A small
+// actions (new project, home, automations, plugins, templates, design systems, integrations). A small
 // help launcher sits at the bottom and opens a popover with the
 // canonical "ask for help / submit a feature / what's new / download
 // desktop" external links. Language switching and other account-
@@ -15,9 +15,9 @@ import { useT } from '../i18n';
 
 export type EntryView =
   | 'home'
-  | 'projects'
   | 'tasks'
   | 'plugins'
+  | 'templates'
   | 'design-systems'
   | 'integrations';
 
@@ -68,7 +68,7 @@ export function EntryNavRail({ view, onViewChange, onNewProject }: Props) {
           data-testid="entry-nav-logo"
         >
           <img
-            src="/app-icon.svg"
+            src="/logo.png"
             alt=""
             className="entry-nav-rail__logo-img"
             draggable={false}
@@ -92,18 +92,9 @@ export function EntryNavRail({ view, onViewChange, onNewProject }: Props) {
           <Icon name="home" size={18} />
         </NavButton>
         <NavButton
-          active={view === 'projects'}
-          ariaLabel={t('entry.navProjects')}
-          tooltip={t('entry.navProjects')}
-          onClick={() => onViewChange('projects')}
-          testId="entry-nav-projects"
-        >
-          <Icon name="folder" size={18} />
-        </NavButton>
-        <NavButton
           active={view === 'tasks'}
-          ariaLabel="Automations"
-          tooltip="Automations"
+          ariaLabel={t('entry.navTasks')}
+          tooltip={t('entry.navTasks')}
           onClick={() => onViewChange('tasks')}
           testId="entry-nav-tasks"
         >
@@ -111,12 +102,21 @@ export function EntryNavRail({ view, onViewChange, onNewProject }: Props) {
         </NavButton>
         <NavButton
           active={view === 'plugins'}
-          ariaLabel="Plugins"
-          tooltip="Plugins"
+          ariaLabel={t('entry.navPlugins')}
+          tooltip={t('entry.navPlugins')}
           onClick={() => onViewChange('plugins')}
           testId="entry-nav-plugins"
         >
           <Icon name="grid" size={18} />
+        </NavButton>
+        <NavButton
+          active={view === 'templates'}
+          ariaLabel={t('entry.tabTemplates')}
+          tooltip={t('entry.tabTemplates')}
+          onClick={() => onViewChange('templates')}
+          testId="entry-nav-templates"
+        >
+          <Icon name="file" size={18} />
         </NavButton>
         <NavButton
           active={view === 'design-systems'}
@@ -129,8 +129,8 @@ export function EntryNavRail({ view, onViewChange, onNewProject }: Props) {
         </NavButton>
         <NavButton
           active={view === 'integrations'}
-          ariaLabel="Integrations"
-          tooltip="Integrations"
+          ariaLabel={t('entry.navIntegrations')}
+          tooltip={t('entry.navIntegrations')}
           onClick={() => onViewChange('integrations')}
           testId="entry-nav-integrations"
         >

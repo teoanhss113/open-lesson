@@ -117,12 +117,14 @@ function reviveTab(value: unknown): WorkspaceChromeTab | null {
   const lastActiveAt = typeof record.lastActiveAt === 'number' ? record.lastActiveAt : createdAt;
   if (!id) return null;
   if (record.kind === 'entry') {
-    const view = record.view;
+    const view = record.view === 'projects'
+      ? 'home'
+      : record.view;
     if (
       view === 'home'
-      || view === 'projects'
       || view === 'tasks'
       || view === 'plugins'
+      || view === 'templates'
       || view === 'design-systems'
       || view === 'integrations'
     ) {
@@ -560,17 +562,17 @@ function displayTabFor(
   }
   const entryTitle: Record<EntryHomeView, string> = {
     home: t('entry.navHome'),
-    projects: t('entry.navProjects'),
     tasks: t('entry.navTasks'),
     plugins: t('entry.navPlugins'),
+    templates: t('entry.tabTemplates'),
     'design-systems': t('entry.navDesignSystems'),
     integrations: t('entry.navIntegrations'),
   };
   const entryIcon: Record<EntryHomeView, IconName> = {
     home: 'home',
-    projects: 'folder',
     tasks: 'kanban',
     plugins: 'grid',
+    templates: 'palette',
     'design-systems': 'palette',
     integrations: 'link',
   };

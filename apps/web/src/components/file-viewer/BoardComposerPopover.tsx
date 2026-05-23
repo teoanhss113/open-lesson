@@ -62,7 +62,7 @@ export function BoardComposerPopover({
           ) : (
             <>
               <strong id={titleId}>{target.label || target.elementId}</strong>
-              <span>{selectionKindLabel(target.selectionKind, target.memberCount)}</span>
+              <span>{selectionKindLabel(target.selectionKind, target.memberCount, t)}</span>
             </>
           )}
         </div>

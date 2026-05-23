@@ -79,3 +79,105 @@
   min-height: 0;
   padding-top: 0;
 }
+
+.template-project-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 925;
+  background: rgba(28, 27, 26, 0.42);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+.template-project-modal {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(78vh, 680px);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.template-project-modal__head,
+.template-project-modal__foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-bottom: 1px solid var(--border);
+}
+.template-project-modal__foot {
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+.template-project-modal__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.template-project-modal__subtitle {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.template-project-modal__body {
+  padding: var(--spacing-md) var(--spacing-xl);
+  min-height: 0;
+  overflow: auto;
+}
+.template-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+.template-project-row {
+  appearance: none;
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  color: var(--text);
+  padding: var(--spacing-sm) var(--spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  cursor: pointer;
+  text-align: left;
+}
+.template-project-row:hover,
+.template-project-row.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-panel));
+}
+.template-project-row__name {
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.template-project-row__meta,
+.template-project-modal__empty,
+.template-project-modal__error {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.template-project-modal__empty {
+  padding: var(--spacing-xl);
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+.template-project-modal__error {
+  margin-top: var(--spacing-sm);
+  color: var(--danger, #b42318);
+}

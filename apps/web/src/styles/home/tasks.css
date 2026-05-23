@@ -529,7 +529,7 @@
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 768px) {
   .tasks-view__hero,
   .task-artifact__head {
     flex-direction: column;

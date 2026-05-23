@@ -621,3 +621,15 @@ describe('listSkillFiles', () => {
     }
   });
 });
+
+// Bundled slide catalogue — counts are data-driven from design-templates/.
+// Regenerate with: node --experimental-strip-types scripts/sync-design-templates.ts
+describe('bundled design-templates slide catalogue', () => {
+  it('ships the upstream html-ppt deck set (not a 3-template subset)', async () => {
+    const templates = await listSkills([designTemplatesRoot]);
+    const deckTemplates = templates.filter((t) => t.mode === 'deck');
+    expect(deckTemplates.length).toBeGreaterThanOrEqual(55);
+    expect(deckTemplates.some((t) => t.id === 'html-ppt-course-module')).toBe(true);
+    expect(deckTemplates.some((t) => t.id === 'html-ppt-pitch-deck')).toBe(true);
+  });
+});

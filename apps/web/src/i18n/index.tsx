@@ -118,7 +118,7 @@ export function I18nProvider({ initial, children }: ProviderProps) {
   const t = useCallback(
     (key: DictKey, vars?: Record<string, string | number>): string => {
       const dict = DICTS[locale] ?? en;
-      const raw = dict[key] ?? en[key] ?? key;
+      const raw = dict[key] ?? en[key] ?? humanizeMissingKey(String(key));
       if (!vars) return raw;
       return raw.replace(/\{(\w+)\}/g, (_, name: string) => {
         const v = vars[name];
@@ -146,7 +146,7 @@ export function useI18n(): I18nContextValue {
       locale: 'en',
       setLocale: () => { },
       t: (key, vars) => {
-        const raw = en[key] ?? key;
+        const raw = en[key] ?? humanizeMissingKey(String(key));
         if (!vars) return raw;
         return raw.replace(/\{(\w+)\}/g, (_, n: string) => {
           const v = vars[n];
@@ -161,4 +161,14 @@ export function useI18n(): I18nContextValue {
 // Convenience for components that only need the translator function.
 export function useT(): I18nContextValue['t'] {
   return useI18n().t;
+}
+
+function humanizeMissingKey(key: string): string {
+  const last = key.split('.').filter(Boolean).pop() ?? key;
+  return last
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^./, (ch) => ch.toUpperCase());
 }

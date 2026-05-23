@@ -97,7 +97,7 @@ Existing routes to reuse/adapt:
 - `{ kind: 'home', view: 'home' }` → Curriculum Library home
 - `{ kind: 'home', view: 'projects' }` → All curriculum projects
 - `{ kind: 'project', projectId, fileName }` → Open curriculum workspace
-- `{ kind: 'home', view: 'design-systems' }` → Curriculum templates
+- `{ kind: 'home', view: 'templates' }` → Curriculum templates (`/templates`; legacy `/design-systems` redirects)
 
 New curriculum-specific sub-views should follow the `EntryHomeView` union type pattern in `router.ts`.
 

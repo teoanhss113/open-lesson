@@ -7,7 +7,10 @@ import type { AgentModelOption } from '../types';
 //
 // `'default'` is always pinned first (no group), so the user can return
 // to "let the CLI decide" with one click.
-export function renderModelOptions(models: AgentModelOption[]) {
+export function renderModelOptions(
+  models: AgentModelOption[],
+  defaultLabel?: string,
+) {
   const groups = new Map<string, AgentModelOption[]>();
   const flat: AgentModelOption[] = [];
   for (const m of models) {
@@ -27,7 +30,7 @@ export function renderModelOptions(models: AgentModelOption[]) {
       <>
         {flat.map((m) => (
           <option key={m.id} value={m.id}>
-            {m.label}
+            {modelOptionLabel(m, defaultLabel)}
           </option>
         ))}
       </>
@@ -37,7 +40,7 @@ export function renderModelOptions(models: AgentModelOption[]) {
     <>
       {flat.map((m) => (
         <option key={m.id} value={m.id}>
-          {m.label}
+          {modelOptionLabel(m, defaultLabel)}
         </option>
       ))}
       {Array.from(groups.entries()).map(([provider, items]) => (
@@ -47,15 +50,22 @@ export function renderModelOptions(models: AgentModelOption[]) {
               {/* Strip the redundant `provider/` prefix from the label
                   inside its own optgroup; keep it in the value so the
                   CLI sees the fully-qualified id. */}
-              {m.label.startsWith(`${provider}/`)
-                ? m.label.slice(provider.length + 1)
-                : m.label}
+              {modelOptionLabel(m, defaultLabel).startsWith(`${provider}/`)
+                ? modelOptionLabel(m, defaultLabel).slice(provider.length + 1)
+                : modelOptionLabel(m, defaultLabel)}
             </option>
           ))}
         </optgroup>
       ))}
     </>
   );
+}
+
+function modelOptionLabel(
+  model: AgentModelOption,
+  defaultLabel: string | undefined,
+): string {
+  return model.id === 'default' && defaultLabel ? defaultLabel : model.label;
 }
 
 // True when the picked model id isn't one of the listed options — i.e.

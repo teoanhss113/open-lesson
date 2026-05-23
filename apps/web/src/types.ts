@@ -409,7 +409,7 @@ export interface AgentModelOption {
   label: string;
 }
 
-export type Surface = 'web' | 'image' | 'video' | 'audio';
+export type Surface = 'web' | 'deck' | 'image' | 'video' | 'audio';
 
 export interface PromptTemplateSource {
   repo: string;

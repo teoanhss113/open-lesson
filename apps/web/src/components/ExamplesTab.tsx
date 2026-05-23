@@ -32,6 +32,7 @@ type ScenarioFilter = string;
 
 const SURFACE_PILLS: { value: SurfaceFilter; labelKey: keyof Dict }[] = [
   { value: 'all', labelKey: 'examples.modeAll' },
+  { value: 'deck', labelKey: 'examples.surfaceDeck' },
   { value: 'web', labelKey: 'examples.surfaceWeb' },
   { value: 'image', labelKey: 'examples.surfaceImage' },
   { value: 'video', labelKey: 'examples.surfaceVideo' },
@@ -57,7 +58,11 @@ const SCENARIO_LABEL_KEY: Record<string, keyof Dict> = {
   sales: 'examples.scenarioSales',
   finance: 'examples.scenarioFinance',
   hr: 'examples.scenarioHr',
+  operation: 'examples.scenarioOperation',
   operations: 'examples.scenarioOperations',
+  creator: 'examples.scenarioCreator',
+  healthcare: 'examples.scenarioHealthcare',
+  'live-artifacts': 'examples.scenarioLiveArtifacts',
   support: 'examples.scenarioSupport',
   legal: 'examples.scenarioLegal',
   education: 'examples.scenarioEducation',
@@ -284,7 +289,7 @@ export function ExamplesTab({ skills: rawSkills, onUsePrompt }: Props) {
   }, [skills, surfaceFilter]);
 
   const surfaceCounts = useMemo(() => {
-    const counts: Record<SurfaceFilter, number> = { all: skills.length, web: 0, image: 0, video: 0, audio: 0 };
+    const counts: Record<SurfaceFilter, number> = { all: skills.length, web: 0, image: 0, video: 0, audio: 0, deck: 0 };
     for (const s of skills) counts[surfaceOf(s)]++;
     return counts;
   }, [skills]);

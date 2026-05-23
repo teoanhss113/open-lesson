@@ -155,7 +155,7 @@ import {
   FinalizeUpstreamError,
 } from './finalize-design.js';
 import { listPromptTemplates, readPromptTemplate } from './prompt-templates.js';
-import { buildDocumentPreview } from './document-preview.js';
+import { buildDocumentPreview, extractDocumentMediaOnly } from './document-preview.js';
 import { lintArtifact, renderFindingsForAgent } from './lint-artifact.js';
 import { loadCraftSections } from './craft.js';
 import { stageActiveSkill } from './cwd-aliases.js';
@@ -216,6 +216,7 @@ import { buildMcpInstallPayload } from './mcp-install-info.js';
 import {
   buildProjectArchive,
   buildBatchArchive,
+  createProjectFolder,
   decodeMultipartFilename,
   deleteProjectFile,
   detectEntryFile,
@@ -230,6 +231,8 @@ import {
   removeProjectDir,
   resolveProjectDir,
   sanitizeName,
+  sanitizePath,
+  normalizeUploadDestination,
   searchProjectFiles,
   resolveProjectDir,
   resolveProjectFilePath,
@@ -1410,7 +1413,7 @@ export function createAgentRuntimeToolPrompt(
     '',
     `- Daemon URL: \`${daemonUrl}\` (also available as \`OD_DAEMON_URL\`).`,
     '- `OD_NODE_BIN` is the absolute path to the Node-compatible runtime that started the daemon; packaged desktop installs provide this even when the user has no system `node` on PATH.',
-    '- `OD_BIN` is the absolute path to the Open Design CLI script. On POSIX shells run wrappers with `"$OD_NODE_BIN" "$OD_BIN" tools ...`; do not call bare `od`, which may resolve to the system octal-dump command on Unix-like systems.',
+    '- `OD_BIN` is the absolute path to the Curriculum Workspace CLI script. On POSIX shells run wrappers with `"$OD_NODE_BIN" "$OD_BIN" tools ...`; do not call bare `od`, which may resolve to the system octal-dump command on Unix-like systems.',
     '- On PowerShell use `& $env:OD_NODE_BIN $env:OD_BIN tools ...`; on cmd.exe use `"%OD_NODE_BIN%" "%OD_BIN%" tools ...`.',
     tokenLine,
     '- Prefer project wrapper commands through `OD_NODE_BIN` + `OD_BIN` over raw HTTP. The wrappers read these environment values automatically.',
@@ -1532,12 +1535,12 @@ function githubRepoNameFromPluginName(name) {
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, '-')
     .replace(/(^[-._]+|[-._]+$)/g, '');
-  return slug || 'open-design-plugin';
+  return slug || 'curriculum-workspace-plugin';
 }
 
 const PLUGIN_SHARE_ACTION_LABELS = {
   'publish-github': 'Publish to GitHub',
-  'contribute-open-design': 'Contribute to Open Design',
+  'contribute-open-design': 'Contribute to Curriculum Workspace',
 };
 
 const USER_PLUGIN_SOURCE_KINDS = new Set([
@@ -1584,10 +1587,10 @@ function renderPluginSharePrompt({ action, sourcePlugin, stagedPath }) {
   const title = sourcePlugin.title || sourcePlugin.id;
   if (action === 'publish-github') {
     return [
-      `Publish the local Open Design plugin "${title}" as a new public GitHub repository.`,
+      `Publish the local Curriculum Workspace plugin "${title}" as a new public GitHub repository.`,
       '',
       `The plugin source files have been copied into this project at \`${stagedPath}\`.`,
-      'Use the local daemon share endpoint so the publish flow runs through Open Design\'s validated GitHub path:',
+      'Use the local daemon share endpoint so the publish flow runs through Curriculum Workspace\'s validated GitHub path:',
       '',
       '```bash',
       `curl -sS -X POST "$OD_DAEMON_URL/api/projects/$OD_PROJECT_ID/plugins/publish-github" \\`,
@@ -1601,10 +1604,10 @@ function renderPluginSharePrompt({ action, sourcePlugin, stagedPath }) {
     ].join('\n');
   }
   return [
-    `Open a pull request to add the local Open Design plugin "${title}" to the Open Design repository.`,
+    `Open a pull request to add the local Curriculum Workspace plugin "${title}" to the Curriculum Workspace repository.`,
     '',
     `The plugin source files have been copied into this project at \`${stagedPath}\`.`,
-    'Use the local daemon share endpoint so the contribution flow runs through Open Design\'s validated GitHub path:',
+    'Use the local daemon share endpoint so the contribution flow runs through Curriculum Workspace\'s validated GitHub path:',
     '',
     '```bash',
     `curl -sS -X POST "$OD_DAEMON_URL/api/projects/$OD_PROJECT_ID/plugins/contribute-open-design" \\`,
@@ -2016,7 +2019,7 @@ function renderOAuthResultPage(opts) {
   const title = ok ? 'Connected' : 'Authorization failed';
   const heading = ok ? '✅ Connected' : '⚠️ Authorization failed';
   const body = ok
-    ? `Your MCP server <code>${escapeHtml(opts.serverId ?? '')}</code> is now connected. You can close this tab and return to Open Design.`
+    ? `Your MCP server <code>${escapeHtml(opts.serverId ?? '')}</code> is now connected. You can close this tab and return to Curriculum Workspace.`
     : escapeHtml(opts.message ?? 'Authorization could not be completed.');
   const accent = ok ? '#1a7f37' : '#cf222e';
   const payload = ok
@@ -2026,7 +2029,7 @@ function renderOAuthResultPage(opts) {
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>${escapeHtml(title)} — Open Design</title>
+<title>${escapeHtml(title)} — Curriculum Workspace</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   :root { color-scheme: light dark; }
@@ -2250,6 +2253,40 @@ const pluginUpload = multer({
 // files live under metadata.baseDir.
 let projectMetadataLookup: ((id: string) => Record<string, unknown> | null) | null = null;
 
+async function getUniqueFilename(dir: string, baseName: string): Promise<string> {
+  let name = baseName;
+  const ext = path.extname(baseName);
+  const base = path.basename(baseName, ext);
+  let counter = 1;
+  while (true) {
+    const fullPath = path.join(dir, name);
+    try {
+      await fs.promises.stat(fullPath);
+      name = `${base} (${counter})${ext}`;
+      counter++;
+    } catch (err: any) {
+      if (err && err.code === 'ENOENT') {
+        return name;
+      }
+      throw err;
+    }
+  }
+}
+
+async function getUniqueProjectRelativePath(
+  projectDir: string,
+  relativePath: string,
+): Promise<string> {
+  const safe = sanitizePath(relativePath);
+  const segments = safe.split('/');
+  const fileName = segments.pop()!;
+  const parentRel = segments.join('/');
+  const parentDir = parentRel ? path.join(projectDir, parentRel) : projectDir;
+  await fs.promises.mkdir(parentDir, { recursive: true });
+  const uniqueFile = await getUniqueFilename(parentDir, fileName);
+  return parentRel ? `${parentRel}/${uniqueFile}`.replace(/\\/g, '/') : uniqueFile;
+}
+
 const projectUpload = multer({
   storage: multer.diskStorage({
     destination: async (req, _file, cb) => {
@@ -2267,15 +2304,29 @@ const projectUpload = multer({
         cb(err, '');
       }
     },
-    filename: (_req, file, cb) => {
+    filename: (req, file, cb) => {
       // multer@1 hands us latin1-decoded multipart filenames; restore the
       // original UTF-8 so the response (and the on-disk name) preserves
       // non-ASCII characters instead of mangling them. Then run the
-      // shared sanitiser and prepend a base36 timestamp so multiple
-      // uploads with the same original name don't clobber each other.
+      // shared sanitiser.
       file.originalname = decodeMultipartFilename(file.originalname);
       const safe = sanitizeName(file.originalname);
-      cb(null, `${Date.now().toString(36)}-${safe}`);
+      let destination = '';
+      try {
+        destination = normalizeUploadDestination(req.body?.destination);
+      } catch {
+        return cb(new Error('invalid upload destination'), '');
+      }
+      const relative = destination ? `${destination}/${safe}` : safe;
+      const meta = projectMetadataLookup?.(req.params.id) ?? null;
+      ensureProject(PROJECTS_DIR, req.params.id, meta)
+        .then((dir) => getUniqueProjectRelativePath(dir, relative))
+        .then((uniqueName) => {
+          cb(null, uniqueName);
+        })
+        .catch((err) => {
+          cb(err, '');
+        });
     },
   }),
   limits: { fileSize: 200 * 1024 * 1024 },  // 200MB — covers the largest design assets we expect (PPTX/PDF/raw images)
@@ -3577,6 +3628,7 @@ export async function startServer({
     resolveProjectDir,
     resolveProjectFilePath,
     parseByteRange,
+    createProjectFolder,
     renameProjectFile,
     deleteProjectFile,
     writeProjectFile,
@@ -3822,7 +3874,7 @@ export async function startServer({
     node: nodeDeps,
     projectStore: projectStoreDeps,
     projectFiles: projectFileDeps,
-    documents: { buildDocumentPreview },
+    documents: { buildDocumentPreview, extractDocumentMediaOnly },
     artifacts: artifactDeps,
   });
 
@@ -6853,7 +6905,7 @@ export async function startServer({
       for (const [cmd, args] of [
         ['git', ['init']],
         ['git', ['add', '.']],
-        ['git', ['-c', 'user.name=Open Design', '-c', 'user.email=open-design@example.invalid', 'commit', '-m', `Publish ${meta.title}`]],
+        ['git', ['-c', 'user.name=Curriculum Workspace', '-c', 'user.email=curriculum-workspace@example.invalid', 'commit', '-m', `Publish ${meta.title}`]],
       ]) {
         const result = await execFileBuffered(cmd, args, { cwd: work });
         log.push(result.stdout || result.stderr);
@@ -6926,7 +6978,7 @@ export async function startServer({
       const branch = `plugin/${repoName}-${Date.now()}`;
       const dest = path.join(work, 'plugins', 'community', repoName);
       const bodyText = [
-        `Adds ${meta.title} as a community Open Design plugin.`,
+        `Adds ${meta.title} as a community Curriculum Workspace plugin.`,
         '',
         '## Source',
         '',
@@ -6956,7 +7008,7 @@ export async function startServer({
           /already exists/i.test(String(result.stderr || result.stdout));
         if (!result.ok && !toleratedExistingFork && !toleratedExistingRemote) {
           await fs.promises.rm(tmp, { recursive: true, force: true }).catch(() => undefined);
-          res.status(500).json({ ok: false, code: `${cmd}-failed`, message: `${cmd} failed while preparing the Open Design PR.`, log });
+          res.status(500).json({ ok: false, code: `${cmd}-failed`, message: `${cmd} failed while preparing the Curriculum Workspace PR.`, log });
           return;
         }
       }
@@ -6964,14 +7016,14 @@ export async function startServer({
       await fs.promises.cp(folder, dest, { recursive: true });
       for (const [cmd, args] of [
         ['git', ['add', `plugins/community/${repoName}`]],
-        ['git', ['-c', 'user.name=Open Design', '-c', 'user.email=open-design@example.invalid', 'commit', '-m', `Add ${meta.title} plugin`]],
+        ['git', ['-c', 'user.name=Curriculum Workspace', '-c', 'user.email=curriculum-workspace@example.invalid', 'commit', '-m', `Add ${meta.title} plugin`]],
         ['git', ['push', '-u', 'fork', branch]],
       ]) {
         const result = await execFileBuffered(cmd, args, { cwd: work });
         log.push(result.stdout || result.stderr);
         if (!result.ok) {
           await fs.promises.rm(tmp, { recursive: true, force: true }).catch(() => undefined);
-          res.status(500).json({ ok: false, code: `${cmd}-failed`, message: `${cmd} failed while preparing the Open Design PR.`, log });
+          res.status(500).json({ ok: false, code: `${cmd}-failed`, message: `${cmd} failed while preparing the Curriculum Workspace PR.`, log });
           return;
         }
       }
@@ -6992,12 +7044,12 @@ export async function startServer({
       log.push(pr.stdout || pr.stderr);
       await fs.promises.rm(tmp, { recursive: true, force: true }).catch(() => undefined);
       if (!pr.ok) {
-        res.status(500).json({ ok: false, code: 'gh-pr-create-failed', message: 'Open Design PR creation failed.', log });
+        res.status(500).json({ ok: false, code: 'gh-pr-create-failed', message: 'Curriculum Workspace PR creation failed.', log });
         return;
       }
       res.json({
         ok: true,
-        message: `Created Open Design PR for ${meta.title}.`,
+        message: `Created Curriculum Workspace PR for ${meta.title}.`,
         url: pr.stdout || undefined,
         log,
       });
@@ -7273,6 +7325,8 @@ export async function startServer({
             uploadProject?.metadata,
           );
           fs.promises.unlink(req.file.path).catch(() => {});
+          const projectDir = resolveProjectDir(PROJECTS_DIR, req.params.id, uploadProject?.metadata);
+          extractDocumentMediaOnly({ name: meta.name, buffer: buf }, projectDir).catch(() => {});
           /** @type {import('@open-design/contracts').ProjectFileResponse} */
           const body = { file: meta };
           return res.json(body);
@@ -8264,11 +8318,24 @@ export async function startServer({
     const attachmentHint = safeAttachments.length
       ? `\n\nAttached project files: ${safeAttachments.map((p) => `\`${p}\``).join(', ')}`
       : '';
+    const docxTemplateAttachments = safeAttachments.filter((p) => p.toLowerCase().endsWith('.docx'));
+    const contentSourceAttachments = safeAttachments.filter((p) =>
+      /\.(xlsx|xls|csv)$/i.test(p),
+    );
+    const docxCloneHint = docxTemplateAttachments.length > 0
+      ? `\n\nDocument-template workflow (composer guardrail):\n` +
+        `- The attached DOCX file(s) ${docxTemplateAttachments.map((p) => `\`${p}\``).join(', ')} are layout/design templates, not a request to recreate the design as HTML.\n` +
+        `- If the user asks to create a new Lesson Plan, Teaching Guide, syllabus, report, or similar curriculum document based on the DOCX design, default output MUST be a new .docx file. Copy the most relevant DOCX template to a fresh descriptive filename first, then replace lesson-specific content inside the copy.\n` +
+        `- Preserve the original DOCX package structure: styles, sections, page size, margins, headers, footers, logos, images, tables, borders, numbering, relationships, and theme parts. Prefer editing the cloned DOCX with python-docx or by unzipping and modifying Word XML. Do not flatten the document into HTML unless the user explicitly asks for HTML.\n` +
+        `- Keep the original template file unchanged unless the user explicitly asks to edit the original. If a spreadsheet is attached${contentSourceAttachments.length > 0 ? ` (${contentSourceAttachments.map((p) => `\`${p}\``).join(', ')})` : ''}, treat it as the content/data source and map its lesson data into the cloned DOCX layout.\n` +
+        `- If exact DOCX editing is not possible in the runtime, say that clearly and ask before falling back to HTML; do not silently produce an HTML artifact when the template is DOCX.\n`
+      : '';
 
     // Automatically parse binary attachment contents (PDF, DOCX, PPTX, XLSX)
     // and extract any binary assets (images, logos) into the project directory
     // so they are available to the AI prompt and workspace.
     let attachmentsPreviewBlock = '';
+    let extractedImagesGuardrail = '';
     if (cwd && safeAttachments.length > 0) {
       const parsedAttachments = [];
       for (const attachmentRelPath of safeAttachments) {
@@ -8300,6 +8367,13 @@ export async function startServer({
             }).join('\n\n');
             return `### File: ${pa.name}\n\n${sectionsStr}`;
           }).join('\n\n---\n\n');
+
+        if (attachmentsPreviewBlock.includes('MANDATORY Extracted Assets & Images')) {
+          extractedImagesGuardrail = '\n\n## MANDATORY IMAGE EMBEDDING RULES\n' +
+            '- The attached documents contain extracted images and slides that represent the core visual content of the lesson.\n' +
+            '- When you generate any HTML webpage, teaching slides, or interactive prototypes based on these attachments, you MUST embed these images in the output using the exact `<img src="_document_media/...` relative paths listed under the "MANDATORY Extracted Assets & Images" section.\n' +
+            '- Do NOT substitute them with generic placeholders, SVG sketches, or blank boxes. Integrate all extracted images seamlessly into your generated code so the lesson content remains complete and visually correct.\n';
+        }
       }
     }
 
@@ -8502,12 +8576,14 @@ export async function startServer({
     });
     const composed = [
       instructionPrompt
-        ? `# Instructions (read first)\n\n${instructionPrompt}${cwdHint}${linkedDirsHint}\n\n---\n`
+        ? `# Instructions (read first)\n\n${instructionPrompt}${cwdHint}${linkedDirsHint}${docxCloneHint}${extractedImagesGuardrail}\n\n---\n`
         : cwdHint
-          ? `# Instructions${cwdHint}${linkedDirsHint}\n\n---\n`
+          ? `# Instructions${cwdHint}${linkedDirsHint}${docxCloneHint}${extractedImagesGuardrail}\n\n---\n`
           : linkedDirsHint
-            ? `# Instructions${linkedDirsHint}\n\n---\n`
-            : '',
+            ? `# Instructions${linkedDirsHint}${docxCloneHint}${extractedImagesGuardrail}\n\n---\n`
+            : docxCloneHint || extractedImagesGuardrail
+              ? `# Instructions${docxCloneHint}${extractedImagesGuardrail}\n\n---\n`
+              : '',
       `# User request\n\n${message || '(No extra typed instruction.)'}${attachmentHint}${commentHint}${attachmentsPreviewBlock}`,
       safeImages.length
         ? `\n\n${safeImages.map((p) => `@${p}`).join(' ')}`
@@ -9596,7 +9672,7 @@ export async function startServer({
       systemPrompt: [
         renderOrbitTemplateSystemPrompt(template),
         systemPrompt,
-        'You are Orbit, an autonomous activity-summary agent inside Open Design.',
+        'You are Orbit, an autonomous activity-summary agent inside Curriculum Workspace.',
         'You must discover connectors and connector tools yourself through the OD CLI; the daemon has not chosen tools for you.',
         'You must create and register a Live Artifact as the final deliverable. Do not merely describe what you would do.',
         'Do not ask follow-up questions, do not emit <question-form>, and do not wait for user input. This run is unattended; pick reasonable defaults and complete the artifact.',
@@ -9991,7 +10067,7 @@ export async function startServer({
     imports: importDeps,
     exports: projectExportDeps,
     artifacts: artifactDeps,
-    documents: { buildDocumentPreview },
+    documents: { buildDocumentPreview, extractDocumentMediaOnly },
     auth: authDeps,
     liveArtifacts: liveArtifactDeps,
     deploy: deployDeps,
@@ -10130,7 +10206,7 @@ function assembleExample(templateHtml, slidesHtml, title) {
     .replace('<!-- SLIDES_HERE -->', slidesHtml)
     .replace(
       /<title>.*?<\/title>/,
-      `<title>${title} | Open Design Example</title>`,
+      `<title>${title} | Curriculum Workspace Example</title>`,
     );
 }
 

@@ -84,14 +84,14 @@ const designSystems: DesignSystemSummary[] = [
     id: 'clay',
     title: 'Clay',
     summary: 'Friendly tactile product UI.',
-    category: 'Product',
+    category: 'Slide',
     swatches: ['#f4efe7', '#25211d'],
   },
   {
     id: 'noir',
     title: 'Editorial Noir',
     summary: 'High-contrast editorial system.',
-    category: 'Editorial',
+    category: 'Slide',
     swatches: ['#111111', '#f7f0e8'],
   },
 ];
@@ -187,6 +187,49 @@ describe('NewProjectPanel curriculum workspace creation', () => {
     const metadata = onCreate.mock.calls[0][0].metadata;
     expect(metadata?.curriculumKind).toBeUndefined();
     expect(screen.queryByText('Level')).toBeNull();
+  });
+
+  it('keeps the single create form but infers prototype intent from the workspace name', () => {
+    const onCreate = renderPanel();
+
+    fireEvent.change(screen.getByTestId('new-project-name'), {
+      target: { value: 'ARMA web homework' },
+    });
+    fireEvent.click(screen.getByTestId('create-project'));
+
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'ARMA web homework',
+        skillId: 'prototype-skill',
+        metadata: expect.objectContaining({
+          kind: 'prototype',
+          curriculumKind: 'homework',
+          curriculumStatus: 'draft',
+        }),
+      }),
+    );
+    expect(onCreate.mock.calls[0][0].metadata).not.toEqual(
+      expect.objectContaining({ intent: 'live-artifact' }),
+    );
+  });
+
+  it('infers slide deck projects from the unified create form', () => {
+    const onCreate = renderPanel();
+
+    fireEvent.change(screen.getByTestId('new-project-name'), {
+      target: { value: 'Lesson 3 slide deck' },
+    });
+    fireEvent.click(screen.getByTestId('create-project'));
+
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skillId: 'deck-skill',
+        metadata: expect.objectContaining({
+          kind: 'deck',
+          speakerNotes: false,
+        }),
+      }),
+    );
   });
 
   it('does not show starter template option cards', () => {

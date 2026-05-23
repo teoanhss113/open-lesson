@@ -227,6 +227,9 @@ interface Props {
   // Skills available for @-mention assembly. ProjectView filters out the
   // user's disabled set before passing them in here.
   skills?: SkillSummary[];
+  // Rendering templates are kept out of the @-mention list, but the
+  // composer can still use them for per-turn intent routing.
+  designTemplates?: SkillSummary[];
   // Click-to-open chain: passes a basename up to ProjectView, which sets
   // FileWorkspace's openRequest. Tool cards, attachment chips, and
   // produced-file chips all call this.
@@ -325,6 +328,7 @@ export function ChatPane({
   researchAvailable,
   activePluginSnapshot,
   skills = [],
+  designTemplates = [],
   onCollapse,
   selectedText,
   onClearSelection,
@@ -839,34 +843,13 @@ export function ChatPane({
             dismissedKey={dismissedPinnedTodoKey}
             onDismiss={setDismissedPinnedTodoKey}
           />
-          <div className="curriculum-quick-actions">
-            <button
-              type="button"
-              className="ghost subtle curriculum-quick-action-btn"
-              onClick={() => composerRef.current?.setDraft('Analyze curriculum')}
-            >
-              <span>{t('curriculum.action.analyzeCurriculum')}</span>
-            </button>
-            <button
-              type="button"
-              className="ghost subtle curriculum-quick-action-btn"
-              onClick={() => composerRef.current?.setDraft('Generate Lesson Plan')}
-            >
-              <span>{t('curriculum.action.generateLessonPlan')}</span>
-            </button>
-            <button
-              type="button"
-              className="ghost subtle curriculum-quick-action-btn"
-              onClick={() => composerRef.current?.setDraft('Validate rollout')}
-            >
-              <span>{t('curriculum.action.validateRollout')}</span>
-            </button>
-          </div>
+
           <ChatComposer
             ref={composerRef}
             projectId={projectId}
             projectFiles={projectFiles}
             skills={skills}
+            designTemplates={designTemplates}
             streaming={streaming}
             sendDisabled={sendDisabled}
             initialDraft={initialDraft}
@@ -1127,7 +1110,15 @@ function ConversationRow({
           type="button"
           className="chat-conv-item-name"
           data-testid={`conversation-select-${conversation.id}`}
-          style={{ background: 'transparent', border: 'none', padding: 0, textAlign: 'left' }}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+          }}
           onClick={onSelect}
           onDoubleClick={() => {
             if (!onRename) return;
@@ -1241,7 +1232,7 @@ function UserMessage({
           {commentAttachments.filter((attachment) => attachment.selectionKind !== 'visual').map((a) => (
             <span key={a.id} className="user-attachment staged-comment">
               <span className="staged-name" title={`${a.elementId}: ${a.comment}`}>
-                <strong>{a.selectionKind === 'visual' ? 'Visual mark' : a.elementId}</strong>
+                <strong>{a.selectionKind === 'visual' ? t('chat.comments.selectionVisual') : a.elementId}</strong>
                 <span>{a.comment}</span>
               </span>
             </span>

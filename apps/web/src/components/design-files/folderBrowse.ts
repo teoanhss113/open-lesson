@@ -44,6 +44,14 @@ export function joinBrowsePath(parent: BrowsePath, segment: string): BrowsePath 
   return base ? `${base}/${name}` : name;
 }
 
+/** Prefix a relative upload path (file name or folder tree path) with the browsed folder. */
+export function joinUploadRelativePath(parent: BrowsePath, relativePath: string): BrowsePath {
+  const base = normalizeBrowsePath(parent);
+  const rel = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!rel) return base;
+  return base ? `${base}/${rel}` : rel;
+}
+
 /** List immediate child folders and files for a directory path. */
 export function listBrowseDirectory(
   files: ProjectFile[],
@@ -54,6 +62,22 @@ export function listBrowseDirectory(
   const folders = new Map<string, BrowseFolder>();
   const directFiles: ProjectFile[] = [];
 
+  const addFolder = (segment: string, mtime: number, childDelta: number) => {
+    const folderPath = joinBrowsePath(current, segment);
+    const existing = folders.get(folderPath);
+    if (existing) {
+      existing.childCount += childDelta;
+      existing.mtime = Math.max(existing.mtime, mtime);
+      return;
+    }
+    folders.set(folderPath, {
+      name: segment,
+      path: folderPath,
+      mtime,
+      childCount: childDelta,
+    });
+  };
+
   for (const file of files) {
     const name = file.name.replace(/\\/g, '/');
     if (current && !name.startsWith(prefix)) continue;
@@ -61,25 +85,22 @@ export function listBrowseDirectory(
     if (!remainder) continue;
 
     const slashIdx = remainder.indexOf('/');
+    if (file.type === 'dir') {
+      if (slashIdx === -1) {
+        addFolder(remainder, file.mtime, 0);
+      } else {
+        addFolder(remainder.slice(0, slashIdx), file.mtime, 1);
+      }
+      continue;
+    }
+
     if (slashIdx === -1) {
       directFiles.push(file);
       continue;
     }
 
     const segment = remainder.slice(0, slashIdx);
-    const folderPath = joinBrowsePath(current, segment);
-    const existing = folders.get(folderPath);
-    if (existing) {
-      existing.childCount += 1;
-      existing.mtime = Math.max(existing.mtime, file.mtime);
-    } else {
-      folders.set(folderPath, {
-        name: segment,
-        path: folderPath,
-        mtime: file.mtime,
-        childCount: 1,
-      });
-    }
+    addFolder(segment, file.mtime, 1);
   }
 
   const folderList = [...folders.values()].sort((a, b) =>

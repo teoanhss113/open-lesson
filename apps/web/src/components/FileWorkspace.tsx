@@ -11,7 +11,9 @@ import { useT } from '../i18n';
 import { isMacPlatform } from '../utils/platform';
 import { kindIconName } from '../utils/fileKind';
 import {
+  createProjectFolder,
   deleteProjectFile,
+  deleteProjectFolder,
   fetchProjectFileText,
   renameProjectFile,
   type UploadProjectFilesResult,
@@ -34,6 +36,7 @@ import {
   type CurriculumRisk,
 } from '../types';
 import { DesignFilesPanel } from './DesignFilesPanel';
+import { joinBrowsePath, normalizeBrowsePath } from './design-files/folderBrowse';
 import type { PluginFolderAgentAction } from './design-files/pluginFolderActions';
 import { FileViewer, LiveArtifactViewer } from './FileViewer';
 import { Icon } from './Icon';
@@ -168,12 +171,19 @@ export function FileWorkspace({
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  /** Folder path active in Design Files when the native picker was opened. */
+  const pendingUploadDestinationRef = useRef('');
   const tabsBarRef = useRef<HTMLDivElement | null>(null);
   const draggedTabNameRef = useRef<string | null>(null);
 
-  const visibleFiles = useMemo(
-    () => files.filter((file) => !isLiveArtifactImplementationPath(file.name) && !file.name.includes('-media-')),
+  const designFiles = useMemo(
+    () => files.filter((file) => !isLiveArtifactImplementationPath(file.name)),
     [files],
+  );
+
+  const visibleFiles = useMemo(
+    () => designFiles.filter((file) => !file.name.includes('-media-')),
+    [designFiles],
   );
 
   const liveArtifactEntries = useMemo(
@@ -299,16 +309,26 @@ export function FileWorkspace({
     setDragOverTab(null);
   }
 
+  function beginNativeUpload(browsePath: string) {
+    pendingUploadDestinationRef.current = normalizeBrowsePath(browsePath);
+  }
+
+  function consumePendingUploadDestination(): string {
+    const destination = pendingUploadDestinationRef.current;
+    pendingUploadDestinationRef.current = '';
+    return destination;
+  }
+
   async function handleFilePicked(ev: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(ev.target.files ?? []);
     ev.target.value = '';
-    await uploadFiles(picked);
+    await uploadFiles(picked, consumePendingUploadDestination());
   }
 
   async function handleFolderPicked(ev: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(ev.target.files ?? []);
     ev.target.value = '';
-    await uploadFolderFiles(picked);
+    await uploadFolderFiles(picked, consumePendingUploadDestination());
   }
 
   async function applyUploadResult(picked: File[], result: UploadProjectFilesResult) {
@@ -331,13 +351,13 @@ export function FileWorkspace({
     }
   }
 
-  async function uploadFiles(picked: File[]) {
+  async function uploadFiles(picked: File[], destinationFolder = '') {
     if (picked.length === 0) return;
 
     setUploadError(null);
     let result: UploadProjectFilesResult;
     try {
-      result = await uploadProjectFiles(projectId, picked);
+      result = await uploadProjectFiles(projectId, picked, { destinationFolder });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       setUploadError(`Upload failed for ${picked.length} file(s) (${detail}).`);
@@ -346,13 +366,13 @@ export function FileWorkspace({
     await applyUploadResult(picked, result);
   }
 
-  async function uploadFolderFiles(picked: File[]) {
+  async function uploadFolderFiles(picked: File[], destinationFolder = '') {
     if (picked.length === 0) return;
 
     setUploadError(null);
     let result: UploadProjectFilesResult;
     try {
-      result = await uploadProjectFolder(projectId, picked);
+      result = await uploadProjectFolder(projectId, picked, { destinationFolder });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       setUploadError(`Folder upload failed for ${picked.length} file(s) (${detail}).`);
@@ -450,7 +470,10 @@ export function FileWorkspace({
 
   async function handleDelete(name: string) {
     if (!confirm(t('workspace.deleteFileConfirm', { name }))) return;
-    const ok = await deleteProjectFile(projectId, name);
+    const isFolder = designFiles.some((file) => file.name === name && file.type === 'dir');
+    const ok = isFolder
+      ? await deleteProjectFolder(projectId, name)
+      : await deleteProjectFile(projectId, name);
     if (ok) {
       await onRefreshFiles();
       const nextTabs = persistedTabs.filter((n) => n !== name);
@@ -483,8 +506,13 @@ export function FileWorkspace({
     if (!confirm(t('workspace.deleteSelectedFilesConfirm', { n: names.length }))) return;
     const deleted: string[] = [];
     const failed: string[] = [];
+    const folderNames = new Set(
+      designFiles.filter((file) => file.type === 'dir').map((file) => file.name),
+    );
     for (const name of names) {
-      const ok = await deleteProjectFile(projectId, name);
+      const ok = folderNames.has(name)
+        ? await deleteProjectFolder(projectId, name)
+        : await deleteProjectFile(projectId, name);
       if (ok) deleted.push(name);
       else failed.push(name);
     }
@@ -541,6 +569,41 @@ export function FileWorkspace({
     });
 
     return renamed;
+  }
+
+  async function handleCreateFolder(folderPath: string): Promise<ProjectFile | null> {
+    const folder = await createProjectFolder(projectId, folderPath);
+    await onRefreshFiles();
+    return folder;
+  }
+
+  async function handleMoveFiles(names: string[], destinationFolder: string): Promise<void> {
+    const normalizedDestination = destinationFolder.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const moved: ProjectFile[] = [];
+    const failed: string[] = [];
+
+    for (const name of names) {
+      const baseName = name.replace(/\\/g, '/').split('/').filter(Boolean).pop();
+      if (!baseName) {
+        failed.push(name);
+        continue;
+      }
+      const nextName = normalizedDestination ? `${normalizedDestination}/${baseName}` : baseName;
+      if (nextName === name) continue;
+      try {
+        const renamed = await handleRename(name, nextName);
+        if (renamed) moved.push(renamed);
+        else failed.push(name);
+      } catch (err) {
+        console.warn('[DesignFiles] move failed', { name, nextName, err });
+        failed.push(name);
+      }
+    }
+
+    if (moved.length > 0) await onRefreshFiles();
+    if (failed.length > 0) {
+      alert(`Failed to move ${failed.length} file(s).`);
+    }
   }
 
   function startNewSketch() {
@@ -830,11 +893,7 @@ export function FileWorkspace({
                 <strong>{t('workspace.metaAge')}:</strong> {projectMetadata.ageGroup}
               </div>
             )}
-            {projectMetadata.level && (
-              <div>
-                <strong>{t('workspace.metaLevel')}:</strong> {projectMetadata.level}
-              </div>
-            )}
+
             {projectMetadata.curriculumVersion && (
               <div>
                 <strong>{t('workspace.metaVersion')}:</strong> {projectMetadata.curriculumVersion}
@@ -899,23 +958,37 @@ export function FileWorkspace({
           <DesignFilesPanel
             key={`${projectId}:${designFilesResetNonce}`}
             projectId={projectId}
-            files={visibleFiles}
+            files={designFiles}
             liveArtifacts={liveArtifactEntries}
             onRefreshFiles={onRefreshFiles}
             onOpenFile={openFile}
             onOpenLiveArtifact={(tabId) => openFile(tabId)}
+            onCreateFolder={handleCreateFolder}
+            onMoveFiles={handleMoveFiles}
             onRenameFile={handleRename}
             onDeleteFile={(name) => void handleDelete(name)}
             onDeleteFiles={handleDeleteMany}
-            onUpload={() => fileInputRef.current?.click()}
-            onUploadFolder={() => folderInputRef.current?.click()}
-            onUploadFiles={(picked) => {
+            onUpload={(browsePath) => {
+              beginNativeUpload(browsePath);
+              fileInputRef.current?.click();
+            }}
+            onUploadFolder={(browsePath) => {
+              beginNativeUpload(browsePath);
+              folderInputRef.current?.click();
+            }}
+            onUploadFiles={(picked, browsePath) => {
+              const destinationFolder = normalizeBrowsePath(browsePath);
               const hasFolderPaths = picked.some((f) =>
                 Boolean((f as File & { webkitRelativePath?: string }).webkitRelativePath),
               );
-              void (hasFolderPaths ? uploadFolderFiles(picked) : uploadFiles(picked));
+              void (hasFolderPaths
+                ? uploadFolderFiles(picked, destinationFolder)
+                : uploadFiles(picked, destinationFolder));
             }}
-            onPaste={() => setShowPasteDialog(true)}
+            onPaste={(browsePath) => {
+              beginNativeUpload(browsePath);
+              setShowPasteDialog(true);
+            }}
             onNewSketch={startNewSketch}
             uploadError={uploadError}
             onClearUploadError={() => setUploadError(null)}
@@ -998,10 +1071,15 @@ export function FileWorkspace({
       />
       {showPasteDialog ? (
         <PasteTextDialog
-          onClose={() => setShowPasteDialog(false)}
+          onClose={() => {
+            pendingUploadDestinationRef.current = '';
+            setShowPasteDialog(false);
+          }}
           onSave={async (name, content) => {
             setShowPasteDialog(false);
-            const file = await writeProjectTextFile(projectId, name, content);
+            const destination = consumePendingUploadDestination();
+            const filePath = destination ? joinBrowsePath(destination, name) : name;
+            const file = await writeProjectTextFile(projectId, filePath, content);
             if (file) {
               await onRefreshFiles();
               openFile(file.name);

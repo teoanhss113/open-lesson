@@ -49,13 +49,19 @@ describe('router /marketplace', () => {
 });
 
 describe('router entry sub-views', () => {
-  it('parses /projects (no id) as the projects entry view', () => {
-    expect(parseRoute('/projects')).toEqual({ kind: 'home', view: 'projects' });
-    expect(parseRoute('/projects/')).toEqual({ kind: 'home', view: 'projects' });
+  it('parses bare /projects as unified home (legacy list URL)', () => {
+    expect(parseRoute('/projects')).toEqual({ kind: 'home', view: 'home' });
+    expect(parseRoute('/projects/')).toEqual({ kind: 'home', view: 'home' });
   });
 
-  it('parses /design-systems as the design-systems entry view', () => {
-    expect(parseRoute('/design-systems')).toEqual({ kind: 'home', view: 'design-systems' });
+  it('parses /templates as the templates entry view', () => {
+    expect(parseRoute('/templates')).toEqual({ kind: 'home', view: 'templates' });
+    expect(parseRoute('/templates/')).toEqual({ kind: 'home', view: 'templates' });
+  });
+
+  it('parses legacy /design-systems as the templates entry view', () => {
+    expect(parseRoute('/design-systems')).toEqual({ kind: 'home', view: 'templates' });
+    expect(parseRoute('/design-systems/')).toEqual({ kind: 'home', view: 'templates' });
   });
 
   it('parses /automations as the automations entry view', () => {
@@ -78,10 +84,9 @@ describe('router entry sub-views', () => {
   it('round-trips entry sub-views through buildPath', () => {
     for (const route of [
       { kind: 'home', view: 'home' } as Route,
-      { kind: 'home', view: 'projects' } as Route,
       { kind: 'home', view: 'tasks' } as Route,
       { kind: 'home', view: 'plugins' } as Route,
-      { kind: 'home', view: 'design-systems' } as Route,
+      { kind: 'home', view: 'templates' } as Route,
       { kind: 'home', view: 'integrations' } as Route,
     ]) {
       expect(parseRoute(buildPath(route))).toEqual(route);

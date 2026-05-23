@@ -136,20 +136,20 @@ export const API_PROTOCOL_TABS: ReadonlyArray<{
   { id: 'ollama', title: 'Ollama Cloud' },
 ];
 
-export const API_PROTOCOL_LABELS: Record<ApiProtocol, string> = {
-  anthropic: 'Anthropic API',
-  openai: 'OpenAI API',
-  azure: 'Azure OpenAI',
-  google: 'Google Gemini',
-  ollama: 'Ollama Cloud API',
+export const API_PROTOCOL_LABELS: Record<ApiProtocol, any> = {
+  anthropic: 'settings.anthropicApi',
+  openai: 'settings.openaiApi',
+  azure: 'settings.azureApi',
+  google: 'settings.googleApi',
+  ollama: 'settings.ollamaApi',
 };
 
-export const API_KEY_PLACEHOLDERS: Record<ApiProtocol, string> = {
-  anthropic: 'sk-ant-...',
-  openai: 'sk-...',
-  azure: 'azure key',
-  google: 'AIza...',
-  ollama: 'Ollama API key',
+export const API_KEY_PLACEHOLDERS: Record<ApiProtocol, any> = {
+  anthropic: 'settings.apiKeyPlaceholderAnthropic',
+  openai: 'settings.apiKeyPlaceholderOpenai',
+  azure: 'settings.apiKeyPlaceholderAzure',
+  google: 'settings.apiKeyPlaceholderGoogle',
+  ollama: 'settings.apiKeyPlaceholderOllama',
 };
 
 // Default base URL the daemon assumes when the user leaves the field

@@ -29,11 +29,12 @@ import type {
   SkillSummary,
 } from '../types';
 import { apiProtocolLabel } from '../utils/apiProtocol';
+import { localizeSkillPrompt } from '../i18n/content';
 import { CenteredLoader } from './Loading';
-import { DesignsTab } from './DesignsTab';
 import { DesignSystemPreviewModal } from './DesignSystemPreviewModal';
 import { DesignSystemsTab } from './DesignSystemsTab';
 import { EntryNavRail, type EntryView as EntryViewKind } from './EntryNavRail';
+import { ExamplesTab } from './ExamplesTab';
 import { HomeView } from './HomeView';
 import { Icon } from './Icon';
 import { IntegrationsView, type IntegrationTab } from './IntegrationsView';
@@ -121,6 +122,7 @@ function describeModelChip(
 
 interface Props {
   skills: SkillSummary[];
+  designTemplates: SkillSummary[];
   designSystems: DesignSystemSummary[];
   projects: Project[];
   templates: ProjectTemplate[];
@@ -161,6 +163,10 @@ interface Props {
       pendingFiles?: File[];
     },
   ) => boolean | void | Promise<boolean | void>;
+  onStartProjectConversation: (
+    projectId: string,
+    prompt: string,
+  ) => boolean | Promise<boolean>;
   onCreatePluginShareProject: (
     pluginId: string,
     action: PluginShareAction,
@@ -194,6 +200,7 @@ interface Props {
 
 export function EntryShell({
   skills,
+  designTemplates,
   designSystems,
   projects,
   templates,
@@ -216,6 +223,7 @@ export function EntryShell({
   onApiModelChange,
   onThemeChange,
   onCreateProject,
+  onStartProjectConversation,
   onCreatePluginShareProject,
   onImportClaudeDesign,
   onImportFolder,
@@ -241,6 +249,10 @@ export function EntryShell({
   const [languageExpanded, setLanguageExpanded] = useState(false);
   const [appearanceExpanded, setAppearanceExpanded] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [templatePromptSkill, setTemplatePromptSkill] = useState<SkillSummary | null>(null);
+  const [templateProjectId, setTemplateProjectId] = useState<string | null>(null);
+  const [templateProjectError, setTemplateProjectError] = useState<string | null>(null);
+  const [templateProjectSubmitting, setTemplateProjectSubmitting] = useState(false);
   const [integrationTab, setIntegrationTab] = useState<IntegrationTab>(integrationInitialTab);
   const avatarMenuRef = useRef<HTMLDivElement | null>(null);
   // Active-model summary is kept in render scope so
@@ -251,9 +263,55 @@ export function EntryShell({
     () => describeModelChip(config, agents, t),
     [config, agents, t],
   );
+  const sortedProjects = useMemo(
+    () => [...projects].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)),
+    [projects],
+  );
+
+  const templatePromptText = useMemo(() => {
+    if (!templatePromptSkill) return '';
+    return (
+      localizeSkillPrompt(locale, templatePromptSkill)
+      ?? templatePromptSkill.description
+      ?? templatePromptSkill.name
+      ?? ''
+    ).trim();
+  }, [locale, templatePromptSkill]);
 
   function changeView(next: EntryViewKind) {
     navigate({ kind: 'home', view: next });
+  }
+
+  function openTemplateProjectPicker(skill: SkillSummary) {
+    setTemplatePromptSkill(skill);
+    setTemplateProjectId(sortedProjects[0]?.id ?? null);
+    setTemplateProjectError(null);
+  }
+
+  function closeTemplateProjectPicker() {
+    if (templateProjectSubmitting) return;
+    setTemplatePromptSkill(null);
+    setTemplateProjectId(null);
+    setTemplateProjectError(null);
+  }
+
+  async function startTemplateConversation() {
+    if (!templatePromptSkill || !templateProjectId || !templatePromptText) return;
+    setTemplateProjectSubmitting(true);
+    setTemplateProjectError(null);
+    try {
+      const ok = await onStartProjectConversation(templateProjectId, templatePromptText);
+      if (ok) {
+        setTemplatePromptSkill(null);
+        setTemplateProjectId(null);
+      } else {
+        setTemplateProjectError(t('templates.projectStartFailed'));
+      }
+    } catch {
+      setTemplateProjectError(t('templates.projectStartFailed'));
+    } finally {
+      setTemplateProjectSubmitting(false);
+    }
   }
 
   // The home view no longer hosts a prompt loop, so the plugin
@@ -466,7 +524,7 @@ export function EntryShell({
               })}
             </div>
           ) : null}
-          <div style={{ height: 1, background: 'var(--border-soft)', margin: 'var(--spacing-xxs) var(--spacing-xs)' }} />
+          <div className="menu-hairline" />
           <button
             type="button"
             className="avatar-item"
@@ -547,31 +605,15 @@ export function EntryShell({
             {view === 'home' ? (
               <HomeView
                 projects={projects}
+                skills={skills}
+                designSystems={designSystems}
                 projectsLoading={projectsLoading}
                 onOpenProject={onOpenProject}
-                onViewAllProjects={() => changeView('projects')}
+                onOpenLiveArtifact={onOpenLiveArtifact}
+                onDeleteProject={onDeleteProject}
                 onCreateProject={() => setNewProjectOpen(true)}
+                onProjectsRefresh={onProjectsRefresh}
               />
-            ) : null}
-            {view === 'projects' ? (
-              projectsLoading || skillsLoading || designSystemsLoading ? (
-                <CenteredLoader label={t('common.loading')} />
-              ) : (
-                <div className="entry-section">
-                  <header className="entry-section__head">
-                    <h1 className="entry-section__title">Projects</h1>
-                  </header>
-                  <DesignsTab
-                    projects={projects}
-                    skills={skills}
-                    designSystems={designSystems}
-                    onOpen={onOpenProject}
-                    onOpenLiveArtifact={onOpenLiveArtifact}
-                    onDelete={onDeleteProject}
-                    onProjectsRefresh={onProjectsRefresh}
-                  />
-                </div>
-              )
             ) : null}
             {view === 'tasks' ? (
               <TasksView
@@ -586,13 +628,28 @@ export function EntryShell({
                 onCreatePluginShareProject={onCreatePluginShareProject}
               />
             ) : null}
+            {view === 'templates' ? (
+              skillsLoading ? (
+                <CenteredLoader label={t('common.loading')} />
+              ) : (
+                <div className="entry-section">
+                  <header className="entry-section__head">
+                    <h1 className="entry-section__title">{t('entry.tabTemplates')}</h1>
+                  </header>
+                  <ExamplesTab
+                    skills={designTemplates}
+                    onUsePrompt={openTemplateProjectPicker}
+                  />
+                </div>
+              )
+            ) : null}
             {view === 'design-systems' ? (
               designSystemsLoading ? (
                 <CenteredLoader label={t('common.loading')} />
               ) : (
                 <div className="entry-section">
                   <header className="entry-section__head">
-                    <h1 className="entry-section__title">Design systems</h1>
+                    <h1 className="entry-section__title">{t('entry.tabDesignSystems')}</h1>
                   </header>
                   <DesignSystemsTab
                     systems={designSystems}
@@ -619,6 +676,106 @@ export function EntryShell({
           system={previewSystem}
           onClose={() => setPreviewSystemId(null)}
         />
+      ) : null}
+      {templatePromptSkill ? (
+        <div
+          className="template-project-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeTemplateProjectPicker();
+          }}
+        >
+          <div
+            className="template-project-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="template-project-title"
+          >
+            <header className="template-project-modal__head">
+              <div>
+                <h2 id="template-project-title" className="template-project-modal__title">
+                  {t('templates.projectPickerTitle')}
+                </h2>
+                <p className="template-project-modal__subtitle">
+                  {t('templates.projectPickerSubtitle')}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="new-project-modal__close"
+                onClick={closeTemplateProjectPicker}
+                aria-label={t('common.close')}
+                title={`${t('common.close')} (Esc)`}
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </header>
+            <div className="template-project-modal__body">
+              {sortedProjects.length > 0 ? (
+                <div className="template-project-list" role="listbox" aria-label={t('templates.selectProject')}>
+                  {sortedProjects.map((project) => {
+                    const active = project.id === templateProjectId;
+                    const updated = project.updatedAt
+                      ? new Date(project.updatedAt).toLocaleDateString(locale)
+                      : t('common.untitled');
+                    return (
+                      <button
+                        key={project.id}
+                        type="button"
+                        className={`template-project-row${active ? ' is-active' : ''}`}
+                        onClick={() => setTemplateProjectId(project.id)}
+                        role="option"
+                        aria-selected={active}
+                      >
+                        <span className="template-project-row__name">{project.name}</span>
+                        <span className="template-project-row__meta">{updated}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="template-project-modal__empty">
+                  {t('templates.noProjects')}
+                </div>
+              )}
+              {templateProjectError ? (
+                <div className="template-project-modal__error">{templateProjectError}</div>
+              ) : null}
+            </div>
+            <footer className="template-project-modal__foot">
+              <button
+                type="button"
+                className="secondary"
+                onClick={closeTemplateProjectPicker}
+              >
+                {t('common.cancel')}
+              </button>
+              {sortedProjects.length > 0 ? (
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={!templateProjectId || templateProjectSubmitting}
+                  onClick={() => void startTemplateConversation()}
+                >
+                  {templateProjectSubmitting
+                    ? t('common.loading')
+                    : t('templates.startConversation')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => {
+                    closeTemplateProjectPicker();
+                    setNewProjectOpen(true);
+                  }}
+                >
+                  {t('entry.navNewProject')}
+                </button>
+              )}
+            </footer>
+          </div>
+        </div>
       ) : null}
       <NewProjectModal
         open={newProjectOpen}

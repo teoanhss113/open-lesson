@@ -344,7 +344,7 @@ describe('connectConnector', () => {
 
     await expect(connectConnector('github')).resolves.toEqual({
       connector: { id: 'github', name: 'GitHub', status: 'available', tools: [] },
-      error: 'Popup blocked. Allow popups for Open Design and try again.',
+      error: 'Popup blocked. Allow popups for Curriculum Workspace and try again.',
     });
     expect(open).toHaveBeenCalledTimes(2);
     expect(fetchMock).not.toHaveBeenCalledWith('/api/connectors/github/authorization/cancel', {
@@ -442,7 +442,7 @@ describe('connectConnector', () => {
 
     await expect(connectConnector('github')).resolves.toEqual({
       connector: { id: 'github', name: 'GitHub', status: 'available', tools: [] },
-      error: 'Popup blocked. Allow popups for Open Design and try again.',
+      error: 'Popup blocked. Allow popups for Curriculum Workspace and try again.',
     });
     expect(open).not.toHaveBeenCalled();
     expect(openExternal).toHaveBeenCalledWith('https://example.com/oauth');

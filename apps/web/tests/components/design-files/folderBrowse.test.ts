@@ -4,6 +4,7 @@ import {
   browsePathSegments,
   displayNameForFile,
   joinBrowsePath,
+  joinUploadRelativePath,
   listBrowseDirectory,
   mergeBrowseRows,
   parentBrowsePath,
@@ -62,6 +63,10 @@ describe('folderBrowse', () => {
     expect(parentBrowsePath('lessons')).toBe('');
     expect(browsePathSegments('lessons/unit-1')).toEqual(['lessons', 'unit-1']);
     expect(joinBrowsePath('lessons', 'unit-2')).toBe('lessons/unit-2');
+    expect(joinUploadRelativePath('lessons', 'pack/readme.txt')).toBe(
+      'lessons/pack/readme.txt',
+    );
+    expect(joinUploadRelativePath('', 'readme.txt')).toBe('readme.txt');
   });
 
   it('shows basenames inside nested folders', () => {

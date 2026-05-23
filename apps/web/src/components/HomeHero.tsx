@@ -360,7 +360,7 @@ export const HomeHero = forwardRef<HTMLTextAreaElement, Props>(function HomeHero
     <section className="home-hero" data-testid="home-hero">
       <div className="home-hero__brand" aria-hidden>
         <span className="home-hero__brand-mark">
-          <img src="/app-icon.svg" alt="" draggable={false} />
+          <img src="/logo.png" alt="" draggable={false} />
         </span>
         <span className="home-hero__brand-name">{t('app.brand')}</span>
       </div>
@@ -643,14 +643,14 @@ export const HomeHero = forwardRef<HTMLTextAreaElement, Props>(function HomeHero
               ))}
             </div>
             {visibleLoading && visiblePickerOptions.length === 0 ? (
-              <div className="home-hero__plugin-picker-empty">Loading context…</div>
+              <div className="home-hero__plugin-picker-empty">{t('homeHero.contextLoading')}</div>
             ) : null}
             {!visibleLoading && visiblePickerOptions.length === 0 ? (
               <div className="home-hero__plugin-picker-empty">
                 {mentionQuery ? (
-                  <>No results for “{mentionQuery}”.</>
+                  <>{t('homeHero.contextNoResults', { query: mentionQuery })}</>
                 ) : (
-                  <>Search plugins, skills, and MCP servers.</>
+                  <>{t('homeHero.contextSearchHint')}</>
                 )}
               </div>
             ) : null}
@@ -1122,6 +1122,7 @@ function InlinePromptInput({
   filled,
   onChange,
 }: InlinePromptInputProps) {
+  const { t } = useI18n();
   const label = field?.label ?? name;
   const type = field ? inlineFieldType(field) : 'string';
   const displayValue = value === undefined || value === null || value === ''
@@ -1155,7 +1156,7 @@ function InlinePromptInput({
         value={value !== undefined && value !== null ? String(value) : ''}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value="">{field.placeholder ?? 'Select...'}</option>
+        <option value="">{field.placeholder ?? t('common.selectEllipsis')}</option>
         {field.options.map((option) => (
           <option key={option} value={option}>
             {option}

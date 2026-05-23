@@ -1,5 +1,5 @@
 /**
- * The base system prompt for Open Design.
+ * The base system prompt for Curriculum Workspace.
  *
  * Adapted from claude.ai/design's "expert designer" prompt — same identity,
  * workflow, and content philosophy, retargeted to the tools an OD-managed
@@ -58,9 +58,9 @@ PDFs, PPTX, DOCX: you can extract them via Bash (\`unzip\`, \`pdftotext\`, etc.)
 - Give files descriptive names (\`landing-page.html\`, \`pricing.html\`).
 - For significant revisions, copy the file to a versioned name (\`landing.html\` → \`landing-v2.html\`) so the previous version stays browsable.
 - Keep individual files under ~1000 lines. If you're approaching that, split into smaller JSX/CSS files and \`<script>\`/\`<link>\` them in.
-- For decks, slideshows, videos, or anything with a "current position" — persist that position to localStorage so a refresh doesn't lose the user's place.
+- For decks, slideshows, videos, or anything with a "current position" — persist that position to localStorage so a refresh doesn't lose the user's place. Always wrap Web Storage reads/writes in \`try/catch\` and provide an in-memory/default fallback; the embedded preview is sandboxed and may throw \`SecurityError\` when storage is accessed directly.
 - Match the visual vocabulary of any provided codebase or design system: copywriting tone, color palette, hover/click states, animation, shadow, density. Think out loud about what you observe before you start writing.
-- **Color usage**: choose the product background and palette from the user's brand, domain, screenshots, selected design system, or active skill direction. Do not inherit Open Design app chrome colors. Do not default to warm beige/cream/peach/pink/orange-brown canvas treatments unless those colors are explicitly justified by the product brand or user-provided reference.
+- **Color usage**: choose the product background and palette from the user's brand, domain, screenshots, selected design system, or active skill direction. Do not inherit Curriculum Workspace app chrome colors. Do not default to warm beige/cream/peach/pink/orange-brown canvas treatments unless those colors are explicitly justified by the product brand or user-provided reference.
 - Don't use \`scrollIntoView\` — it can break the embedded preview. Use other DOM scroll methods.
 
 ## Content guidelines

@@ -10,6 +10,7 @@
 import { link, lstat, mkdir, readdir, readFile, realpath, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import JSZip from 'jszip';
+import { EXTRACTED_DOCUMENT_MEDIA_DIR } from '@open-design/contracts';
 import {
   inferLegacyManifest,
   parsePersistedManifest,
@@ -21,9 +22,11 @@ import {
   evaluateArtifactStubGuard,
   readArtifactStubGuardConfigFromEnv,
 } from './artifact-stub-guard.js';
+import { postProcessHtmlWithExtractedImages } from './inject-extracted-images.js';
 
 const FORBIDDEN_SEGMENT = /^$|^\.\.?$/;
 const RESERVED_PROJECT_FILE_SEGMENTS = new Set(['.live-artifacts']);
+const EXTRACTABLE_SOURCE_FILE = /\.(pdf|docx|pptx|xlsx|xlsm)$/i;
 const DESIGN_HANDOFF_FILENAME = 'DESIGN-HANDOFF.md';
 const DESIGN_MANIFEST_FILENAME = 'DESIGN-MANIFEST.json';
 export const projectFileRenameTestHooks = {
@@ -118,11 +121,20 @@ async function collectFiles(dir, relDir, out, skipDirs?: Set<string>) {
   }
   for (const e of entries) {
     if (e.name.startsWith('.')) continue;
-    if (e.name.includes('-media-')) continue;
     const rel = relDir ? `${relDir}/${e.name}` : e.name;
     const full = path.join(dir, e.name);
     if (e.isDirectory()) {
       if (skipDirs && skipDirs.has(e.name)) continue;
+      const st = await stat(full);
+      out.push({
+        name: rel,
+        path: rel,
+        type: 'dir',
+        size: 0,
+        mtime: st.mtimeMs,
+        kind: 'binary',
+        mime: 'inode/directory',
+      });
       await collectFiles(full, rel, out, skipDirs);
       continue;
     }
@@ -404,7 +416,7 @@ function buildDesignManifest(entries, projectLabel) {
   const screenFiles = screenHtmlFiles.length > 0 ? screenHtmlFiles : [entryFile];
   return JSON.stringify({
     schema: 'open-design.design-manifest.v1',
-    title: projectLabel || 'Open Design project',
+    title: projectLabel || 'Curriculum Workspace project',
     entryFile,
     sourceFiles: {
       all: files,
@@ -493,7 +505,7 @@ function buildDesignHandoff(entries, projectLabel) {
     files.some((name) => /(screens?|pages?|components?|app|src)\//i.test(name));
   const list = (items) => items.length > 0 ? items.map((name) => `- \`${name}\``).join('\n') : '- None detected';
 
-  return `# ${projectLabel || 'Open Design project'} implementation handoff
+  return `# ${projectLabel || 'Curriculum Workspace project'} implementation handoff
 
 This archive is the source of truth for turning the design into production code. Start from \`${entryFile}\`, then preserve the visual system, responsive behavior, and interactions found in the exported files.
 
@@ -501,7 +513,7 @@ This archive is the source of truth for turning the design into production code.
 - Build production UI from the exported design, not a loose reinterpretation.
 - Preserve typography scale, spacing rhythm, color tokens, border radii, shadows, motion timing, and component states.
 - Replace static placeholders only when the target app has real data or functional equivalents.
-- Keep generated product UI free of Open Design chrome, preview labels, or design-process annotations.
+- Keep generated product UI free of Curriculum Workspace chrome, preview labels, or design-process annotations.
 - Treat this handoff as a visual contract: if implementation choices conflict, match the exported pixels and behavior first, then refactor internals.
 
 ## Source map
@@ -532,7 +544,7 @@ For responsive web exports, treat these as a modern breakpoint system for one ad
 - Preserve real copy, labels, and data shown in the export. Do not replace specific text with generic marketing filler.
 - Preserve interactive affordances: hover, focus, pressed, disabled, loading, validation, copy/share, tab/accordion, modal/sheet, and keyboard states where present.
 - Preserve accessibility semantics when converting: headings stay hierarchical, controls remain buttons/links/inputs, focus states stay visible.
-- Do not keep prototype-only annotations, frame labels, or Open Design chrome in the production UI.
+- Do not keep prototype-only annotations, frame labels, or Curriculum Workspace chrome in the production UI.
 
 ## CJX-ready UX contract
 - Use \`${DESIGN_MANIFEST_FILENAME}\` as the machine-readable map for screens, app modules, OS widgets, landing pages, tokens, interactions, and viewport checks.
@@ -686,7 +698,15 @@ export async function writeProjectFile(
       }
     }
   }
-  await writeFile(target, body);
+  let fileContent = body;
+  if (safeName.endsWith('.html') || safeName.endsWith('.htm')) {
+    const htmlString = Buffer.isBuffer(body) ? body.toString('utf8') : body;
+    if (!htmlString.includes('BEGIN AUTOMATICALLY INJECTED EXTRACTED IMAGES')) {
+      const processedHtml = await postProcessHtmlWithExtractedImages(htmlString, dir);
+      fileContent = Buffer.isBuffer(body) ? Buffer.from(processedHtml, 'utf8') : processedHtml;
+    }
+  }
+  await writeFile(target, fileContent);
   if (validatedManifest) {
     const manifestFileName = artifactManifestNameFor(safeName);
     const manifestTarget = await resolveSafeReal(dir, manifestFileName);
@@ -733,7 +753,70 @@ function parseManifest(raw) {
 export async function deleteProjectFile(projectsRoot, projectId, name, metadata?) {
   const dir = resolveProjectDir(projectsRoot, projectId, metadata);
   const file = await resolveSafeReal(dir, name);
-  await unlink(file);
+  await rm(file, { recursive: true, force: true });
+  await deleteExtractedMediaForSource(dir, name);
+}
+
+async function deleteExtractedMediaForSource(projectDirPath, sourceName) {
+  if (typeof sourceName !== 'string' || !EXTRACTABLE_SOURCE_FILE.test(sourceName)) return;
+  const sourceSlug = sourceMediaSlug(sourceName);
+  const legacySlug = sourceMediaSlugLegacy(sourceName);
+  const mediaDir = path.join(projectDirPath, EXTRACTED_DOCUMENT_MEDIA_DIR, sourceSlug);
+  const legacyMediaDir = path.join(projectDirPath, EXTRACTED_DOCUMENT_MEDIA_DIR, legacySlug);
+  await Promise.all([
+    rm(mediaDir, { recursive: true, force: true }).catch(() => {}),
+    legacySlug !== sourceSlug ? rm(legacyMediaDir, { recursive: true, force: true }).catch(() => {}) : Promise.resolve(),
+  ]);
+
+  // Older builds extracted DOCX/PPTX media into project root as
+  // `{sourceSlug}-media-*`. Clean those up too so deleting the source
+  // document does not leave stale assets behind.
+  let entries = [];
+  try {
+    entries = await readdir(projectDirPath, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  const cleanupPrefixes = [
+    `${sourceSlug}-media-`.toLowerCase(),
+    `${legacySlug}-media-`.toLowerCase(),
+  ];
+  await Promise.all(entries.map(async (entry) => {
+    if (!entry.isFile()) return;
+    if (!cleanupPrefixes.some(p => entry.name.toLowerCase().startsWith(p))) return;
+    const target = await resolveSafeReal(projectDirPath, entry.name).catch(() => null);
+    if (target) await rm(target, { force: true }).catch(() => {});
+  }));
+}
+
+export function sourceMediaSlug(originalFilename: string): string {
+  const ext = path.extname(originalFilename).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const base = path.basename(originalFilename, path.extname(originalFilename));
+  const stem = base.normalize('NFC').replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^_+|_+$/g, '');
+  if (stem) return ext ? `${stem}-${ext}` : stem;
+  return ext || 'document';
+}
+
+function sourceMediaSlugLegacy(originalFilename) {
+  const base = path.basename(originalFilename, path.extname(originalFilename));
+  return base.normalize('NFC').replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^_+|_+$/g, '') || 'document';
+}
+
+export async function createProjectFolder(projectsRoot, projectId, folderPath, metadata?) {
+  const dir = await ensureProject(projectsRoot, projectId, metadata);
+  const safePath = sanitizePath(folderPath);
+  const target = await resolveSafeReal(dir, safePath);
+  await mkdir(target, { recursive: false });
+  const st = await stat(target);
+  return {
+    name: safePath,
+    path: safePath,
+    type: 'dir',
+    size: 0,
+    mtime: st.mtimeMs,
+    kind: 'binary',
+    mime: 'inode/directory',
+  };
 }
 
 export async function renameProjectFile(projectsRoot, projectId, fromName, toName, metadata?) {
@@ -971,6 +1054,15 @@ export function sanitizePath(raw) {
   return normalized.split('/').map(sanitizeName).join('/');
 }
 
+/** Optional Design Files browse folder for multipart project uploads. */
+export function normalizeUploadDestination(raw) {
+  if (raw === undefined || raw === null) return '';
+  if (typeof raw !== 'string') return '';
+  const trimmed = raw.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  if (!trimmed) return '';
+  return validateProjectPath(trimmed);
+}
+
 export function validateProjectPath(raw) {
   if (typeof raw !== 'string' || !raw.trim()) {
     throw new Error('invalid file name');
@@ -1006,9 +1098,10 @@ export function isReservedProjectFilePath(raw) {
 // (issue #144).
 export function sanitizeName(raw) {
   const cleaned = String(raw ?? '')
+    .normalize('NFC')
     .replace(/[\\/]/g, '_')
-    .replace(/\s+/g, '-')
-    .replace(/[^\p{L}\p{N}._-]/gu, '_')
+    .replace(/\s+/g, ' ')
+    .replace(/[^\p{L}\p{N}._ ()\u005B\u005D-]/gu, '_')
     .replace(/^\.+/, '_')
     .trim();
   return cleaned || `file-${Date.now()}`;

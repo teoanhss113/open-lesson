@@ -457,20 +457,17 @@ export function fidelityToTracking(
   return 'not_applicable';
 }
 
-// Code top-tab from apps/web/src/components/EntryView.tsx:
-//   'designs' | 'templates' | 'design-systems' | 'image-templates' | 'video-templates'
-// Note: the entry tab labelled 'Templates' in this branch corresponds to
-// what the CSV calls 'examples' — the surface that was historically the
-// curated examples gallery.
+// Code entry sub-view from apps/web/src/router.ts (EntryHomeView) and legacy
+// tab ids: 'designs' | 'templates' | 'design-systems' | 'image-templates' |
+// 'video-templates'. The /templates gallery maps to CSV `examples`.
 export function topTabToTracking(tab: string): TrackingTopTabId {
   switch (tab) {
     case 'designs':
       return 'designs';
     case 'templates':
     case 'examples':
-      return 'examples';
     case 'design-systems':
-      return 'design_systems';
+      return 'examples';
     case 'image-templates':
       return 'image_templates';
     case 'video-templates':

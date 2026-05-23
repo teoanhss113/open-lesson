@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode, type WheelEvent } from 'react';
 
 import { Icon } from './Icon';
+import { FlexRow } from './UiPrimitives';
 import type { PreviewVisualMarkKind } from '../types';
 import { requestPreviewSnapshot } from '../runtime/exports';
 
@@ -393,15 +394,12 @@ export function PreviewDrawOverlay({
         />
       ) : null}
       {active ? (
-        <div
+        <FlexRow align="center"
           style={{
             position: 'absolute',
             left: '50%',
             bottom: 'var(--spacing-md)',
             transform: 'translateX(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-xs)',
             padding: 'var(--spacing-xxs) var(--spacing-xs)',
             background: 'rgba(20,20,20,0.92)',
             color: '#fff',
@@ -496,7 +494,7 @@ export function PreviewDrawOverlay({
               )}
             </button>
           ) : null}
-        </div>
+        </FlexRow>
       ) : null}
     </div>
   );

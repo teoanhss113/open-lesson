@@ -26,6 +26,7 @@ import {
 } from './plugins-home/usePluginFacets';
 import type { FacetOption } from './plugins-home/facets';
 import type { PluginUseAction } from './plugins-home/useActions';
+import type { TranslateFn } from './chat-composer/types';
 
 interface Props {
   plugins: InstalledPluginRecord[];
@@ -155,13 +156,13 @@ export function PluginsHomeSection({
 
           {filtered.length === 0 && !showContributionCard ? (
             <div className="plugins-home__empty plugins-home__empty--filtered">
-              No plugins match the current filters.{' '}
+              {t('pluginsHome.noFilterMatch')}{' '}
               <button
                 type="button"
                 className="plugins-home__linkbtn"
                 onClick={clearFacets}
               >
-                Clear filters
+                {t('pluginsHome.clearFilters')}
               </button>
             </div>
           ) : (
@@ -175,6 +176,7 @@ export function PluginsHomeSection({
                   pendingAny={pendingApplyId !== null}
                   pendingShareAction={pendingShareAction}
                   isFeatured={featuredList.some((f) => f.id === p.id)}
+                  t={t}
                   onUse={onUse}
                   onOpenDetails={onOpenDetails}
                   onShareAction={onPluginShareAction}
@@ -182,9 +184,10 @@ export function PluginsHomeSection({
               ))}
               {showContributionCard && contributionTarget ? (
                 <ContributionCard
-                  label={contributionTarget.label}
+                  label={pluginFacetLabel(contributionTarget, t)}
                   starterPrompt={contributionTarget.starterPrompt}
                   onCreatePlugin={() => onCreatePlugin?.(contributionTarget.starterPrompt)}
+                  t={t}
                 />
               ) : null}
             </div>
@@ -217,10 +220,12 @@ function ContributionCard({
   label,
   starterPrompt,
   onCreatePlugin,
+  t,
 }: {
   label: string;
   starterPrompt: string;
   onCreatePlugin: () => void;
+  t: TranslateFn;
 }) {
   return (
     <article
@@ -233,13 +238,10 @@ function ContributionCard({
           <Icon name="plus" size={18} />
         </span>
         <div>
-          <h3>Contribute a {label} plugin</h3>
-          <p>
-            This area is still sparse. Turn your workflow into a reusable
-            plugin, add it to My plugins, then share it with the community.
-          </p>
+          <h3>{t('pluginsHome.contributeTitle', { label })}</h3>
+          <p>{t('pluginsHome.contributeBody')}</p>
           <p className="plugins-home__contribute-template">
-            Starter: {starterPrompt}
+            {t('pluginsHome.contributeStarter', { starter: starterPrompt })}
           </p>
         </div>
         <button
@@ -248,7 +250,7 @@ function ContributionCard({
           onClick={onCreatePlugin}
           data-testid="plugins-home-contribution-create"
         >
-          Create plugin
+          {t('pluginsHome.createPlugin')}
         </button>
       </div>
     </article>
@@ -275,8 +277,9 @@ function ModeRow({
   onModeChange,
   onClearFacets,
 }: ModeRowProps) {
+  const t = useT();
   return (
-    <div className="plugins-home__mode" role="group" aria-label="Plugin mode">
+    <div className="plugins-home__mode" role="group" aria-label={t('pluginsHome.modeAria')}>
       {featuredCount > 0 ? (
         <button
           type="button"
@@ -292,12 +295,12 @@ function ModeRow({
           data-testid="plugins-home-chip-featured"
         >
           <Icon name="star" size={11} />
-          <span>Featured</span>
+          <span>{t('pluginsHome.featured')}</span>
           <span className="plugins-home__chip-count">{featuredCount}</span>
         </button>
       ) : null}
       <span className="plugins-home__mode-total">
-        {totalVisible} in catalog
+        {t('pluginsHome.inCatalog', { count: totalVisible })}
       </span>
       {hasActiveFacet ? (
         <button
@@ -306,7 +309,7 @@ function ModeRow({
           onClick={onClearFacets}
           data-testid="plugins-home-clear"
         >
-          Clear filters
+          {t('pluginsHome.clearFilters')}
         </button>
       ) : null}
     </div>
@@ -321,6 +324,7 @@ interface CategoryRowProps {
 }
 
 function CategoryRow({ options, selectedSlug, totalVisible, onPick }: CategoryRowProps) {
+  const t = useT();
   if (options.length === 0) return null;
   return (
     <div
@@ -330,11 +334,11 @@ function CategoryRow({ options, selectedSlug, totalVisible, onPick }: CategoryRo
       <div
         className="plugins-home__facet-pills"
         role="tablist"
-        aria-label="Category filter"
+        aria-label={t('pluginsHome.categoryAria')}
       >
         <CategoryPill
           slug={null}
-          label="All"
+          label={t('pluginsHome.all')}
           count={totalVisible}
           active={selectedSlug === null}
           onPick={onPick}
@@ -344,7 +348,7 @@ function CategoryRow({ options, selectedSlug, totalVisible, onPick }: CategoryRo
           <CategoryPill
             key={opt.slug}
             slug={opt.slug}
-            label={opt.label}
+            label={pluginFacetLabel(opt, t)}
             count={opt.count}
             active={selectedSlug === opt.slug}
             onPick={onPick}
@@ -363,7 +367,9 @@ interface SubcategoryRowProps {
 }
 
 function SubcategoryRow({ parent, options, selectedSlug, onPick }: SubcategoryRowProps) {
+  const t = useT();
   if (!parent || options.length === 0) return null;
+  const parentLabel = pluginFacetLabel(parent, t);
   return (
     <div
       className="plugins-home__facet-row plugins-home__facet-row--inline plugins-home__facet-row--sub"
@@ -372,11 +378,11 @@ function SubcategoryRow({ parent, options, selectedSlug, onPick }: SubcategoryRo
       <div
         className="plugins-home__facet-pills"
         role="tablist"
-        aria-label={`${parent.label} subcategory filter`}
+        aria-label={t('pluginsHome.subcategoryAria', { category: parentLabel })}
       >
         <CategoryPill
           slug={null}
-          label={`All ${parent.label}`}
+          label={t('pluginsHome.allCategory', { category: parentLabel })}
           count={parent.count}
           active={selectedSlug === null}
           onPick={onPick}
@@ -387,7 +393,7 @@ function SubcategoryRow({ parent, options, selectedSlug, onPick }: SubcategoryRo
           <CategoryPill
             key={opt.slug}
             slug={opt.slug}
-            label={opt.label}
+            label={pluginFacetLabel(opt, t)}
             count={opt.count}
             active={selectedSlug === opt.slug}
             onPick={onPick}
@@ -464,7 +470,7 @@ function SearchInput({ value, onChange }: SearchInputProps) {
           type="button"
           className="plugins-home__search-clear"
           onClick={() => onChange('')}
-          aria-label="Clear search"
+          aria-label={t('pluginsHome.clearFilters')}
           data-testid="plugins-home-search-clear"
         >
           <Icon name="close" size={12} />
@@ -472,4 +478,10 @@ function SearchInput({ value, onChange }: SearchInputProps) {
       ) : null}
     </div>
   );
+}
+
+function pluginFacetLabel(option: FacetOption, t: TranslateFn): string {
+  const key = `pluginsHome.category.${option.slug}` as Parameters<TranslateFn>[0];
+  const translated = t(key);
+  return translated === key ? option.label : translated;
 }

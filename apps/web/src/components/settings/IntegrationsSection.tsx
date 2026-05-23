@@ -265,10 +265,7 @@ export function IntegrationsSection() {
     <section className="settings-section">
       <div className="mcp-client-body">
         {infoError ? (
-          <div
-            className="empty-card"
-            style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--danger-fg, #f88)' }}
-          >
+          <div className="empty-card mcp-error-card">
             {t('settings.mcpDaemonError', { error: infoError! })}
           </div>
         ) : null}
@@ -328,12 +325,7 @@ export function IntegrationsSection() {
                       >
                         <span className="ds-picker-item-text">
                           <span className="ds-picker-item-title">{c.label}</span>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: 'var(--text-muted)',
-                            }}
-                          >
+                          <span className="mcp-picker-label">
                             {info ? c.buildMethod(info) : ''}
                           </span>
                         </span>
@@ -346,14 +338,14 @@ export function IntegrationsSection() {
           </div>
 
           {info ? (
-            <p style={{ margin: 0 }}>{client.buildInstruction(info)}</p>
+            <p className="mcp-build-instruction">{client.buildInstruction(info)}</p>
           ) : null}
 
           {client.buildDeeplink && info ? (
-            <div style={{ marginBottom: 'var(--spacing-sm)' }}>
+            <div className="mcp-deeplink-wrap">
               <button
                 type="button"
-                className="primary"
+                className="primary mcp-deeplink-btn"
                 onClick={() => {
                   const url = client.buildDeeplink!(info);
                   const a = document.createElement('a');
@@ -362,24 +354,17 @@ export function IntegrationsSection() {
                   a.click();
                 }}
                 disabled={!info.cliExists || !info.nodeExists}
-                style={{ padding: 'var(--spacing-xxs) var(--spacing-sm)', fontSize: 13 }}
               >
                 <Icon name="link" size={14} />
-                <span style={{ marginLeft: 'var(--spacing-xs)' }}>{client.deeplinkLabel ? client.deeplinkLabel() : ''}</span>
+                <span className="mcp-text-gap">{client.deeplinkLabel ? client.deeplinkLabel() : ''}</span>
               </button>
-              <span
-                style={{
-                  marginLeft: 'var(--spacing-xs)',
-                  fontSize: 12,
-                  color: 'var(--fg-2, #9aa0a6)',
-                }}
-              >
+              <span className="mcp-gap-detail">
                 {t('settings.mcpCursorApproval')}
               </span>
             </div>
           ) : null}
 
-          <div style={{ position: 'relative' }}>
+          <div className="mcp-code-wrap">
             <pre
               style={{
                 background: 'var(--surface-2, #11141a)',
@@ -411,24 +396,16 @@ export function IntegrationsSection() {
               className="ghost mcp-copy-btn"
               onClick={onCopy}
               disabled={!snippet}
-              style={{
-                position: 'absolute',
-                top: 'var(--spacing-xs)',
-                right: 'var(--spacing-xs)',
-                padding: 'var(--spacing-xxs) var(--spacing-xs)',
-                fontSize: 12,
-              }}
               aria-label={t('settings.mcpCopyAria')}
             >
               <Icon name={copied ? 'check' : 'copy'} size={14} />
-              <span style={{ marginLeft: 'var(--spacing-xs)' }}>{copied ? t('settings.mcpCopied') : t('settings.mcpCopy')}</span>
+              <span className="mcp-copy-label">{copied ? t('settings.mcpCopied') : t('settings.mcpCopy')}</span>
             </button>
           </div>
 
           {info && (!info.cliExists || !info.nodeExists) ? (
             <div
-              className="empty-card"
-              style={{ borderLeft: '3px solid var(--warning-fg, #fbbf24)' }}
+              className="empty-card mcp-warning-card"
             >
               <strong>
                 {!info.cliExists
@@ -439,21 +416,9 @@ export function IntegrationsSection() {
             </div>
           ) : null}
 
-          <div
-            style={{
-              padding: 'var(--spacing-xs) var(--spacing-sm)',
-              background: 'var(--bg-subtle)',
-              border: '1px solid var(--border)',
-              borderLeft: '3px solid var(--border-strong)',
-              borderRadius: 'var(--rounded-sm)',
-              fontSize: 13,
-              lineHeight: 1.5,
-            }}
-          >
+          <div className="mcp-restart-note">
             <strong>{t('settings.mcpRestartNote')}</strong>{' '}
-            <span style={{ color: 'var(--text-muted)' }}>
-              {t('settings.mcpRestartDetail')}
-            </span>
+            <span className="text-muted">{t('settings.mcpRestartDetail')}</span>
           </div>
 
           <p className="mcp-running-note">

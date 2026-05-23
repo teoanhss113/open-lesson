@@ -6,4 +6,4 @@
 // Keep this list narrow — only add values that are user-visible and
 // shared across multiple surfaces.
 
-export const APP_NAME = 'Open Design';
+export const APP_NAME = 'Curriculum Workspace';

@@ -50,8 +50,17 @@ export function CurriculumSection({
     }));
   };
 
-  const ageGroups = ['K-12', 'Primary', 'Secondary', 'Adult'];
-  const levels = ['Beginner', 'Intermediate', 'Advanced'];
+  const ageGroups: Array<{ id: string; labelKey: any }> = [
+    { id: 'K-12', labelKey: 'settings.curriculum.ageK12' },
+    { id: 'Primary', labelKey: 'settings.curriculum.agePrimary' },
+    { id: 'Secondary', labelKey: 'settings.curriculum.ageSecondary' },
+    { id: 'Adult', labelKey: 'settings.curriculum.ageAdult' },
+  ];
+  const levels: Array<{ id: string; labelKey: any }> = [
+    { id: 'Beginner', labelKey: 'settings.curriculum.levelBeginner' },
+    { id: 'Intermediate', labelKey: 'settings.curriculum.levelIntermediate' },
+    { id: 'Advanced', labelKey: 'settings.curriculum.levelAdvanced' },
+  ];
 
   return (
     <section className="settings-section">
@@ -95,7 +104,7 @@ export function CurriculumSection({
           onChange={(e) => updateDefaults({ defaultAgeGroup: e.target.value })}
         >
           {ageGroups.map((g) => (
-            <option key={g} value={g}>{g}</option>
+            <option key={g.id} value={g.id}>{t(g.labelKey)}</option>
           ))}
         </select>
         <small className="hint">{t('settings.curriculum.defaultAgeGroupHint')}</small>
@@ -108,7 +117,7 @@ export function CurriculumSection({
           onChange={(e) => updateDefaults({ defaultLevel: e.target.value })}
         >
           {levels.map((lvl) => (
-            <option key={lvl} value={lvl}>{lvl}</option>
+            <option key={lvl.id} value={lvl.id}>{t(lvl.labelKey)}</option>
           ))}
         </select>
         <small className="hint">{t('settings.curriculum.defaultLevelHint')}</small>

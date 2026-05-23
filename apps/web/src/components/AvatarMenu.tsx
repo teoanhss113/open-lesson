@@ -195,7 +195,7 @@ export function AvatarMenu({
                           })
                         }
                       >
-                        {renderModelOptions(currentAgent.models)}
+                        {renderModelOptions(currentAgent.models, t('settings.modelDefaultCli'))}
                         {/* When the user has typed a custom id in
                             Settings, surface it here too so the dropdown
                             actually shows the active selection rather

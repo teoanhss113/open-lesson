@@ -2,9 +2,10 @@ import type { Express } from 'express';
 import {
   defaultScenarioPluginIdForKind,
   type PluginManifest,
+  EXTRACTED_DOCUMENT_MEDIA_DIR,
 } from '@open-design/contracts';
 import { ArtifactRegressionError } from './artifact-stub-guard.js';
-import { decodeMultipartFilename, isSafeId, sanitizePath } from './projects.js';
+import { decodeMultipartFilename, isSafeId, sanitizePath, sourceMediaSlug } from './projects.js';
 import { listDesignSystems } from './design-systems.js';
 import {
   FIRST_PARTY_ATOMS,
@@ -782,10 +783,10 @@ export function registerProjectFileRoutes(app: Express, ctx: RegisterProjectFile
   const { sendApiError, sendMulterError } = ctx.http;
   const { PROJECTS_DIR } = ctx.paths;
   const { upload } = ctx.uploads;
-  const { fs } = ctx.node;
+  const { fs, path } = ctx.node;
   const { getProject } = ctx.projectStore;
-  const { listFiles, searchProjectFiles, readProjectFile, resolveProjectFilePath, parseByteRange, renameProjectFile, deleteProjectFile, writeProjectFile, sanitizeName, ensureProject, resolveProjectDir } = ctx.projectFiles;
-  const { buildDocumentPreview } = ctx.documents;
+  const { listFiles, searchProjectFiles, readProjectFile, resolveProjectFilePath, parseByteRange, renameProjectFile, deleteProjectFile, createProjectFolder, writeProjectFile, sanitizeName, ensureProject, resolveProjectDir } = ctx.projectFiles;
+  const { buildDocumentPreview, extractDocumentMediaOnly } = ctx.documents;
   const { validateArtifactManifestInput } = ctx.artifacts;
 
   // Project files. Each project owns a flat folder under .od/projects/<id>/
@@ -849,6 +850,52 @@ export function registerProjectFileRoutes(app: Express, ctx: RegisterProjectFile
       res.header('Access-Control-Allow-Headers', 'Content-Type');
     }
     res.sendStatus(204);
+  });
+
+  // Standalone extract-media endpoint — triggers extraction without building
+  // the full text preview. Returns { extracted: string[] } with the relative
+  // paths of the written image files. The df-preview panel can poll this once
+  // after selecting a file to ensure media is available even if the upload
+  // handler's fire-and-forget hasn't completed yet, or if extraction was skipped
+  // for an older file.
+  app.post('/api/projects/:id/files/:name/extract-media', async (req, res) => {
+    try {
+      const project = getProject(db, req.params.id);
+      const file = await readProjectFile(
+        PROJECTS_DIR,
+        req.params.id,
+        req.params.name,
+        project?.metadata,
+      );
+      const projectDir = resolveProjectDir(PROJECTS_DIR, req.params.id, project?.metadata);
+      const extracted = await extractDocumentMediaOnly({ name: file.name, buffer: file.buffer }, projectDir);
+      res.json({ extracted });
+    } catch (err: any) {
+      const status = err?.code === 'ENOENT' ? 404 : 400;
+      sendApiError(res, status, status === 404 ? 'FILE_NOT_FOUND' : 'BAD_REQUEST', err?.message || 'extraction failed');
+    }
+  });
+
+  app.get('/api/projects/:id/files/:name/extracted-media', async (req, res) => {
+    try {
+      const project = getProject(db, req.params.id);
+      const projectDir = resolveProjectDir(PROJECTS_DIR, req.params.id, project?.metadata);
+      const sourceSlug = sourceMediaSlug(req.params.name);
+      const targetDir = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, sourceSlug);
+
+      let extracted: string[] = [];
+      try {
+        const entries = await fs.promises.readdir(targetDir, { withFileTypes: true });
+        extracted = entries
+          .filter((e: any) => e.isFile() && !e.name.startsWith('.'))
+          .map((e: any) => path.posix.join(EXTRACTED_DOCUMENT_MEDIA_DIR, sourceSlug, e.name));
+      } catch (err: any) {
+        if (err?.code !== 'ENOENT') throw err;
+      }
+      res.json({ extracted });
+    } catch (err: any) {
+      sendApiError(res, 500, 'SERVER_ERROR', err?.message || 'failed to list extracted media');
+    }
   });
 
   app.get('/api/projects/:id/raw/*', async (req, res) => {
@@ -1023,6 +1070,11 @@ export function registerProjectFileRoutes(app: Express, ctx: RegisterProjectFile
             uploadProject?.metadata,
           );
           fs.promises.unlink(req.file.path).catch(() => {});
+          // Fire-and-forget: extract embedded media from document/presentation/
+          // spreadsheet/PDF files so the df-preview media grid is populated
+          // immediately after upload without the user needing to open the file.
+          const projectDir = resolveProjectDir(PROJECTS_DIR, req.params.id, uploadProject?.metadata);
+          extractDocumentMediaOnly({ name: meta.name, buffer: buf }, projectDir).catch(() => {});
           /** @type {import('@open-design/contracts').ProjectFileResponse} */
           const body = { file: meta };
           return res.json(body);
@@ -1107,6 +1159,53 @@ export function registerProjectFileRoutes(app: Express, ctx: RegisterProjectFile
         return sendApiError(res, 404, 'FILE_NOT_FOUND', message);
       }
       sendApiError(res, 400, 'BAD_REQUEST', message);
+    }
+  });
+
+  app.post('/api/projects/:id/folders', async (req, res) => {
+    try {
+      const { path: folderPath } = req.body || {};
+      if (typeof folderPath !== 'string') {
+        return sendApiError(res, 400, 'BAD_REQUEST', 'path required');
+      }
+      const project = getProject(db, req.params.id);
+      const file = await createProjectFolder(
+        PROJECTS_DIR,
+        req.params.id,
+        folderPath,
+        project?.metadata,
+      );
+      /** @type {import('@open-design/contracts').ProjectFileResponse} */
+      const body = { file };
+      res.json(body);
+    } catch (err: any) {
+      if (err?.code === 'EEXIST') {
+        return sendApiError(res, 409, 'CONFLICT', 'folder already exists');
+      }
+      const message = String(err?.message || err);
+      sendApiError(res, 400, 'BAD_REQUEST', message);
+    }
+  });
+
+  app.delete('/api/projects/:id/folders', async (req, res) => {
+    try {
+      const { path: folderPath } = req.body || {};
+      if (typeof folderPath !== 'string') {
+        return sendApiError(res, 400, 'BAD_REQUEST', 'path required');
+      }
+      const project = getProject(db, req.params.id);
+      await deleteProjectFile(PROJECTS_DIR, req.params.id, folderPath, project?.metadata);
+      /** @type {import('@open-design/contracts').DeleteProjectFileResponse} */
+      const body = { ok: true };
+      res.json(body);
+    } catch (err: any) {
+      const status = err && err.code === 'ENOENT' ? 404 : 400;
+      sendApiError(
+        res,
+        status,
+        status === 404 ? 'FILE_NOT_FOUND' : 'BAD_REQUEST',
+        String(err),
+      );
     }
   });
 

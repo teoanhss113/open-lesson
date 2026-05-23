@@ -35,7 +35,7 @@ export function registerImportRoutes(app: Express, ctx: RegisterImportRoutesDeps
         if (!req.file)
           return res.status(400).json({ error: 'zip file required' });
         const originalName =
-          req.file.originalname || 'Claude Design export.zip';
+          req.file.originalname || 'Backup export.zip';
         if (!/\.zip$/i.test(originalName)) {
           fs.promises.unlink(req.file.path).catch(() => {});
           return res.status(400).json({ error: 'expected a .zip file' });
@@ -43,7 +43,7 @@ export function registerImportRoutes(app: Express, ctx: RegisterImportRoutesDeps
         const id = randomId();
         const now = Date.now();
         const baseName =
-          originalName.replace(/\.zip$/i, '').trim() || 'Claude Design import';
+          originalName.replace(/\.zip$/i, '').trim() || 'Backup import';
         const imported = await importClaudeDesignZip(
           req.file.path,
           projectDir(PROJECTS_DIR, id),
@@ -55,7 +55,7 @@ export function registerImportRoutes(app: Express, ctx: RegisterImportRoutesDeps
           name: baseName,
           skillId: null,
           designSystemId: null,
-          pendingPrompt: `Imported from Claude Design ZIP: ${originalName}. Continue editing ${imported.entryFile}.`,
+          pendingPrompt: `Imported from Backup ZIP: ${originalName}. Continue editing ${imported.entryFile}.`,
           metadata: {
             kind: 'prototype',
             importedFrom: 'claude-design',
@@ -69,7 +69,7 @@ export function registerImportRoutes(app: Express, ctx: RegisterImportRoutesDeps
         insertConversation(db, {
           id: cid,
           projectId: id,
-          title: 'Imported Claude Design project',
+          title: 'Imported Backup project',
           createdAt: now,
           updatedAt: now,
         });

@@ -9,6 +9,40 @@ function autoSendAttachmentsKey(projectId: string): string {
   return `od:auto-send-attachments:${projectId}`;
 }
 
+function autoSendPromptKey(projectId: string): string {
+  return `od:auto-send-prompt:${projectId}`;
+}
+
+function autoSendSkillIdsKey(projectId: string): string {
+  return `od:auto-send-skill-ids:${projectId}`;
+}
+
+export function stageProjectAutoSend(
+  projectId: string,
+  prompt: string,
+  options?: { attachments?: ChatAttachment[]; skillIds?: string[] },
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(autoSendFirstMessageKey(projectId), '1');
+    window.sessionStorage.setItem(autoSendPromptKey(projectId), prompt);
+    const attachments = options?.attachments ?? [];
+    if (attachments.length > 0) {
+      window.sessionStorage.setItem(autoSendAttachmentsKey(projectId), JSON.stringify(attachments));
+    } else {
+      window.sessionStorage.removeItem(autoSendAttachmentsKey(projectId));
+    }
+    const skillIds = options?.skillIds?.filter((id) => id.length > 0) ?? [];
+    if (skillIds.length > 0) {
+      window.sessionStorage.setItem(autoSendSkillIdsKey(projectId), JSON.stringify(skillIds));
+    } else {
+      window.sessionStorage.removeItem(autoSendSkillIdsKey(projectId));
+    }
+  } catch {
+    /* sessionStorage may be unavailable; callers can still navigate normally. */
+  }
+}
+
 function readAutoSendAttachments(projectId: string): ChatAttachment[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -17,6 +51,28 @@ function readAutoSendAttachments(projectId: string): ChatAttachment[] {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(isStoredChatAttachment);
+  } catch {
+    return [];
+  }
+}
+
+function readAutoSendPrompt(projectId: string): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return window.sessionStorage.getItem(autoSendPromptKey(projectId)) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function readAutoSendSkillIds(projectId: string): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.sessionStorage.getItem(autoSendSkillIdsKey(projectId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is string => typeof id === 'string' && id.length > 0);
   } catch {
     return [];
   }
@@ -40,6 +96,8 @@ function clearAutoSendSession(projectId: string): void {
   try {
     window.sessionStorage.removeItem(autoSendFirstMessageKey(projectId));
     window.sessionStorage.removeItem(autoSendAttachmentsKey(projectId));
+    window.sessionStorage.removeItem(autoSendPromptKey(projectId));
+    window.sessionStorage.removeItem(autoSendSkillIdsKey(projectId));
   } catch {
     /* ignore */
   }
@@ -52,33 +110,44 @@ export function useProjectAutoSend(
   streaming: boolean,
   messagesCount: number,
   onClearPendingPrompt: () => void,
-  handleSend: (content: string, attachments: ChatAttachment[], commentAttachments?: any[]) => void | Promise<void>,
+  handleSend: (
+    content: string,
+    attachments: ChatAttachment[],
+    commentAttachments?: any[],
+    meta?: { skillIds?: string[] },
+  ) => void | Promise<void>,
 ) {
   const autoSendSeedRef = useRef<string | null>(null);
   const autoSendAttachmentsRef = useRef<ChatAttachment[] | null>(null);
+  const autoSendSkillIdsRef = useRef<string[]>([]);
   const autoSendFirstMessageRef = useRef(false);
   const autoSentRef = useRef(false);
 
+  const lastProjectIdRef = useRef<string | null>(null);
   // Reset refs when the project changes so we capture the fresh project values
-  useEffect(() => {
+  if (lastProjectIdRef.current !== project.id) {
+    lastProjectIdRef.current = project.id;
     autoSendSeedRef.current = null;
     autoSendAttachmentsRef.current = null;
     autoSendFirstMessageRef.current = false;
+    autoSendSkillIdsRef.current = [];
     autoSentRef.current = false;
-  }, [project.id]);
+  }
 
   if (autoSendSeedRef.current === null) {
     let isAutoSend = false;
     try {
-      isAutoSend = Boolean(
-        window.sessionStorage.getItem(autoSendFirstMessageKey(project.id)),
-      );
+      const storageKey = autoSendFirstMessageKey(project.id);
+      const storageVal = window.sessionStorage.getItem(storageKey);
+      isAutoSend = Boolean(storageVal);
     } catch {
-      /* sessionStorage may be unavailable; treat as manual flow. */
+      isAutoSend = false;
     }
     autoSendFirstMessageRef.current = isAutoSend;
-    autoSendSeedRef.current = isAutoSend ? (project.pendingPrompt ?? '') : '';
+    const stagedPrompt = isAutoSend ? readAutoSendPrompt(project.id) : '';
+    autoSendSeedRef.current = isAutoSend ? (stagedPrompt || project.pendingPrompt || '') : '';
     autoSendAttachmentsRef.current = isAutoSend ? readAutoSendAttachments(project.id) : [];
+    autoSendSkillIdsRef.current = isAutoSend ? readAutoSendSkillIds(project.id) : [];
   }
 
   const [initialDraft, setInitialDraft] = useState<{ projectId: string; value: string } | undefined>(
@@ -135,9 +204,11 @@ export function useProjectAutoSend(
       return;
     }
     autoSentRef.current = true;
+    const skillIds = autoSendSkillIdsRef.current;
     clearAutoSendSession(project.id);
     autoSendAttachmentsRef.current = [];
-    void handleSend(seed, attachments, []);
+    autoSendSkillIdsRef.current = [];
+    void handleSend(seed, attachments, [], skillIds.length > 0 ? { skillIds } : undefined);
   }, [
     activeConversationId,
     messagesInitialized,

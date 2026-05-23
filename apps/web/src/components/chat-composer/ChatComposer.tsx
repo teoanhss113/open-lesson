@@ -52,6 +52,7 @@ interface Props {
   commentAttachments?: ChatCommentAttachment[];
   onRemoveCommentAttachment?: (id: string) => void;
   skills?: SkillSummary[];
+  designTemplates?: SkillSummary[];
   onSend: (
     prompt: string,
     attachments: ChatAttachment[],
@@ -162,8 +163,6 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
       if (seededRef.current) return;
       if (initialDraft && initialDraft !== draft) {
         setDraft(initialDraft);
-        seededRef.current = true;
-      } else if (initialDraft === undefined) {
         seededRef.current = true;
       }
     }, [initialDraft, draft]);
@@ -1044,6 +1043,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
                 mcpServers={filteredMcpServers}
                 query={mention.q}
                 currentSkillId={currentSkillId}
+                t={t}
                 onPickFile={insertMention}
                 onPickPlugin={(record) => void insertPluginMention(record)}
                 onPickSkill={(skill) => void insertSkillMention(skill)}

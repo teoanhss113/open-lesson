@@ -12,6 +12,7 @@ import type {
   InstalledPluginRecord,
   PluginManifest,
 } from '@open-design/contracts';
+import { useT } from '../../i18n';
 import { Icon } from '../Icon';
 import { PluginPreviewHero } from './PluginPreviewHero';
 import { PluginMetaSections } from './PluginMetaSections';
@@ -30,6 +31,7 @@ export function PluginScenarioDetail({
   onUse,
   isApplying,
 }: Props) {
+  const t = useT();
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export function PluginScenarioDetail({
       className="plugin-details-modal-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label={`${record.title} details`}
+      aria-label={t('plugins.details.detailsAria', { title: record.title })}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -110,8 +112,8 @@ export function PluginScenarioDetail({
               type="button"
               className="plugin-details-modal__close"
               onClick={onClose}
-              aria-label="Close details"
-              title="Close (Esc)"
+              aria-label={t('common.close')}
+              title={`${t('common.close')} (Esc)`}
             >
               <Icon name="close" size={18} />
             </button>
@@ -136,7 +138,7 @@ export function PluginScenarioDetail({
             className="plugin-details-modal__secondary"
             onClick={onClose}
           >
-            Close
+            {t('common.close')}
           </button>
           <button
             type="button"
@@ -147,13 +149,14 @@ export function PluginScenarioDetail({
             data-testid={`plugin-details-use-${record.id}`}
           >
             {isApplying
-              ? 'Applying…'
+              ? t('plugins.details.applying')
               : query
-                ? 'Use example query'
-                : 'Use plugin'}
+                ? t('plugins.details.useExampleQuery')
+                : t('plugins.details.usePlugin')}
           </button>
         </footer>
       </div>
     </div>
   );
 }
+

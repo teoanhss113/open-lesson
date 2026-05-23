@@ -16,6 +16,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { InputFieldSpec } from '@open-design/contracts';
+import { useT } from '../i18n';
 
 interface Props {
   fields: InputFieldSpec[];
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export function PluginInputsForm(props: Props) {
+  const t = useT();
   const fields = props.fields ?? [];
   const required = useMemo(
     () => fields.filter((f) => f.required === true).map((f) => f.name),
@@ -85,7 +87,7 @@ export function PluginInputsForm(props: Props) {
             {field.label ?? field.name}
             {field.required ? <span className="plugin-inputs-form__required">*</span> : null}
           </span>
-          {renderField(field, values[field.name], (v) => update(field.name, v))}
+          {renderField(field, values[field.name], (v) => update(field.name, v), t('common.selectEllipsis'))}
         </label>
       ))}
     </div>
@@ -96,6 +98,7 @@ function renderField(
   field: InputFieldSpec,
   value: unknown,
   onChange: (value: unknown) => void,
+  selectPlaceholder: string,
 ) {
   const type = fieldType(field);
   if (type === 'select' && Array.isArray(field.options)) {
@@ -106,7 +109,7 @@ function renderField(
         onChange={(e) => onChange(e.target.value)}
         data-field-name={field.name}
       >
-        <option value="">{field.placeholder ?? 'Select…'}</option>
+        <option value="">{field.placeholder ?? selectPlaceholder}</option>
         {field.options.map((opt) => (
           <option key={opt} value={opt}>
             {opt}

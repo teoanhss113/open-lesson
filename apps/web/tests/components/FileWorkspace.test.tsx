@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FileWorkspace, scrollWorkspaceTabsWithWheel } from '../../src/components/FileWorkspace';
 import { DesignFilesPanel } from '../../src/components/DesignFilesPanel';
 import { projectSplitClassName } from '../../src/components/ProjectView';
-import { uploadProjectFiles } from '../../src/providers/registry';
+import { deleteProjectFile, deleteProjectFolder, uploadProjectFiles } from '../../src/providers/registry';
 import type { ProjectFile } from '../../src/types';
 
 vi.mock('../../src/providers/registry', async () => {
@@ -18,10 +18,14 @@ vi.mock('../../src/providers/registry', async () => {
   );
   return {
     ...actual,
+    deleteProjectFile: vi.fn(),
+    deleteProjectFolder: vi.fn(),
     uploadProjectFiles: vi.fn(),
   };
 });
 
+const mockedDeleteProjectFile = vi.mocked(deleteProjectFile);
+const mockedDeleteProjectFolder = vi.mocked(deleteProjectFolder);
 const mockedUploadProjectFiles = vi.mocked(uploadProjectFiles);
 
 let root: Root | null = null;
@@ -65,6 +69,18 @@ function workspaceFile(name: string): ProjectFile {
     mtime: 1700000000,
     kind: name.endsWith('.html') ? 'html' : 'text',
     mime: name.endsWith('.html') ? 'text/html' : 'text/plain',
+  };
+}
+
+function workspaceFolder(name: string): ProjectFile {
+  return {
+    name,
+    path: name,
+    type: 'dir',
+    size: 0,
+    mtime: 1700000000,
+    kind: 'binary',
+    mime: 'inode/directory',
   };
 }
 
@@ -198,6 +214,49 @@ describe('FileWorkspace upload input', () => {
     fireEvent.click(screen.getByTestId('upload-error-dismiss'));
 
     expect(screen.queryByTestId('upload-error-banner')).toBeNull();
+  });
+
+  it('uploads into the browsed folder when a subfolder is open', async () => {
+    mockedUploadProjectFiles.mockResolvedValueOnce({ uploaded: [], failed: [] });
+
+    render(
+      <FileWorkspace
+        projectId="project-1"
+        projectKind="prototype"
+        files={[
+          baseFile({ name: 'notes.txt', kind: 'text', mime: 'text/plain' }),
+          {
+            name: 'unit-1',
+            path: 'unit-1',
+            type: 'dir',
+            size: 0,
+            mtime: Date.now(),
+            kind: 'text',
+            mime: 'inode/directory',
+          },
+        ]}
+        liveArtifacts={[]}
+        onRefreshFiles={vi.fn()}
+        isDeck={false}
+        tabsState={{ tabs: [], active: null }}
+        onTabsStateChange={vi.fn()}
+      />,
+    );
+
+    const folderRow = screen.getByTestId('design-folder-row-unit-1');
+    fireEvent.click(folderRow.querySelector('.df-cell-name')!);
+    fireEvent.click(screen.getByTestId('design-files-upload-trigger'));
+    fireEvent.change(screen.getByTestId('design-files-upload-input'), {
+      target: { files: [new File(['hello'], 'hello.txt', { type: 'text/plain' })] },
+    });
+
+    await waitFor(() => {
+      expect(mockedUploadProjectFiles).toHaveBeenCalledWith(
+        'project-1',
+        [expect.any(File)],
+        { destinationFolder: 'unit-1' },
+      );
+    });
   });
 
   it('keeps partial upload failures visible after a successful file opens', async () => {
@@ -424,6 +483,37 @@ describe('FileWorkspace Design Files tab', () => {
       expect(screen.queryByTestId('design-file-preview')).toBeNull();
     });
     expect(screen.getByTestId('design-files-upload-trigger')).toBeTruthy();
+  });
+
+  it('deletes selected folders through the folder endpoint', async () => {
+    mockedDeleteProjectFolder.mockResolvedValue(true);
+    mockedDeleteProjectFile.mockResolvedValue(true);
+    vi.stubGlobal('confirm', vi.fn(() => true));
+    const onRefreshFiles = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <FileWorkspace
+        projectId="project-1"
+        projectKind="prototype"
+        files={[workspaceFolder('New folder'), workspaceFile('notes.md')]}
+        liveArtifacts={[]}
+        onRefreshFiles={onRefreshFiles}
+        isDeck={false}
+        tabsState={{ tabs: [], active: null }}
+        onTabsStateChange={vi.fn()}
+      />,
+    );
+
+    const folderRow = screen.getByTestId('design-folder-row-New folder');
+    const checkbox = within(folderRow).getByRole('checkbox');
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByTestId('design-files-batch-delete'));
+
+    await waitFor(() => {
+      expect(mockedDeleteProjectFolder).toHaveBeenCalledWith('project-1', 'New folder');
+    });
+    expect(mockedDeleteProjectFile).not.toHaveBeenCalled();
+    expect(onRefreshFiles).toHaveBeenCalled();
   });
 });
 

@@ -85,6 +85,7 @@ export function DocumentPreviewViewer({
   const [zoom, setZoom] = useState<number | 'fit'>('fit');
   const [previewViewport, setPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
+  const [docxWidth, setDocxWidth] = useState<number>(850);
 
   // States for reviews and drawing overlay
   const [boardMode, setBoardMode] = useState(false);
@@ -132,9 +133,9 @@ export function DocumentPreviewViewer({
   const calculatedScale = useMemo(() => {
     if (!previewBodySize?.width) return 100;
     const availableWidth = previewBodySize.width - 48;
-    const targetWidth = isDeck ? 1000 : 850;
+    const targetWidth = isDeck ? 1000 : (isDoc ? docxWidth : 850);
     return Math.max(25, Math.min(200, Math.round((availableWidth / targetWidth) * 100)));
-  }, [previewBodySize?.width, isDeck]);
+  }, [previewBodySize?.width, isDeck, isDoc, docxWidth]);
 
   const actualZoom = zoom === 'fit' ? calculatedScale : zoom;
 
@@ -157,6 +158,7 @@ export function DocumentPreviewViewer({
     setSelectedPalette(null);
     setPreviewPalette(null);
     setDrawOverlayOpen(false);
+    setDocxWidth(850);
     clearBoardComposer();
   }, [file.name]);
 
@@ -206,10 +208,13 @@ export function DocumentPreviewViewer({
   useEffect(() => {
     function onMessage(ev: MessageEvent) {
       if (ev.source !== iframeRef.current?.contentWindow) return;
-      const data = ev?.data as { type?: string; active?: number; count?: number } | null;
-      if (!data || data.type !== 'od:slide-state') return;
-      if (typeof data.active !== 'number') return;
-      setActiveSlide(data.active);
+      const data = ev?.data as { type?: string; active?: number; count?: number; width?: number } | null;
+      if (!data) return;
+      if (data.type === 'od:slide-state' && typeof data.active === 'number') {
+        setActiveSlide(data.active);
+      } else if (data.type === 'od:docx-width' && typeof data.width === 'number') {
+        setDocxWidth(data.width);
+      }
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
@@ -579,31 +584,18 @@ export function DocumentPreviewViewer({
     return pdfTab === 'visual' ? (
       <div
         className="pdf-iframe-container"
-        style={{
-          width: '100%',
-          height: '100%',
-          background: 'var(--bg-subtle)',
-          overflow: 'hidden',
-        }}
       >
         <iframe
           src={`${rawUrl}#toolbar=0`}
-          style={{ width: '100%', height: '100%', border: 'none' }}
+          className="pdf-iframe"
           title={file.name}
         />
       </div>
     ) : (
       <div
         className="document-preview"
-        style={{
-          width: '100%',
-          height: '100%',
-          overflowY: 'auto',
-          background: 'var(--bg-panel)',
-          padding: 'var(--spacing-xxl) var(--spacing-xl)'
-        }}
       >
-        <div style={{ maxWidth: '820px', margin: '0 auto' }}>
+        <div className="preview-content">
           {previewData ? (
             previewData.sections.map((section: ProjectFilePreviewSection, idx: number) => (
               <section
@@ -614,11 +606,11 @@ export function DocumentPreviewViewer({
                   paddingTop: idx > 0 ? 'var(--spacing-md)' : '0'
                 }}
               >
-                <h3 style={{ margin: '0 0 var(--spacing-sm)', fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <h3 className="preview-section-title">
                   {section.title}
                 </h3>
                 {section.lines.map((line: string, lineIdx: number) => (
-                  <p key={`${lineIdx}-${line}`} style={{ margin: '0 0 var(--spacing-xs)', fontSize: '14px', lineHeight: 1.6, color: 'var(--text)' }}>
+                  <p key={`${lineIdx}-${line}`} className="preview-line">
                     {line}
                   </p>
                 ))}
@@ -642,50 +634,22 @@ export function DocumentPreviewViewer({
 
     return (
       <div
-        className="xlsx-viewer-layout"
-        style={{
-          width: '100%',
-          height: '100%',
-          overflow: 'auto',
-          background: 'var(--bg-panel)'
-        }}
+        className="xlsx-viewer-layout w-full"
       >
         {currentWorksheet.lines.length === 0 ? (
-          <div className="viewer-empty" style={{ padding: 'var(--spacing-xxl)' }}>
+          <div className="viewer-empty">
             No readable cell values found.
           </div>
         ) : (
           <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: '13px',
-              fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
-            }}
+            className="tbl-fill xlsx-table"
           >
             <thead>
               <tr
-                style={{
-                  background: 'var(--bg-subtle)',
-                  borderBottom: '1px solid var(--border)',
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 10
-                }}
+                className="tbl-th-sticky"
               >
                 <th
-                  style={{
-                    padding: 'var(--spacing-xs) var(--spacing-sm)',
-                    color: 'var(--text-muted)',
-                    fontWeight: 'bold',
-                    width: '45px',
-                    textAlign: 'center',
-                    borderRight: '1px solid var(--border-soft)',
-                    background: 'var(--bg-subtle)',
-                    position: 'sticky',
-                    left: 0,
-                    zIndex: 11
-                  }}
+                  className="tbl-th-num"
                 >
                   #
                 </th>
@@ -707,13 +671,7 @@ export function DocumentPreviewViewer({
                     headers.push(
                       <th
                         key={c}
-                        style={{
-                          padding: 'var(--spacing-sm) var(--spacing-md)',
-                          fontWeight: '600',
-                          color: 'var(--text)',
-                          textAlign: 'left',
-                          borderRight: '1px solid var(--border-soft)'
-                        }}
+                        className="tbl-th-col"
                       >
                         {label}
                       </th>
@@ -729,41 +687,18 @@ export function DocumentPreviewViewer({
                 return (
                   <tr
                     key={rIdx}
-                    style={{
-                      borderBottom: '1px solid var(--border-soft)',
-                      background: rIdx % 2 === 1 ? 'var(--bg-subtle)' : 'var(--bg-panel)',
-                      transition: 'background-color 100ms ease'
-                    }}
+                    className="tbl-row"
+                    style={{ background: rIdx % 2 === 1 ? 'var(--bg-subtle)' : 'var(--bg-panel)' }}
                   >
                     <td
-                      style={{
-                        padding: 'var(--spacing-xs) var(--spacing-sm)',
-                        color: 'var(--text-muted)',
-                        textAlign: 'center',
-                        borderRight: '1px solid var(--border-soft)',
-                        fontWeight: '500',
-                        background: 'var(--bg-subtle)',
-                        userSelect: 'none',
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 2
-                      }}
+                      className="tbl-cell-num"
                     >
                       {rIdx + 1}
                     </td>
                     {cells.map((cell, cIdx) => (
                       <td
                         key={cIdx}
-                        style={{
-                          padding: 'var(--spacing-sm) var(--spacing-md)',
-                          color: 'var(--text)',
-                          borderRight: '1px solid var(--border-soft)',
-                          whiteSpace: 'nowrap',
-                          minWidth: '120px',
-                          maxWidth: '300px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}
+                        className="tbl-cell-val"
                         title={cell}
                       >
                         {cell}
@@ -786,18 +721,8 @@ export function DocumentPreviewViewer({
     return (
       <div
         className="source-viewer"
-        style={{
-          padding: 'var(--spacing-xl)',
-          background: '#1e1e1e',
-          color: '#d4d4d4',
-          height: '100%',
-          overflowY: 'auto',
-          fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
-          fontSize: '14px',
-          lineHeight: '1.6'
-        }}
       >
-        <pre style={{ margin: 0 }}>{JSON.stringify(preview, null, 2)}</pre>
+        <pre className="m-0">{JSON.stringify(preview, null, 2)}</pre>
       </div>
     );
   };
@@ -888,7 +813,7 @@ export function DocumentPreviewViewer({
                   sandbox="allow-scripts allow-downloads"
                   srcDoc={srcDoc}
                   onLoad={syncBridgeModes}
-                  style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }}
+                  className="fallback-iframe"
                 />
               )}
             </PreviewDrawOverlay>
@@ -921,7 +846,7 @@ export function DocumentPreviewViewer({
   return (
     <div className="viewer document-viewer">
       <div className="viewer-toolbar">
-        <div className="viewer-toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)' }}>
+        <div className="viewer-toolbar-left">
           {/* Reload trigger */}
           <button
             type="button"
@@ -955,7 +880,7 @@ export function DocumentPreviewViewer({
 
           {/* PDF visual vs text tabs switch in toolbar */}
           {file.kind === 'pdf' && (
-            <div className="viewer-tabs" style={{ display: 'inline-flex' }}>
+            <div className="viewer-tabs">
               <button
                 type="button"
                 className={`viewer-tab ${pdfTab === 'visual' ? 'active' : ''}`}
@@ -984,7 +909,7 @@ export function DocumentPreviewViewer({
                 style={{ opacity: activeSlide <= 0 ? 0.4 : 1, cursor: activeSlide <= 0 ? 'not-allowed' : 'pointer' }}
                 title="Previous Slide"
               >
-                <Icon name="chevron-right" size={14} style={{ transform: 'rotate(180deg)' }} />
+                <Icon name="chevron-right" size={14} className="icon-rotate-180" />
               </button>
               <span className="deck-nav-counter">
                 {activeSlide + 1} / {preview.sections.length}
@@ -1004,11 +929,11 @@ export function DocumentPreviewViewer({
 
           {/* XLSX worksheets tab switcher in toolbar */}
           {preview?.kind === 'spreadsheet' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', borderLeft: '1px solid var(--border-soft)', paddingLeft: 'var(--spacing-md)' }}>
-              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div className="sheet-toolbar">
+              <span className="sheet-label">
                 Sheets:
               </span>
-              <div className="viewer-tabs" style={{ display: 'inline-flex' }}>
+              <div className="viewer-tabs">
                 {preview.sections.map((sheet, idx) => (
                   <button
                     key={idx}
@@ -1029,12 +954,12 @@ export function DocumentPreviewViewer({
         </div>
 
         {/* Viewport, zoom and file actions on the right side */}
-        <div className="viewer-toolbar-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)' }}>
+        <div className="viewer-toolbar-actions">
           {mode === 'preview' ? (
             <>
               {/* Tweaks */}
               {(isDeck || isDoc) && (
-                <div className="palette-tweaks-anchor" style={{ position: 'relative' }}>
+                <div className="palette-tweaks-anchor pos-relative">
                   <button
                     type="button"
                     className={`viewer-action${selectedPalette || palettePopoverOpen ? ' active' : ''}`}
@@ -1056,12 +981,12 @@ export function DocumentPreviewViewer({
                             selectedPalette === 'electric' ? '#7c3aed' :
                             selectedPalette === 'acid-forest' ? '#16a34a' :
                             selectedPalette === 'risograph' ? '#e11d48' :
-                            '#0a0a0a',
+                            'var(--colors-ink)',
                           display: 'inline-block',
                           width: '8px',
                           height: '8px',
-                          borderRadius: '50%',
-                          marginLeft: '4px'
+                          borderRadius: 'var(--rounded-full)',
+                          marginLeft: 'var(--spacing-2xs)'
                         }}
                       />
                     ) : null}
@@ -1222,9 +1147,8 @@ export function DocumentPreviewViewer({
                       aria-haspopup="menu"
                       aria-expanded={zoomMenuOpen}
                       onClick={() => setZoomMenuOpen((v) => !v)}
-                      style={{ minWidth: 64 }}
                     >
-                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      <span className="tabular-nums">
                         {zoom === 'fit' ? `${calculatedScale}%` : `${zoom}%`}
                       </span>
                       <Icon name="chevron-down" size={11} />
@@ -1243,7 +1167,7 @@ export function DocumentPreviewViewer({
                           <span>{t('fileViewer.zoomFit') || 'Fit to screen'}</span>
                           {zoom === 'fit' ? <Icon name="check" size={13} /> : null}
                         </button>
-                        <div className="zoom-menu-divider" style={{ height: '1px', background: 'var(--border-soft, #e5e7eb)', margin: '4px 0' }} />
+                        <div className="zoom-divider" />
                         {[50, 75, 100, 125, 150, 200].map((level) => (
                           <button
                             key={level}
@@ -1255,7 +1179,7 @@ export function DocumentPreviewViewer({
                               setZoomMenuOpen(false);
                             }}
                           >
-                            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{level}%</span>
+                            <span className="tabular-nums">{level}%</span>
                             {zoom === level ? <Icon name="check" size={13} /> : null}
                           </button>
                         ))}
@@ -1282,7 +1206,7 @@ export function DocumentPreviewViewer({
         </div>
       </div>
 
-      <div className="viewer-body" ref={previewBodyRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <div className="viewer-body" ref={previewBodyRef}>
         {mode === 'preview' ? renderBody() : renderSource()}
         {mode === 'preview' && boardMode && activeCommentTarget ? (
           <BoardComposerPopover

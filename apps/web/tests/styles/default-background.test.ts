@@ -14,14 +14,14 @@ describe('default app background colors', () => {
   it('uses the release light background color by default', () => {
     const root = cssBlock(':root');
 
-    expect(root).toContain('--bg: #faf9f7;');
-    expect(root).toContain('--bg-app: #faf9f7;');
+    expect(root).toContain('--bg: var(--colors-canvas);');
+    expect(root).toContain('--bg-app: var(--colors-canvas);');
   });
 
   it('keeps the dark theme background unchanged', () => {
     const dark = cssBlock('[data-theme="dark"]');
 
-    expect(dark).toContain('--bg: #1a1917;');
-    expect(dark).toContain('--bg-app: #1a1917;');
+    expect(dark).toContain('--bg: var(--colors-canvas);');
+    expect(dark).toContain('--bg-app: var(--colors-canvas);');
   });
 });
