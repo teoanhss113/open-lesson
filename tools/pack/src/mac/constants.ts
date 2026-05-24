@@ -1,4 +1,6 @@
-export const PRODUCT_NAME = "Open Design";
+export const PRODUCT_NAME = "Open Lesson";
+export const PRODUCT_RESOURCE_DIR_NAME = "open-lesson";
+export const PACKAGED_CONFIG_FILE_NAME = "open-lesson-config.json";
 
 export const INTERNAL_PACKAGES = [
   { directory: "packages/contracts", name: "@open-design/contracts" },
@@ -16,7 +18,7 @@ export const INTERNAL_PACKAGES = [
 
 export const DESKTOP_LOG_ECHO_ENV = "OD_DESKTOP_LOG_ECHO";
 export const WEB_STANDALONE_HOOK_CONFIG_ENV = "OD_TOOLS_PACK_WEB_STANDALONE_HOOK_CONFIG";
-export const WEB_STANDALONE_RESOURCE_NAME = "open-design-web-standalone";
+export const WEB_STANDALONE_RESOURCE_NAME = "open-lesson-web-standalone";
 export const ELECTRON_BUILDER_ASAR = false;
 export const ELECTRON_BUILDER_FILE_PATTERNS = [
   "**/*",

@@ -30,11 +30,11 @@ describe('document preview media extraction', () => {
 
     const preview = await buildDocumentPreview({ name: 'Lesson 1.docx', buffer }, projectDir);
 
-    const extractedPath = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, 'Lesson_1', 'image1.png');
+    const extractedPath = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, 'Lesson_1-docx', 'image1.png');
     expect(await readFile(extractedPath, 'utf8')).toBe('png-data');
     const sections = preview.sections as PreviewSection[];
-    const mediaSection = sections.find((section) => section.title === 'Extracted Reference Images');
-    expect(mediaSection?.lines.join('\n')).toContain(`${EXTRACTED_DOCUMENT_MEDIA_DIR}/Lesson_1/image1.png`);
+    const mediaSection = sections.find((section) => section.title === 'MANDATORY Extracted Assets & Images — MUST USE');
+    expect(mediaSection?.lines.join('\n')).toContain(`${EXTRACTED_DOCUMENT_MEDIA_DIR}/Lesson_1-docx/image1.png`);
   });
 
   it('extracts XLSX images into a source-specific media folder', async () => {
@@ -48,9 +48,9 @@ describe('document preview media extraction', () => {
 
     const preview = await buildDocumentPreview({ name: 'Workbook.xlsx', buffer }, projectDir);
 
-    const extractedPath = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, 'Workbook', 'image1.png');
+    const extractedPath = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, 'Workbook-xlsx', 'image1.png');
     expect(await readFile(extractedPath, 'utf8')).toBe('xlsx-png');
     const sections = preview.sections as PreviewSection[];
-    expect(sections.some((section) => section.title === 'Extracted Reference Images')).toBe(true);
+    expect(sections.some((section) => section.title === 'MANDATORY Extracted Assets & Images — MUST USE')).toBe(true);
   });
 });

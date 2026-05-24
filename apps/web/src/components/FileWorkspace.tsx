@@ -7,6 +7,7 @@ import {
   type InputHTMLAttributes,
 } from 'react';
 import type { TrackingProjectKind } from '@open-design/contracts/analytics';
+import { isExtractedDocumentMediaFileName } from '@open-design/contracts';
 import { useT } from '../i18n';
 import { isMacPlatform } from '../utils/platform';
 import { kindIconName } from '../utils/fileKind';
@@ -182,7 +183,7 @@ export function FileWorkspace({
   );
 
   const visibleFiles = useMemo(
-    () => designFiles.filter((file) => !file.name.includes('-media-')),
+    () => designFiles.filter((file) => !isExtractedDocumentMediaFileName(file.name)),
     [designFiles],
   );
 
@@ -1057,7 +1058,7 @@ export function FileWorkspace({
         type="file"
         multiple
         data-testid="design-files-upload-input"
-        style={{ display: 'none' }}
+        className="display-none"
         onChange={handleFilePicked}
       />
       <input
@@ -1066,7 +1067,7 @@ export function FileWorkspace({
         multiple
         {...({ webkitdirectory: '', directory: '' } as InputHTMLAttributes<HTMLInputElement>)}
         data-testid="design-files-upload-folder-input"
-        style={{ display: 'none' }}
+        className="display-none"
         onChange={handleFolderPicked}
       />
       {showPasteDialog ? (

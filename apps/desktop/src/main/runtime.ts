@@ -514,7 +514,7 @@ function createPendingHtml(): string {
   return `data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html>
 <html>
   <head>
-    <title>AI Curriculum Workspace</title>
+    <title>Open Lesson</title>
     <style>
       body {
         align-items: center;
@@ -537,7 +537,7 @@ function createPendingHtml(): string {
   </head>
   <body>
     <main>
-      <h1>AI Curriculum Workspace</h1>
+      <h1>Open Lesson</h1>
       <p>Waiting for the web runtime URL…</p>
     </main>
   </body>
@@ -869,7 +869,7 @@ export async function createDesktopRuntime(options: DesktopRuntimeOptions): Prom
     minHeight: 600,
     minWidth: 900,
     show: true,
-    title: "AI Curriculum Workspace",
+    title: "Open Lesson",
     ...MAC_WINDOW_CHROME,
     webPreferences: {
       contextIsolation: true,

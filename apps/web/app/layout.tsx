@@ -6,7 +6,7 @@ import '../src/index.css';
 import '../src/styles/home/index.css';
 
 export const metadata: Metadata = {
-  title: 'AI Curriculum Workspace',
+  title: 'Open Lesson',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.png',

@@ -1,4 +1,5 @@
 import { useT } from '../i18n';
+import { UiActionButton } from './UiPrimitives';
 
 interface Props {
   /** Affirmative consent (Share usage data). */
@@ -52,12 +53,12 @@ export function PrivacyConsentModal({ onShare, onDecline }: Props): JSX.Element 
         role="group"
         aria-label={t('settings.privacyConsentKicker')}
       >
-        <button type="button" className="privacy-consent-action" onClick={onDecline}>
+        <UiActionButton type="button" tone="secondary" onClick={onDecline}>
           {t('settings.privacyConsentDecline')}
-        </button>
-        <button type="button" className="privacy-consent-action" onClick={onShare}>
+        </UiActionButton>
+        <UiActionButton type="button" tone="secondary" onClick={onShare}>
           {t('settings.privacyConsentShare')}
-        </button>
+        </UiActionButton>
       </div>
     </div>
   );

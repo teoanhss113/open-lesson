@@ -159,14 +159,14 @@ export function MentionPopover({
                     {p.manifest?.description ?? p.id}
                   </span>
                 </span>
-                <span className="mention-meta">{pluginSourceLabel(p)}</span>
+                <span className="mention-meta">{pluginSourceLabel(p, t)}</span>
               </button>
             ))}
           </>
         ) : null}
         {showSkills && skills.length > 0 ? (
           <>
-            <div className="mention-section-label">Skills</div>
+            <div className="mention-section-label">{t('chat.mentionTabSkills')}</div>
             {skills.map((skill) => {
               const active = skill.id === currentSkillId;
               return (

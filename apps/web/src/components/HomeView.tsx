@@ -13,6 +13,7 @@ import type {
 } from '../types';
 import { Icon } from './Icon';
 import { DesignsTab } from './DesignsTab';
+import { PageHeader } from './UiPrimitives';
 
 interface Props {
   projects: Project[];
@@ -42,35 +43,39 @@ export function HomeView({
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
 
   return (
-    <div className="home-view home-view--unified" data-testid="home-view">
-      <header className="home-view__header">
-        <div className="home-view__header-primary">
-          <div className="home-view__brand-lockup" data-testid="home-view-brand">
-            <img
-              src="/od-logo.png"
-              alt=""
-              className="home-view__brand-logo"
-              draggable={false}
-            />
-            <h1 className="home-view__brand">{t('app.brand')}</h1>
-          </div>
-          <button
-            type="button"
-            className="home-view__create"
-            onClick={onCreateProject}
-            aria-label={newProjectLabel}
-            title={newProjectLabel}
-            data-testid="home-view-create"
-          >
-            <Icon name="plus" size={20} />
-          </button>
-        </div>
+    <div className="ui-page home-view home-view--unified" data-testid="home-view">
+      <div className="home-view__header">
+        <PageHeader
+          title={(
+            <span className="home-view__brand-lockup" data-testid="home-view-brand">
+              <img
+                src="/od-logo.png"
+                alt=""
+                className="home-view__brand-logo"
+                draggable={false}
+              />
+              <span className="home-view__brand">{t('app.brand')}</span>
+            </span>
+          )}
+          action={(
+            <button
+              type="button"
+              className="home-view__create"
+              onClick={onCreateProject}
+              aria-label={newProjectLabel}
+              title={newProjectLabel}
+              data-testid="home-view-create"
+            >
+              <Icon name="plus" size={20} />
+            </button>
+          )}
+        />
         <div
           ref={setToolbarHost}
           className="home-view__toolbar"
           data-testid="home-view-toolbar"
         />
-      </header>
+      </div>
       {projectsLoading ? (
         <div className="home-view__loading">{t('common.loading')}</div>
       ) : (

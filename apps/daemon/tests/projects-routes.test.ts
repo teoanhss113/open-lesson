@@ -206,4 +206,33 @@ describe('GET /api/projects/:id resolvedDir', () => {
     expect(body.error?.code).toBe('BAD_REQUEST');
     expect(body.error?.message).toMatch(/fromTrustedPicker/i);
   });
+
+  it('returns legacy flat media files when targetDir in _document_media is empty', async () => {
+    const projectId = `proj-legacy-media-${Date.now()}`;
+    const createResp = await fetch(`${baseUrl}/api/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: projectId,
+        name: 'Legacy media fixture',
+        skillId: null,
+        designSystemId: null,
+      }),
+    });
+    expect(createResp.status).toBe(200);
+
+    const dataDir = process.env.OD_DATA_DIR;
+    if (!dataDir) throw new Error('OD_DATA_DIR is required for daemon route tests');
+    const projectDir = path.join(dataDir, 'projects', projectId);
+
+    // Write a dummy flat legacy media file in the project root
+    const legacyFileName = '_lesson_1-media-image1.png';
+    await writeFile(path.join(projectDir, legacyFileName), 'png-data');
+
+    // Fetch the extracted media for "Lesson 1.docx"
+    const mediaResp = await fetch(`${baseUrl}/api/projects/${projectId}/files/Lesson 1.docx/extracted-media`);
+    expect(mediaResp.status).toBe(200);
+    const body = (await mediaResp.json()) as { extracted: string[] };
+    expect(body.extracted).toEqual([legacyFileName]);
+  });
 });

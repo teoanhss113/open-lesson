@@ -17,7 +17,7 @@ import { patchProject } from '../../state/projects';
 import { fetchMcpServers } from '../../state/mcp';
 import type { McpServerConfig, McpTemplate } from '../../state/mcp';
 import { listPlugins } from '../../state/projects';
-import type { AppConfig, ChatAttachment, ChatCommentAttachment, ProjectFile, ProjectMetadata, SkillSummary } from '../../types';
+import type { ChatAttachment, ChatCommentAttachment, ProjectFile, ProjectMetadata, SkillSummary } from '../../types';
 import type {
   ContextItem,
   InstalledPluginRecord,
@@ -26,7 +26,6 @@ import { buildVisualAnnotationAttachment } from '../../comments';
 import { Icon } from '../Icon';
 import { PluginDetailsModal } from '../PluginDetailsModal';
 import { PluginsSection, type PluginsSectionHandle } from '../PluginsSection';
-import { BUILT_IN_PETS, CUSTOM_PET_ID, resolveActivePet } from '../pet/pets';
 import {
   buildInlineMentionParts,
   inlineMentionToken,
@@ -37,7 +36,7 @@ import { useOutsideClick } from '../../hooks/useOutsideClick';
 import type { ChatSendMeta, ToolsTab, SlashCommand } from './types';
 import { escapeRegExp, looksLikeImage, buildComposerMentionEntities } from './utils';
 import { StagedAttachments, StagedSkills, StagedCommentAttachments } from './StagedAttachments';
-import { ToolsPluginsPanel, ToolsMcpPanel, ToolsSkillsPanel, ToolsImportPanel, ToolsPetPanel } from './ToolsPanels';
+import { ToolsPluginsPanel, ToolsMcpPanel, ToolsSkillsPanel, ToolsImportPanel } from './ToolsPanels';
 import { SlashPopover, MentionPopover } from './Popovers';
 
 interface Props {
@@ -62,10 +61,6 @@ interface Props {
   onStop: () => void;
   onOpenSettings?: () => void;
   onOpenMcpSettings?: () => void;
-  petConfig?: AppConfig['pet'];
-  onAdoptPet?: (petId: string) => void;
-  onTogglePet?: () => void;
-  onOpenPetSettings?: () => void;
   researchAvailable?: boolean;
   projectMetadata?: ProjectMetadata;
   onProjectMetadataChange?: (metadata: ProjectMetadata) => void;
@@ -97,10 +92,6 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
       onStop,
       onOpenSettings,
       onOpenMcpSettings,
-      petConfig,
-      onAdoptPet,
-      onTogglePet,
-      onOpenPetSettings,
       researchAvailable = false,
       projectMetadata,
       onProjectMetadataChange,
@@ -155,7 +146,6 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const toolsMenuRef = useRef<HTMLDivElement | null>(null);
     const toolsTriggerRef = useRef<HTMLButtonElement | null>(null);
-    const petEnabled = Boolean(onAdoptPet && onTogglePet);
     const linkedDirs = projectMetadata?.linkedDirs ?? [];
     const seededRef = useRef(Boolean(initialDraft));
 
@@ -244,9 +234,8 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
       }
       if (onOpenMcpSettings) tabs.push('mcp');
       tabs.push('import');
-      if (petEnabled) tabs.push('pet');
       return tabs;
-    }, [projectId, onOpenMcpSettings, petEnabled]);
+    }, [projectId, onOpenMcpSettings]);
 
     useEffect(() => {
       if (!toolsOpen) return;
@@ -288,42 +277,8 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
           argHint: t('pet.slashSearchArg'),
         });
       }
-      if (petEnabled) {
-        list.push(
-          {
-            id: 'pet',
-            label: '/pet',
-            insert: '/pet ',
-            descKey: 'pet.slashPet',
-            icon: 'sparkles',
-            argHint: 'wake | tuck | <petId>',
-          },
-          {
-            id: 'pet-wake',
-            label: '/pet wake',
-            insert: '/pet wake',
-            descKey: 'pet.slashPetWake',
-            icon: 'eye',
-          },
-          {
-            id: 'pet-tuck',
-            label: '/pet tuck',
-            insert: '/pet tuck',
-            descKey: 'pet.slashPetTuck',
-            icon: 'eye',
-          },
-          {
-            id: 'hatch',
-            label: '/hatch',
-            insert: '/hatch ',
-            descKey: 'pet.slashHatch',
-            icon: 'sparkles',
-            argHint: t('pet.slashHatchArg'),
-          },
-        );
-      }
       return list;
-    }, [petEnabled, researchAvailable, t, enabledMcpServers, onOpenMcpSettings]);
+    }, [researchAvailable, t, enabledMcpServers, onOpenMcpSettings]);
 
     const filteredSlash = useMemo(() => {
       if (!slash) return [] as SlashCommand[];
@@ -346,27 +301,6 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
         const pos = replaced.length;
         ta.setSelectionRange(pos, pos);
       });
-    }
-
-    function expandHatchCommand(input: string): string | null {
-      const m = /^\/hatch(?:\s+([\s\S]*))?$/i.exec(input.trim());
-      if (!m) return null;
-      const concept = m[1]?.trim() ?? '';
-      const intro = concept
-        ? `Hatch a Codex-compatible animated pet for me. Concept: ${concept}.`
-        : 'Hatch a Codex-compatible animated pet for me.';
-      return [
-        intro,
-        '',
-        'Use the @hatch-pet skill end-to-end:',
-        '1. Generate the base look with $imagegen.',
-        '2. Generate every row strip (idle, running-right, waving, jumping, failed, waiting, running, review).',
-        '3. Mirror running-left from running-right only when the design is symmetric.',
-        '4. Run the deterministic scripts (extract / compose / validate / contact-sheet / videos).',
-        '5. Package the result into ${CODEX_HOME:-$HOME/.codex}/pets/<pet-name>/ with pet.json + spritesheet.webp.',
-        '',
-        'When the spritesheet is saved, tell me the absolute path and the pet folder name. I will adopt it from Settings → Pets → Recently hatched.',
-      ].join('\n');
     }
 
     function tryHandleMcpSlash(): boolean {
@@ -405,38 +339,6 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
           'Then summarize the findings with citations by source index and mention the Markdown report path.',
         ].join('\n'),
       };
-    }
-
-    function tryHandlePetSlash(): boolean {
-      if (!petEnabled) return false;
-      const trimmed = draft.trim();
-      const match = /^\/pet(?:\s+(\S+))?$/i.exec(trimmed);
-      if (!match) return false;
-      const arg = match[1]?.toLowerCase();
-      if (!arg || arg === 'toggle') {
-        onTogglePet?.();
-      } else if (arg === 'wake' || arg === 'show') {
-        if (petConfig?.adopted) {
-          if (!petConfig.enabled) onTogglePet?.();
-        } else {
-          onOpenPetSettings?.();
-        }
-      } else if (arg === 'tuck' || arg === 'hide') {
-        if (petConfig?.enabled) onTogglePet?.();
-      } else if (arg === 'adopt' || arg === 'settings' || arg === 'change') {
-        onOpenPetSettings?.();
-      } else if (arg === CUSTOM_PET_ID) {
-        onAdoptPet?.(CUSTOM_PET_ID);
-      } else {
-        const pet = BUILT_IN_PETS.find((p) => p.id === arg);
-        if (pet) {
-          onAdoptPet?.(pet.id);
-        } else {
-          return false;
-        }
-      }
-      setDraft('');
-      return true;
     }
 
     useImperativeHandle(
@@ -772,20 +674,10 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
     async function submit() {
       const prompt = draft.trim();
       if (sendDisabled) return;
-      if (tryHandlePetSlash()) return;
       if (tryHandleMcpSlash()) return;
       const skillIds = stagedSkills.map((s) => s.id);
       const skillMeta = skillIds.length > 0 ? { skillIds } : undefined;
-      const hatched = expandHatchCommand(prompt);
       const nextCommentAttachments = currentCommentAttachments();
-      if (hatched) {
-        if (streaming) return;
-        const finalPrompt = selectedText ? `[Context: "${selectedText}"]\n\n${hatched}` : hatched;
-        onSend(finalPrompt, staged, nextCommentAttachments, skillMeta);
-        onClearSelection?.();
-        reset();
-        return;
-      }
       const search = researchAvailable ? expandSearchCommand(prompt) : null;
       if (search) {
         if (streaming) return;
@@ -921,18 +813,17 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
             />
           ) : null}
           {selectedText ? (
-            <div className="linked-dirs-row" data-testid="selection-context" style={{ marginTop: 'var(--spacing-xxs)' }}>
-              <div className="linked-dir-chip" style={{ border: '1px solid var(--green-border)', background: 'var(--green-bg)', borderRadius: 'var(--rounded-full, 9999px)', display: 'inline-flex', alignItems: 'center', gap: 'var(--spacing-xs)', padding: 'var(--spacing-xxs) var(--spacing-xs)' }}>
-                <Icon name="link" size={13} style={{ color: 'var(--green)' }} />
-                <span className="linked-dir-name" style={{ maxWidth: '280px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: '12px', color: 'var(--green)' }} title={selectedText}>
+            <div className="linked-dirs-row selection-context-row" data-testid="selection-context">
+              <div className="linked-dir-chip selection-context-chip">
+                <Icon name="link" size={13} />
+                <span className="linked-dir-name selection-context-name" title={selectedText}>
                   {selectedText.length > 60 ? `${selectedText.substring(0, 60)}...` : selectedText}
                 </span>
                 <button
-                  className="staged-remove"
+                  className="staged-remove selection-context-remove"
                   onClick={onClearSelection}
                   title="Clear selection"
                   aria-label="Clear selection"
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--green)' }}
                 >
                   <Icon name="close" size={11} />
                 </button>
@@ -1066,7 +957,7 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
               data-testid="chat-file-input"
               type="file"
               multiple
-              style={{ display: 'none' }}
+              className="display-none"
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 void uploadFiles(files);
@@ -1105,13 +996,13 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
                         {tab === 'plugins' ? (
                           <>
                             <Icon name="sparkles" size={12} />
-                            <span>Plugins</span>
+                            <span>{t('chat.toolsTabPlugins')}</span>
                           </>
                         ) : null}
                         {tab === 'skills' ? (
                           <>
                             <Icon name="file" size={12} />
-                            <span>Skills</span>
+                            <span>{t('chat.toolsTabSkills')}</span>
                           </>
                         ) : null}
                         {tab === 'mcp' ? (
@@ -1124,14 +1015,6 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
                           <>
                             <Icon name="import" size={12} />
                             <span>{t('chat.importLabel')}</span>
-                          </>
-                        ) : null}
-                        {tab === 'pet' ? (
-                          <>
-                            <span className="composer-tools-tab-glyph" aria-hidden>
-                              {resolveActivePet(petConfig)?.glyph ?? '🐾'}
-                            </span>
-                            <span>{t('pet.composerMenuTitle')}</span>
                           </>
                         ) : null}
                       </button>
@@ -1200,24 +1083,6 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
                         onLinkFolder={async () => {
                           setToolsOpen(false);
                           await handleLinkFolder();
-                        }}
-                      />
-                    ) : null}
-                    {toolsTab === 'pet' && petEnabled ? (
-                      <ToolsPetPanel
-                        t={t}
-                        petConfig={petConfig}
-                        onTogglePet={() => {
-                          onTogglePet?.();
-                          setToolsOpen(false);
-                        }}
-                        onAdoptPet={(id) => {
-                          onAdoptPet?.(id);
-                          setToolsOpen(false);
-                        }}
-                        onOpenPetSettings={() => {
-                          onOpenPetSettings?.();
-                          setToolsOpen(false);
                         }}
                       />
                     ) : null}

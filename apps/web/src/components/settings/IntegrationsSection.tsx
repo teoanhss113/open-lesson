@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../../i18n';
 import { Icon } from '../Icon';
+import { UiActionButton } from '../UiPrimitives';
 
 type McpClientId =
   | 'claude'
@@ -302,8 +303,7 @@ export function IntegrationsSection() {
               <Icon
                 name="chevron-down"
                 size={14}
-                className="ds-picker-chevron"
-                style={{ transform: pickerOpen ? 'rotate(180deg)' : undefined }}
+                className={`ds-picker-chevron${pickerOpen ? ' icon-rotate-180' : ''}`}
               />
             </button>
             {pickerOpen ? (
@@ -343,9 +343,11 @@ export function IntegrationsSection() {
 
           {client.buildDeeplink && info ? (
             <div className="mcp-deeplink-wrap">
-              <button
+              <UiActionButton
                 type="button"
-                className="primary mcp-deeplink-btn"
+                tone="primary"
+                icon="link"
+                className="mcp-deeplink-btn"
                 onClick={() => {
                   const url = client.buildDeeplink!(info);
                   const a = document.createElement('a');
@@ -355,9 +357,8 @@ export function IntegrationsSection() {
                 }}
                 disabled={!info.cliExists || !info.nodeExists}
               >
-                <Icon name="link" size={14} />
                 <span className="mcp-text-gap">{client.deeplinkLabel ? client.deeplinkLabel() : ''}</span>
-              </button>
+              </UiActionButton>
               <span className="mcp-gap-detail">
                 {t('settings.mcpCursorApproval')}
               </span>
@@ -366,22 +367,7 @@ export function IntegrationsSection() {
 
           <div className="mcp-code-wrap">
             <pre
-              style={{
-                background: 'var(--surface-2, #11141a)',
-                color: 'var(--fg-1, #e6e6e6)',
-                padding: 'var(--spacing-xxxl) 104px var(--spacing-sm) var(--spacing-sm)',
-                borderRadius: 'var(--rounded-md)',
-                overflowX: 'auto',
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-                fontSize: 12,
-                lineHeight: 1.55,
-                margin: 0,
-                userSelect: 'text',
-                whiteSpace: snippetLang === 'bash' ? 'pre-wrap' : 'pre',
-                wordBreak: snippetLang === 'bash' ? 'break-all' : 'normal',
-                minHeight: 60,
-              }}
+              className={`code-snippet-block${snippetLang === 'bash' ? ' wrap' : ''}`}
               data-lang={snippetLang}
             >
               <code>

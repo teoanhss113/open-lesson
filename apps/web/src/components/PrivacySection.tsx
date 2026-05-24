@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useT } from '../i18n';
 import { Icon } from './Icon';
+import { UiActionButton } from './UiPrimitives';
 import type { AppConfig, TelemetryConfig } from '../types';
 
 interface Props {
@@ -112,12 +113,11 @@ export function PrivacySection({ cfg, setCfg }: Props): JSX.Element {
             </div>
             <button
               type="button"
-              className="ghost"
+              className="ghost self-flex-start mt-sm"
               onClick={deleteMyData}
-              style={{ alignSelf: 'flex-start', marginTop: 'var(--spacing-sm)' }}
             >
               <Icon name="trash" size={13} />
-              <span style={{ marginLeft: 'var(--spacing-xs)' }}>{t('settings.privacyDataDeletion')}</span>
+              <span className="ml-xs">{t('settings.privacyDataDeletion')}</span>
             </button>
           </div>
         </>
@@ -187,12 +187,12 @@ function ConsentCard({ onShare, onDecline }: ConsentProps): JSX.Element {
         role="group"
         aria-label={t('settings.privacyConsentKicker')}
       >
-        <button type="button" className="privacy-consent-action" onClick={onDecline}>
+        <UiActionButton type="button" tone="secondary" onClick={onDecline}>
           {t('settings.privacyConsentDecline')}
-        </button>
-        <button type="button" className="privacy-consent-action" onClick={onShare}>
+        </UiActionButton>
+        <UiActionButton type="button" tone="secondary" onClick={onShare}>
           {t('settings.privacyConsentShare')}
-        </button>
+        </UiActionButton>
       </div>
     </div>
   );

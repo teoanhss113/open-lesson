@@ -10,7 +10,7 @@ import {
   ensureWinWorkspaceBuild,
   prepareWinPackagedApp,
 } from "./app.js";
-import { PRODUCT_NAME } from "./constants.js";
+import { PRODUCT_NAME, PRODUCT_RESOURCE_DIR_NAME } from "./constants.js";
 import { pathExists } from "./fs.js";
 import { runElectronBuilder } from "./builder.js";
 import {
@@ -89,7 +89,7 @@ export async function packWin(config: ToolPackConfig): Promise<WinPackResult> {
     installerPath: (await pathExists(paths.setupPath)) ? paths.setupPath : null,
     latestYmlPath: (await pathExists(paths.latestYmlPath)) ? paths.latestYmlPath : null,
     outputRoot: config.roots.output.namespaceRoot,
-    resourceRoot: builtApp == null ? paths.resourceRoot : join(builtApp.unpackedRoot, "resources", "open-design"),
+    resourceRoot: builtApp == null ? paths.resourceRoot : join(builtApp.unpackedRoot, "resources", PRODUCT_RESOURCE_DIR_NAME),
     runtimeNamespaceRoot: config.roots.runtime.namespaceRoot,
     cacheReport: cache.report(),
     sizeReport,

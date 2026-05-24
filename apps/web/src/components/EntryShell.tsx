@@ -48,8 +48,9 @@ import type {
   PluginShareProjectOutcome,
 } from '../state/projects';
 import { TasksView } from './TasksView';
+import { PageHeader, UiActionButton } from './UiPrimitives';
 
-// The topbar chips (GitHub star, model switcher, Use everywhere)
+// The topbar chips (GitHub star, model switcher)
 // collapse into the settings dropdown when the viewport gets
 // narrow. The transition is driven entirely by CSS @media queries
 // in `entry-layout.css` so server and client render identical
@@ -530,20 +531,6 @@ export function EntryShell({
             className="avatar-item"
             onClick={() => {
               setAvatarMenuOpen(false);
-              openIntegrationTab('use-everywhere');
-            }}
-            data-testid="entry-avatar-use-everywhere"
-          >
-            <span className="avatar-item-icon" aria-hidden>
-              <Icon name="hammer" size={14} />
-            </span>
-            <span>{t('entry.useEverywhereTitle')}</span>
-          </button>
-          <button
-            type="button"
-            className="avatar-item"
-            onClick={() => {
-              setAvatarMenuOpen(false);
               onOpenSettings();
             }}
           >
@@ -579,21 +566,6 @@ export function EntryShell({
                 onApiModelChange={onApiModelChange}
                 onOpenSettings={onOpenSettings}
               />
-              <button
-                type="button"
-                className="use-everywhere-chip"
-                onClick={() => openIntegrationTab('use-everywhere')}
-                title={t('entry.useEverywhereTitle')}
-                aria-label={t('entry.useEverywhereAria')}
-                data-testid="entry-use-everywhere-button"
-              >
-                <span className="use-everywhere-chip__icon" aria-hidden>
-                  <Icon name="hammer" size={13} />
-                </span>
-                <span className="use-everywhere-chip__label">
-                  {t('entry.useEverywhereTitle')}
-                </span>
-              </button>
             </div>
             {avatarMenu}
           </div>
@@ -632,10 +604,12 @@ export function EntryShell({
               skillsLoading ? (
                 <CenteredLoader label={t('common.loading')} />
               ) : (
-                <div className="entry-section">
-                  <header className="entry-section__head">
-                    <h1 className="entry-section__title">{t('entry.tabTemplates')}</h1>
-                  </header>
+                <div className="ui-page entry-section">
+                  <PageHeader
+                    kicker={t('entry.templatesKicker')}
+                    title={<span id="templates-title">{t('entry.tabTemplates')}</span>}
+                    lede={t('entry.templatesLede')}
+                  />
                   <ExamplesTab
                     skills={designTemplates}
                     onUsePrompt={openTemplateProjectPicker}
@@ -647,10 +621,12 @@ export function EntryShell({
               designSystemsLoading ? (
                 <CenteredLoader label={t('common.loading')} />
               ) : (
-                <div className="entry-section">
-                  <header className="entry-section__head">
-                    <h1 className="entry-section__title">{t('entry.tabDesignSystems')}</h1>
-                  </header>
+                <div className="ui-page entry-section">
+                  <PageHeader
+                    kicker={t('entry.designSystemsKicker')}
+                    title={<span id="design-systems-title">{t('entry.tabDesignSystems')}</span>}
+                    lede={t('entry.designSystemsLede')}
+                  />
                   <DesignSystemsTab
                     systems={designSystems}
                     selectedId={defaultDesignSystemId}
@@ -743,35 +719,35 @@ export function EntryShell({
               ) : null}
             </div>
             <footer className="template-project-modal__foot">
-              <button
+              <UiActionButton
                 type="button"
-                className="secondary"
+                tone="secondary"
                 onClick={closeTemplateProjectPicker}
               >
                 {t('common.cancel')}
-              </button>
+              </UiActionButton>
               {sortedProjects.length > 0 ? (
-                <button
+                <UiActionButton
                   type="button"
-                  className="primary"
+                  tone="primary"
                   disabled={!templateProjectId || templateProjectSubmitting}
                   onClick={() => void startTemplateConversation()}
                 >
                   {templateProjectSubmitting
                     ? t('common.loading')
                     : t('templates.startConversation')}
-                </button>
+                </UiActionButton>
               ) : (
-                <button
+                <UiActionButton
                   type="button"
-                  className="primary"
+                  tone="primary"
                   onClick={() => {
                     closeTemplateProjectPicker();
                     setNewProjectOpen(true);
                   }}
                 >
                   {t('entry.navNewProject')}
-                </button>
+                </UiActionButton>
               )}
             </footer>
           </div>

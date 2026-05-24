@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useT } from '../i18n';
 import { Icon } from './Icon';
 import { Toggle } from './Toggle';
+import { UiActionButton } from './UiPrimitives';
 import type { AppConfig } from '../types';
 import type { SkillSummary } from '@open-design/contracts';
 import {
@@ -346,15 +347,16 @@ export function SkillsSection({ cfg, setCfg }: Props) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button
+          <UiActionButton
             type="button"
-            className="primary skills-add-btn"
+            tone="primary"
+            icon="plus"
+            className="skills-add-btn"
             onClick={startCreate}
             data-testid="skills-new"
           >
-            <Icon name="plus" size={13} />
-            <span>{t('settings.skillsNew')}</span>
-          </button>
+            {t('settings.skillsNew')}
+          </UiActionButton>
         </div>
         {/* Row 2: filter dropdowns */}
         <div className="library-filter-selects">
@@ -577,14 +579,14 @@ function SkillRow({
         <div className="skills-row-actions">
           {canDelete && confirmDelete ? (
             <span className="skills-delete-confirm" role="group">
-              <button
+              <UiActionButton
                 type="button"
-                className="primary danger"
+                tone="danger"
                 onClick={onCommitDelete}
                 data-testid="skills-delete-confirm"
               >
                 {t('settings.skillsDeleteConfirm')}
-              </button>
+              </UiActionButton>
               <button
                 type="button"
                 className="ghost"
@@ -770,17 +772,17 @@ function SkillDraftForm({
         </div>
       ) : null}
       <div className="library-import-actions">
-        <button
+        <UiActionButton
           type="button"
-          className="ghost"
+          tone="secondary"
           onClick={onCancel}
           disabled={saving}
         >
           {t('common.cancel')}
-        </button>
-        <button
+        </UiActionButton>
+        <UiActionButton
           type="button"
-          className="primary"
+          tone="primary"
           onClick={onSubmit}
           disabled={saving}
           data-testid="skills-save"
@@ -790,7 +792,7 @@ function SkillDraftForm({
             : isEdit
               ? t('settings.skillsSave')
               : t('settings.skillsCreate')}
-        </button>
+        </UiActionButton>
       </div>
     </div>
   );

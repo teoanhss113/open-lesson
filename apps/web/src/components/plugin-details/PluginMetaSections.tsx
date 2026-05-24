@@ -276,11 +276,11 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
       {hasContext ? (
         <Section
           title={t('plugins.details.contextBundles')}
-          hint="Skills, design systems, MCP servers and other refs the plugin will pull in at apply time."
+          hint={t('plugins.details.contextBundlesHint')}
         >
           <div className="plugin-details-modal__context">
             {ctx.skills && ctx.skills.length > 0 ? (
-              <ContextGroup label="Skills" count={ctx.skills.length}>
+              <ContextGroup label={t('plugins.details.contextSkills')} count={ctx.skills.length}>
                 {ctx.skills.map((s, i) => (
                   <span key={`skill-${i}`} className="plugin-details-modal__chip">
                     {refLabel(s as ContextRef)}
@@ -289,7 +289,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
               </ContextGroup>
             ) : null}
             {ctx.designSystem ? (
-              <ContextGroup label="Design system">
+              <ContextGroup label={t('plugins.details.contextDesignSystem')}>
                 <span className="plugin-details-modal__chip">
                   {refLabel(ctx.designSystem as ContextRef)}
                   {(ctx.designSystem as ContextRef).primary ? (
@@ -301,7 +301,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
               </ContextGroup>
             ) : null}
             {ctx.craft && ctx.craft.length > 0 ? (
-              <ContextGroup label="Craft" count={ctx.craft.length}>
+              <ContextGroup label={t('plugins.details.contextCraft')} count={ctx.craft.length}>
                 {ctx.craft.map((c) => (
                   <span key={`craft-${c}`} className="plugin-details-modal__chip">
                     {c}
@@ -310,7 +310,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
               </ContextGroup>
             ) : null}
             {ctx.atoms && ctx.atoms.length > 0 ? (
-              <ContextGroup label="Atoms" count={ctx.atoms.length}>
+              <ContextGroup label={t('plugins.details.contextAtoms')} count={ctx.atoms.length}>
                 {ctx.atoms.map((a) => (
                   <span key={`atom-${a}`} className="plugin-details-modal__chip">
                     {a}
@@ -319,7 +319,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
               </ContextGroup>
             ) : null}
             {ctx.assets && ctx.assets.length > 0 ? (
-              <ContextGroup label="Assets" count={ctx.assets.length}>
+              <ContextGroup label={t('plugins.details.contextAssets')} count={ctx.assets.length}>
                 {ctx.assets.map((a) => (
                   <span
                     key={`asset-${a}`}
@@ -331,7 +331,7 @@ export function PluginMetaSections({ record, omit, compact, heading }: Props) {
               </ContextGroup>
             ) : null}
             {ctx.mcp && ctx.mcp.length > 0 ? (
-              <ContextGroup label="MCP servers" count={ctx.mcp.length}>
+              <ContextGroup label={t('plugins.details.contextMcpServers')} count={ctx.mcp.length}>
                 {(ctx.mcp as McpServerSpec[]).map((m) => (
                   <span key={`mcp-${m.name}`} className="plugin-details-modal__chip">
                     {m.name}
@@ -717,4 +717,3 @@ function ConnectorList({ label, items, variant }: ConnectorListProps) {
     </div>
   );
 }
-

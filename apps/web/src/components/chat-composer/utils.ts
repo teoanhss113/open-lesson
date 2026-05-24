@@ -93,8 +93,12 @@ export function mcpTemplateMatchesQuery(tpl: McpTemplate, query: string): boolea
     .includes(q);
 }
 
-export function pluginSourceLabel(plugin: InstalledPluginRecord): string {
-  return plugin.sourceKind === 'bundled' ? 'Official' : 'My plugin';
+export function pluginSourceLabel(
+  plugin: InstalledPluginRecord,
+  t?: (key: any, vars?: any) => string,
+): string {
+  if (plugin.sourceKind === 'bundled') return t ? t('plugins.source.official') : 'Official';
+  return t ? t('plugins.source.mineSingular') : 'My plugin';
 }
 
 export function buildComposerMentionEntities({

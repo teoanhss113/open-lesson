@@ -240,9 +240,9 @@ async function writeAssembledAppEntrypoints(
     `${JSON.stringify(
       {
         dependencies: options.dependencies ?? createAssembledAppDependencies(config, paths, packedTarballs),
-        description: "Open Design packaged runtime",
+        description: "Open Lesson packaged runtime",
         main: "./main.cjs",
-        name: "open-design-packaged-app",
+        name: "open-lesson-packaged-app",
         private: true,
         productName: PRODUCT_NAME,
         version: packagedVersion,

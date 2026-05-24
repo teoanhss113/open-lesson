@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useT } from '../i18n';
+import { UiActionButton } from './UiPrimitives';
 import type { DirectionCard, FormOption, QuestionForm } from '../artifacts/question-form';
 import { formatFormAnswers, formOptionValueForLabel } from '../artifacts/question-form';
 
@@ -213,15 +214,15 @@ export function QuestionFormView({ form, interactive, submittedAnswers, onSubmit
           <span className="qf-hint">{t('qf.hint')}</span>
         )}
         {!locked ? (
-          <button
+          <UiActionButton
             type="button"
-            className="primary"
+            tone="primary"
             onClick={handleSubmit}
             disabled={!ready}
             title={ready ? t('qf.submitTitle') : t('qf.submitDisabledTitle')}
           >
             {form.submitLabel ?? t('qf.submitDefault')}
-          </button>
+          </UiActionButton>
         ) : null}
       </div>
     </div>

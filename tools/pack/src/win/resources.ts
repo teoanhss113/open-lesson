@@ -4,21 +4,18 @@ import { dirname, join } from "node:path";
 import { hashJson, hashPath, ToolPackCache } from "../cache.js";
 import type { ToolPackConfig } from "../config.js";
 import { copyBundledResourceTrees, winResources } from "../resources.js";
+import { PRODUCT_RESOURCE_DIR_NAME } from "./constants.js";
 import type { WinPaths, ResourceTreeCacheMetadata } from "./types.js";
 
-const RESOURCE_TREE_CACHE_SCHEMA_VERSION = 3;
+const RESOURCE_TREE_CACHE_SCHEMA_VERSION = 4;
 
 async function createResourceTreeCacheKey(config: ToolPackConfig): Promise<string> {
   return hashJson({
-    assetsCommunityPets: await hashPath(join(config.workspaceRoot, "assets", "community-pets")),
     assetsFrames: await hashPath(join(config.workspaceRoot, "assets", "frames")),
     craft: await hashPath(join(config.workspaceRoot, "craft")),
     designSystems: await hashPath(join(config.workspaceRoot, "design-systems")),
     designTemplates: await hashPath(join(config.workspaceRoot, "design-templates")),
     node: "win.resource-tree",
-    pluginOfficial: await hashPath(join(config.workspaceRoot, "plugins", "_official")),
-    pluginRegistry: await hashPath(join(config.workspaceRoot, "plugins", "registry")),
-    promptTemplates: await hashPath(join(config.workspaceRoot, "prompt-templates")),
     schemaVersion: RESOURCE_TREE_CACHE_SCHEMA_VERSION,
     skills: await hashPath(join(config.workspaceRoot, "skills")),
   });
@@ -39,25 +36,25 @@ export async function prepareResourceTree(
   const node = {
     id: "win.resource-tree",
     key,
-    outputs: ["open-design"],
+    outputs: [PRODUCT_RESOURCE_DIR_NAME],
     invalidate: async () => null,
     build: async ({ entryRoot }: { entryRoot: string }): Promise<ResourceTreeCacheMetadata> => {
-      const resourceRoot = join(entryRoot, "open-design");
+      const resourceRoot = join(entryRoot, PRODUCT_RESOURCE_DIR_NAME);
       await mkdir(resourceRoot, { recursive: true });
       await copyBundledResourceTrees({
         workspaceRoot: config.workspaceRoot,
         resourceRoot,
       });
-      return { resourceName: "open-design" };
+      return { resourceName: PRODUCT_RESOURCE_DIR_NAME };
     },
   };
   const manifest = await cache.acquire({
-    materialize: options.materialize ? [{ from: "open-design", to: paths.resourceRoot }] : [],
+    materialize: options.materialize ? [{ from: PRODUCT_RESOURCE_DIR_NAME, to: paths.resourceRoot }] : [],
     node,
   });
   return {
     key,
-    resourceRoot: options.materialize ? paths.resourceRoot : join(manifest.entryPath, "open-design"),
+    resourceRoot: options.materialize ? paths.resourceRoot : join(manifest.entryPath, PRODUCT_RESOURCE_DIR_NAME),
   };
 }
 

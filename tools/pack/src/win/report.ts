@@ -10,6 +10,7 @@ import {
   ELECTRON_BUILDER_NPM_REBUILD,
   ELECTRON_REBUILD_MODE,
   ELECTRON_REBUILD_NATIVE_MODULES,
+  PRODUCT_RESOURCE_DIR_NAME,
   WEB_STANDALONE_RESOURCE_NAME,
 } from "./constants.js";
 import { PathSizeIndex, pathExists, sizeExistingFileBytes } from "./fs.js";
@@ -68,7 +69,7 @@ export async function collectWinSizeReport(
     generatedAt: new Date().toISOString(),
     installerBytes: await sizeExistingFileBytes(paths.setupPath),
     outputRootBytes: namespaceSizeIndex.sizePathBytes(config.roots.output.namespaceRoot),
-    resourceRootBytes: sizeIndex.sizePathBytes(join(appResourcesRoot, "open-design")),
+    resourceRootBytes: sizeIndex.sizePathBytes(join(appResourcesRoot, PRODUCT_RESOURCE_DIR_NAME)),
     runtimeNamespaceRoot: config.roots.runtime.namespaceRoot,
     topLevel: {
       appResourcesBytes: sizeIndex.sizePathBytes(join(appResourcesRoot, "app")),

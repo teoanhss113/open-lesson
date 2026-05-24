@@ -2,75 +2,11 @@
    Tasks route — Orbit, routines, schedules, and live artifacts
    ============================================================ */
 
-.tasks-view {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.tasks-view__hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-}
-
-.tasks-view__kicker {
-  margin: 0 0 var(--spacing-xxs);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent-strong, var(--accent));
-}
-
 .tasks-view__title-row {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
   min-width: 0;
-}
-
-.tasks-view__coming-soon {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 var(--spacing-xs);
-  border: 1px solid var(--amber, #b26200);
-  border-radius: var(--radius-pill);
-  background: var(--amber-bg, #fff3e0);
-  color: var(--amber, #b26200);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.tasks-view__lede {
-  margin: var(--spacing-xs) 0 0;
-  max-width: 680px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text-muted);
-}
-
-.tasks-view__preview-note {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid color-mix(in srgb, var(--amber, #b26200) 22%, var(--border));
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--amber-bg, #fff3e0) 70%, var(--bg-panel));
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.tasks-view__preview-note svg {
-  flex: 0 0 auto;
-  margin-top: 1px;
-  color: var(--amber, #b26200);
 }
 
 .tasks-view__new,
@@ -171,7 +107,7 @@
 .tasks-primitive span:not(.tasks-primitive__icon) {
   display: inline-flex;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--text-soft);
 }
 
@@ -264,7 +200,7 @@
 .tasks-filter button:hover,
 .tasks-filter button.is-active {
   background: var(--accent-tint);
-  color: var(--accent-strong, var(--accent));
+  color: var(--accent-strong);
 }
 
 .tasks-list__items {
@@ -308,7 +244,7 @@
   align-items: center;
   gap: var(--spacing-xxs);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .task-card__title {
@@ -317,7 +253,7 @@
   gap: var(--spacing-xs);
   min-width: 0;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-strong);
 }
 
@@ -430,7 +366,7 @@
   margin-bottom: var(--spacing-xxs);
   color: var(--text-muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -438,7 +374,7 @@
 .task-slot__value {
   display: block;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-strong);
 }
 
@@ -465,7 +401,7 @@
   align-items: center;
   gap: var(--spacing-xxs);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -515,8 +451,8 @@
 }
 
 .task-detail__primary:hover {
-  background: var(--accent-strong, var(--accent));
-  border-color: var(--accent-strong, var(--accent));
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 @media (max-width: 1100px) {
@@ -530,7 +466,6 @@
 }
 
 @media (max-width: 768px) {
-  .tasks-view__hero,
   .task-artifact__head {
     flex-direction: column;
     align-items: flex-start;

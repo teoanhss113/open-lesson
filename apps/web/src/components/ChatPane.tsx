@@ -7,7 +7,7 @@ import type { TodoItem } from '../runtime/todos';
 import type { AppliedPluginSnapshot } from '@open-design/contracts';
 import { latestTodoWriteInputFromMessages } from '../runtime/todos';
 import { TodoCard } from './ToolCard';
-import type { AppConfig, ChatAttachment, ChatCommentAttachment, ChatMessage, ChatMessageFeedbackChange, Conversation, PreviewComment, ProjectFile, ProjectMetadata, SkillSummary } from '../types';
+import type { ChatAttachment, ChatCommentAttachment, ChatMessage, ChatMessageFeedbackChange, Conversation, PreviewComment, ProjectFile, ProjectMetadata, SkillSummary } from '../types';
 import { dayKey, dayLabel, exactDateTime, messageTime, relativeTimeLong, MessageTimestamp } from '../utils/chatTime';
 import { isActiveRunStatus, isTerminalRunStatus } from '../utils/runStatus';
 import { useOutsideClick } from '../hooks/useOutsideClick';
@@ -20,6 +20,7 @@ import {
 } from './ChatComposer';
 import type { PluginFolderAgentAction } from './design-files/pluginFolderActions';
 import { Icon } from './Icon';
+import { UiActionButton } from './UiPrimitives';
 
 type TranslateFn = (key: keyof Dict, vars?: Record<string, string | number>) => string;
 
@@ -261,12 +262,6 @@ interface Props {
   // Same dialog, but landing on the External MCP tab. Forwarded to the
   // composer's `/mcp` slash and MCP picker button.
   onOpenMcpSettings?: () => void;
-  // Optional pet wiring forwarded straight through to ChatComposer's
-  // /pet button. When omitted the composer hides the button entirely.
-  petConfig?: AppConfig['pet'];
-  onAdoptPet?: (petId: string) => void;
-  onTogglePet?: () => void;
-  onOpenPetSettings?: () => void;
   projectMetadata?: ProjectMetadata;
   onProjectMetadataChange?: (metadata: ProjectMetadata) => void;
   currentSkillId?: string | null;
@@ -317,10 +312,6 @@ export function ChatPane({
   onRenameConversation,
   onOpenSettings,
   onOpenMcpSettings,
-  petConfig,
-  onAdoptPet,
-  onTogglePet,
-  onOpenPetSettings,
   projectMetadata,
   onProjectMetadataChange,
   currentSkillId = null,
@@ -742,7 +733,6 @@ export function ChatPane({
                         type="button"
                         role="listitem"
                         className="chat-example"
-                        style={{ animationDelay: `${i * 70}ms` }}
                         onClick={() => composerRef.current?.setDraft(ex.prompt)}
                         title={t('chat.fillInputTitle')}
                       >
@@ -833,7 +823,7 @@ export function ChatPane({
               aria-hidden={!scrolledFromBottom}
               tabIndex={scrolledFromBottom ? 0 : -1}
             >
-              <Icon name="arrow-up" size={12} style={{ transform: 'rotate(180deg)' }} />
+              <Icon name="arrow-up" size={12} className="icon-rotate-180" />
               <span>{t('chat.jumpToLatest')}</span>
             </button>
           </div>
@@ -866,10 +856,6 @@ export function ChatPane({
             onStop={onStop}
             onOpenSettings={onOpenSettings}
             onOpenMcpSettings={onOpenMcpSettings}
-            petConfig={petConfig}
-            onAdoptPet={onAdoptPet}
-            onTogglePet={onTogglePet}
-            onOpenPetSettings={onOpenPetSettings}
             researchAvailable={researchAvailable}
             projectMetadata={projectMetadata}
             onProjectMetadataChange={onProjectMetadataChange}
@@ -970,13 +956,13 @@ function CommentsPanel({
       />
       {saved.length > 0 ? (
         <div className="comments-footer">
-          <button
+          <UiActionButton
             type="button"
-            className="primary"
+            tone="primary"
             onClick={() => saved.forEach((comment) => onAttach?.(comment))}
           >
             {t('chat.comments.addAll')}
-          </button>
+          </UiActionButton>
         </div>
       ) : null}
     </div>
@@ -1088,7 +1074,7 @@ function ConversationRow({
       {editing && onRename ? (
         <input
           autoFocus
-          className="chat-conv-rename-input"
+          className="chat-conv-rename-input chat-conv-title-input"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => {
@@ -1103,22 +1089,12 @@ function ConversationRow({
               setEditing(false);
             }
           }}
-          style={{ flex: 1, padding: '2px var(--spacing-xs)', fontSize: 12 }}
         />
       ) : (
         <button
           type="button"
-          className="chat-conv-item-name"
+          className="chat-conv-item-name chat-conv-name-button"
           data-testid={`conversation-select-${conversation.id}`}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            textAlign: 'left',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-          }}
           onClick={onSelect}
           onDoubleClick={() => {
             if (!onRename) return;

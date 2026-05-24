@@ -579,7 +579,7 @@ function displayTabFor(
   return {
     id: tab.id,
     title: entryTitle[tab.view],
-    meta: tab.view === 'home' ? 'Start a new project' : 'Workspace',
+    meta: tab.view === 'home' ? t('workspaceTabs.startNewProject') : t('workspaceTabs.workspace'),
     icon: entryIcon[tab.view],
     tab,
   };

@@ -4,11 +4,10 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from 'react';
 import { Icon } from './Icon';
 import { Toggle } from './Toggle';
-import { FlexGrow, FlexRow } from './UiPrimitives';
+import { FlexGrow, FlexRow, UiActionButton } from './UiPrimitives';
 import { useT } from '../i18n';
 
 type Translate = ReturnType<typeof useT>;
@@ -40,20 +39,6 @@ const EMPTY_DRAFT: DraftEntry = {
   description: '',
   type: 'user',
   body: '',
-};
-
-// Small uppercase caption used above each form field. Centralised so
-// every field renders with the same color/letter-spacing/baseline; this
-// is what gives the editor a Settings-form rhythm rather than a stack
-// of unlabelled inputs.
-const FIELD_LABEL_STYLE: CSSProperties = {
-  display: 'block',
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: 0.5,
-  textTransform: 'uppercase',
-  color: 'var(--text-muted, #888)',
-  marginBottom: 4,
 };
 
 // Click-to-prefill examples shown above the editor when creating a new
@@ -660,15 +645,16 @@ export function MemorySection() {
             );
           })}
         </div>
-        <button
+        <UiActionButton
           type="button"
-          className="primary library-toolbar-action"
+          tone="primary"
+          icon="plus"
+          className="library-toolbar-action"
           onClick={startNew}
           disabled={editing !== null}
         >
-          <Icon name="plus" size={14} />
-          <span>{t('settings.memoryNew')}</span>
-        </button>
+          {t('settings.memoryNew')}
+        </UiActionButton>
       </div>
 
       {flash && flash.kind !== 'pathCopied' ? (
@@ -689,14 +675,7 @@ export function MemorySection() {
         >
           {!editing.id ? (
             <div className="memory-starters-row">
-              <span
-                style={{
-                  ...FIELD_LABEL_STYLE,
-                  display: 'inline-block',
-                  marginRight: 'var(--spacing-xxs)',
-                  marginBottom: 0,
-                }}
-              >
+              <span className="memory-field-label memory-starters-label">
                 {t('settings.memoryStartersLabel')}
               </span>
               {STARTERS.map((starter) => (
@@ -725,7 +704,7 @@ export function MemorySection() {
           >
             <div className="editor-row">
               <FlexGrow>
-                <label style={FIELD_LABEL_STYLE}>
+                <label className="memory-field-label">
                   {t('settings.memoryNameLabel')}
                 </label>
                 <input
@@ -740,7 +719,7 @@ export function MemorySection() {
                 />
               </FlexGrow>
               <div className="editor-help">
-                <label style={FIELD_LABEL_STYLE}>
+                <label className="memory-field-label">
                   {t('settings.memoryTypeLabel')}
                 </label>
                 <select
@@ -762,7 +741,7 @@ export function MemorySection() {
               </div>
             </div>
             <div>
-              <label style={FIELD_LABEL_STYLE}>
+              <label className="memory-field-label">
                 {t('settings.memoryDescLabel')}
               </label>
               <input
@@ -776,7 +755,7 @@ export function MemorySection() {
               />
             </div>
             <div>
-              <label style={FIELD_LABEL_STYLE}>
+              <label className="memory-field-label">
                 {t('settings.memoryBodyLabel')}
               </label>
               <textarea
@@ -802,17 +781,17 @@ export function MemorySection() {
               {t('settings.memorySaveHint')}
             </span>
             <FlexRow align="center">
-              <button type="button" className="ghost" onClick={cancelEdit}>
+              <UiActionButton type="button" tone="secondary" onClick={cancelEdit}>
                 {t('common.cancel')}
-              </button>
-              <button
+              </UiActionButton>
+              <UiActionButton
                 type="button"
-                className="primary"
+                tone="primary"
                 onClick={onSave}
                 disabled={busy || !editing.name.trim()}
               >
                 {editing.id ? t('common.save') : t('common.create')}
-              </button>
+              </UiActionButton>
             </FlexRow>
           </div>
         </div>
@@ -1077,21 +1056,9 @@ export function MemorySection() {
           rows={8}
           className="memory-textarea"
         />
-        <div
-          className="editor-footer"
-          style={{ marginTop: 'var(--spacing-xs)' }}
-        >
+        <div className="editor-footer">
           <span
-            className="hint"
-            style={{
-              fontSize: 11,
-              margin: 0,
-              color:
-                indexDraft !== null
-                  ? 'var(--text-warning, #b06a00)'
-                  : 'var(--text-muted, #888)',
-              fontWeight: indexDraft !== null ? 600 : 400,
-            }}
+            className={`hint-label${indexDraft !== null ? ' unsaved' : ''}`}
           >
             {indexDraft !== null
               ? `● ${t('settings.memoryIndexUnsaved')} — ${t('settings.memoryIndexSaveHint')}`
@@ -1106,14 +1073,14 @@ export function MemorySection() {
             >
               {t('settings.memoryIndexReset')}
             </button>
-            <button
+            <UiActionButton
               type="button"
-              className="primary"
+              tone="primary"
               onClick={onSaveIndex}
               disabled={busy || indexDraft === null}
             >
               {t('settings.memoryIndexSave')}
-            </button>
+            </UiActionButton>
           </FlexRow>
         </div>
       </details>

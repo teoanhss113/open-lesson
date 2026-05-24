@@ -597,7 +597,7 @@ export function PetSettings({ cfg, setCfg }: Props) {
             ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-            style={{ display: 'none' }}
+            className="display-none"
             onChange={(e) => {
               const file = e.target.files?.[0];
               void handleFile(file);
@@ -608,7 +608,7 @@ export function PetSettings({ cfg, setCfg }: Props) {
             ref={atlasInputRef}
             type="file"
             accept="image/png,image/webp,image/jpeg,image/gif"
-            style={{ display: 'none' }}
+            className="display-none"
             onChange={(e) => {
               const file = e.target.files?.[0];
               void handleAtlasFile(file);

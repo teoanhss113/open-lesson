@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
 import type { ToolPackConfig } from "../config.js";
+import { PACKAGED_CONFIG_FILE_NAME } from "./constants.js";
 import { pathExists } from "./fs.js";
 import type { SeededAppConfigPaths } from "./types.js";
 
@@ -40,7 +41,7 @@ export async function seedPackagedAppConfig(config: ToolPackConfig): Promise<voi
 }
 
 export async function writeLaunchPackagedConfig(config: ToolPackConfig, appPath: string): Promise<string> {
-  const embeddedConfigPath = join(appPath, "Contents", "Resources", "open-design-config.json");
+  const embeddedConfigPath = join(appPath, "Contents", "Resources", PACKAGED_CONFIG_FILE_NAME);
   const raw = (await pathExists(embeddedConfigPath))
     ? JSON.parse(await readFile(embeddedConfigPath, "utf8")) as unknown
     : {};
@@ -48,7 +49,7 @@ export async function writeLaunchPackagedConfig(config: ToolPackConfig, appPath:
     throw new Error(`packaged launch config source must be a JSON object: ${embeddedConfigPath}`);
   }
 
-  const launchConfigPath = join(config.roots.runtime.namespaceRoot, "runtime", "open-design-config.json");
+  const launchConfigPath = join(config.roots.runtime.namespaceRoot, "runtime", PACKAGED_CONFIG_FILE_NAME);
   await mkdir(dirname(launchConfigPath), { recursive: true });
   await writeFile(
     launchConfigPath,

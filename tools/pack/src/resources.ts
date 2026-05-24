@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { cp } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { access, cp } from "node:fs/promises";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 function resolveToolsPackRoot(startDir: string): string {
@@ -59,12 +59,22 @@ const BUNDLED_RESOURCE_TREES = [
   { from: "design-templates", to: "design-templates" },
   { from: "design-systems", to: "design-systems" },
   { from: "craft", to: "craft" },
-  { from: join("plugins", "_official"), to: join("plugins", "_official") },
-  { from: join("plugins", "registry"), to: join("plugins", "registry") },
   { from: join("assets", "frames"), to: "frames" },
-  { from: join("assets", "community-pets"), to: "community-pets" },
-  { from: "prompt-templates", to: "prompt-templates" },
 ] as const;
+
+const EXCLUDED_RESOURCE_PATHS = new Set([
+  join("design-templates", "open-design-landing"),
+  join("design-templates", "open-design-landing-deck"),
+]);
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function copyBundledResourceTrees({
   workspaceRoot,
@@ -74,7 +84,13 @@ export async function copyBundledResourceTrees({
   resourceRoot: string;
 }): Promise<void> {
   for (const entry of BUNDLED_RESOURCE_TREES) {
-    await cp(join(workspaceRoot, entry.from), join(resourceRoot, entry.to), {
+    const source = join(workspaceRoot, entry.from);
+    if (!(await pathExists(source))) continue;
+    await cp(source, join(resourceRoot, entry.to), {
+      filter: (candidate) => {
+        const rel = relative(workspaceRoot, candidate);
+        return !EXCLUDED_RESOURCE_PATHS.has(rel);
+      },
       recursive: true,
     });
   }

@@ -190,7 +190,7 @@ export function ReactComponentViewer({
               title={file.name}
               sandbox="allow-scripts allow-downloads"
               srcDoc={srcDoc}
-              style={{ width: '100%', height: '100%', border: 0 }}
+              className="preview-frame-base"
             />
           </PreviewDrawOverlay>
         ) : (

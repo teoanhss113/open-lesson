@@ -78,16 +78,22 @@ export function extractedMediaForSource(
   const legacyFolderPrefix = `${EXTRACTED_DOCUMENT_MEDIA_DIR}/${legacySlug}/`;
   const oldPrefix = `${sourceSlug}-media-`.toLowerCase();
   const oldLegacyPrefix = `${legacySlug}-media-`.toLowerCase();
+  // Extractions before slug trimming (commit 66a1234) saved flat files with the
+  // raw stem, preserving leading/trailing underscores. Check both trimmed and
+  // untrimmed prefixes so we don't miss those legacy files.
+  const oldPrefixRaw = `_${legacySlug}-media-`.toLowerCase();
   return files
     .filter((file) => {
       if (file.type === 'dir') return false;
       const normalized = file.name.replace(/\\/g, '/');
+      const lower = normalized.toLowerCase();
       return (
         normalized.startsWith(folderPrefix) ||
         normalized.startsWith(legacyFolderPrefix) ||
         (!normalized.includes('/') &&
-          (normalized.toLowerCase().startsWith(oldPrefix) ||
-           normalized.toLowerCase().startsWith(oldLegacyPrefix)))
+          (lower.startsWith(oldPrefix) ||
+           lower.startsWith(oldLegacyPrefix) ||
+           lower.startsWith(oldPrefixRaw)))
       );
     })
     .sort((a, b) => a.name.localeCompare(b.name));

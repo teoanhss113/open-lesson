@@ -11,6 +11,7 @@ import { buildSrcdoc } from '../runtime/srcdoc';
 import type { SkillSummary, Surface } from '../types';
 import { Icon } from './Icon';
 import { PreviewModal } from './PreviewModal';
+import { UiActionButton } from './UiPrimitives';
 
 type TranslateFn = (key: keyof Dict, vars?: Record<string, string | number>) => string;
 
@@ -651,13 +652,15 @@ function ExampleCard({
           {displayPrompt ? quotePrompt(locale, displayPrompt) : displayDescription}
         </div>
         <div className="example-card-actions">
-          <button
-            className="primary example-cta"
+          <UiActionButton
+            type="button"
+            tone="primary"
+            className="example-cta"
             data-testid={`example-use-prompt-${skill.id}`}
             onClick={onUsePrompt}
           >
             {t('examples.usePrompt')}
-          </button>
+          </UiActionButton>
           <button
             className="ghost"
             onClick={onOpenPreview}

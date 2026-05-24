@@ -152,12 +152,12 @@ export function MediaProvidersSection({
             ) : reloadNotice?.kind === 'success' ? (
               <>
                 <Icon name="check" size={13} />
-                <span style={{ marginLeft: 'var(--spacing-xxs)' }}>Reloaded</span>
+                <span className="ml-xxs">{t('settings.mediaProviders.reloaded')}</span>
               </>
             ) : (
               <>
                 <Icon name="refresh" size={13} />
-                <span style={{ marginLeft: 'var(--spacing-xxs)' }}>{t('settings.mediaProviderReload')}</span>
+                <span className="ml-xxs">{t('settings.mediaProviderReload')}</span>
               </>
             )}
           </button>
@@ -268,15 +268,14 @@ export function MediaProvidersSection({
         <details className="library-group media-provider-coming-soon">
           <summary className="memory-details-summary">
             <span className="memory-details-title">
-              Coming soon
+              {t('settings.mediaProviders.comingSoon')}
             </span>
             <span className="filter-pill-count">
               {comingSoonProviders.length}
             </span>
           </summary>
-          <p className="hint" style={{ marginTop: 'var(--spacing-xxs)', marginBottom: 'var(--spacing-xs)' }}>
-            We track these for the roadmap; the daemon doesn’t ship a
-            client yet, so there’s nothing to configure.
+          <p className="hint media-provider-coming-soon-hint">
+            {t('settings.mediaProviders.comingSoonHint')}
           </p>
           <ul className="media-provider-coming-soon-list">
             {comingSoonProviders.map((provider) => {
@@ -301,7 +300,7 @@ export function MediaProvidersSection({
                       rel="noopener noreferrer"
                       className="ghost-link"
                     >
-                      Docs
+                      {t('settings.mediaProviders.docs')}
                       <Icon name="external-link" size={11} />
                     </a>
                   ) : null}

@@ -171,9 +171,9 @@ export const HomeHero = forwardRef<HTMLTextAreaElement, Props>(function HomeHero
   );
   const pickerOpen = mentionActive;
   const tabs: Array<{ id: HomeMentionTab; label: string; count: number }> = [
-    { id: 'all', label: 'All', count: pluginMatches.length + skillMatches.length + mcpMatches.length },
-    { id: 'plugins', label: 'Plugins', count: pluginMatches.length },
-    { id: 'skills', label: 'Skills', count: skillMatches.length },
+    { id: 'all', label: t('common.all'), count: pluginMatches.length + skillMatches.length + mcpMatches.length },
+    { id: 'plugins', label: t('chat.toolsTabPlugins'), count: pluginMatches.length },
+    { id: 'skills', label: t('chat.toolsTabSkills'), count: skillMatches.length },
     { id: 'mcp', label: 'MCP', count: mcpMatches.length },
   ];
   const showPlugins = mentionTab === 'all' || mentionTab === 'plugins';
@@ -183,13 +183,13 @@ export const HomeHero = forwardRef<HTMLTextAreaElement, Props>(function HomeHero
     showPlugins
       ? {
           id: 'plugins',
-          label: 'Plugins',
+          label: t('chat.toolsTabPlugins'),
           options: pluginMatches.map((plugin) => ({
             id: `plugin-${plugin.id}`,
             icon: 'sparkles',
             title: plugin.title,
             description: plugin.manifest?.description ?? plugin.id,
-            meta: pendingPluginId === plugin.id ? 'Applying…' : getPluginSourceLabel(plugin),
+            meta: pendingPluginId === plugin.id ? t('plugins.applying') : getPluginSourceLabel(plugin, t),
             pluginRecord: plugin,
             disabled: pendingPluginId !== null,
             onPick: () => pickPlugin(plugin),
@@ -199,7 +199,7 @@ export const HomeHero = forwardRef<HTMLTextAreaElement, Props>(function HomeHero
     showSkills
       ? {
           id: 'skills',
-          label: 'Skills',
+          label: t('chat.toolsTabSkills'),
           options: skillMatches.map((skill) => ({
             id: `skill-${skill.id}`,
             icon: skill.id === activeSkillId ? 'check' : 'file',
@@ -701,7 +701,7 @@ export const HomeHero = forwardRef<HTMLTextAreaElement, Props>(function HomeHero
               >
                 <div>
                   <span className="home-hero__plugin-hover-kicker">
-                    {getPluginSourceLabel(hoveredPlugin)}
+                    {getPluginSourceLabel(hoveredPlugin, t)}
                   </span>
                   <strong>{hoveredPlugin.title}</strong>
                   <p>{hoveredPlugin.manifest?.description ?? hoveredPlugin.id}</p>
@@ -729,7 +729,7 @@ export const HomeHero = forwardRef<HTMLTextAreaElement, Props>(function HomeHero
             data-testid="home-hero-file-input"
             type="file"
             multiple
-            style={{ display: 'none' }}
+            className="display-none"
             onChange={(event) => {
               const files = Array.from(event.target.files ?? []);
               handleFiles(files);
@@ -1337,8 +1337,11 @@ function mcpServerMatchesQuery(server: McpServerConfig, query: string): boolean 
     .includes(q);
 }
 
-function getPluginSourceLabel(plugin: InstalledPluginRecord): string {
-  return plugin.sourceKind === 'bundled' ? 'Official' : 'My plugin';
+function getPluginSourceLabel(
+  plugin: InstalledPluginRecord,
+  t: ReturnType<typeof useI18n>['t'],
+): string {
+  return plugin.sourceKind === 'bundled' ? t('plugins.source.official') : t('plugins.source.mineSingular');
 }
 
 function getPluginQueryPreview(plugin: InstalledPluginRecord): string {

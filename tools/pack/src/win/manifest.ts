@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import type { ToolPackConfig } from "../config.js";
+import { PRODUCT_RESOURCE_DIR_NAME } from "./constants.js";
 import { pathExists } from "./fs.js";
 import type { WinBuiltAppManifest, WinPaths } from "./types.js";
 
@@ -30,6 +31,7 @@ function createPackagedConfig(
     appVersion: packagedVersion,
     ...entrypoints,
     namespace: config.namespace,
+    nodeCommandRelative: `${PRODUCT_RESOURCE_DIR_NAME}/bin/node`,
     ...(config.telemetryRelayUrl == null ? {} : { telemetryRelayUrl: config.telemetryRelayUrl }),
     ...(config.posthogKey == null ? {} : { posthogKey: config.posthogKey }),
     ...(config.posthogHost == null ? {} : { posthogHost: config.posthogHost }),

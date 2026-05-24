@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.33.2",
   "type": "module",
-  "description": "AI Curriculum Workspace: standalone Electron curriculum workspace, adapted from Open Design",
+  "description": "Open Lesson: standalone Electron curriculum workspace, adapted from Open Design",
   "license": "Apache-2.0",
   "bin": {
     "od": "./apps/daemon/dist/cli.js"
@@ -14,6 +14,9 @@
     "tools-dev": "pnpm exec tools-dev",
     "tools-pack": "pnpm exec tools-pack",
     "tools-pr": "pnpm exec tools-pr",
+    "package:mac": "pnpm --filter @open-design/tools-pack build && pnpm exec tools-pack mac build --to all --portable --dir .tmp/tools-pack-open-lesson",
+    "package:win": "pnpm --filter @open-design/tools-pack build && pnpm exec tools-pack win build --to nsis --portable --dir .tmp/tools-pack-open-lesson",
+    "package:desktop": "pnpm package:mac && pnpm package:win",
     "guard": "tsx ./scripts/guard.ts && node --import tsx --test scripts/style-policy.test.ts",
     "i18n:check": "tsx ./scripts/i18n-check.ts",
     "i18n:coverage": "tsx ./scripts/i18n-coverage-report.ts",

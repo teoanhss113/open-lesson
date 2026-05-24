@@ -326,8 +326,7 @@ export function MediaModelCards({
         <Icon
           name="chevron-down"
           size={14}
-          className="ds-picker-chevron"
-          style={{ transform: open ? 'rotate(180deg)' : undefined }}
+          className={`ds-picker-chevron${open ? ' icon-rotate-180' : ''}`}
         />
       </button>
       {open ? (

@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useI18n } from '../../i18n';
 import { Icon } from '../Icon';
 import { ConnectorsBrowser } from '../ConnectorsBrowser';
+import { UiActionButton } from '../UiPrimitives';
 import type { AppConfig } from '../../types';
 import { deriveComposioCredentialState } from './settings-logic';
 
@@ -276,9 +277,11 @@ export function ConnectorSection({
               <span className="field-input-skeleton-shimmer" aria-hidden="true" />
             ) : null}
           </span>
-          <button
+          <UiActionButton
             type="button"
-            className={'primary settings-connectors-save' + (keySaveStatus === 'saving' ? ' is-busy' : '')}
+            tone="primary"
+            icon={keySaveStatus === 'saving' ? 'spinner' : keySaveStatus === 'saved' ? 'check' : undefined}
+            className={`settings-connectors-save${keySaveStatus === 'saving' ? ' is-busy' : ''}`}
             disabled={saveDisabled}
             onClick={() => void handleSaveKey()}
             title={
@@ -289,22 +292,21 @@ export function ConnectorSection({
           >
             {keySaveStatus === 'saving' ? (
               <>
-                <Icon name="spinner" size={12} className="icon-spin" />
-                <span>{t('settings.connectorsKeySaving')}</span>
+                {t('settings.connectorsKeySaving')}
               </>
             ) : keySaveStatus === 'saved' ? (
               <>
-                <Icon name="check" size={12} />
-                <span>{t('settings.connectorsKeySaved')}</span>
+                {t('settings.connectorsKeySaved')}
               </>
             ) : (
               t('settings.connectorsSaveKey')
             )}
-          </button>
-          <button
+          </UiActionButton>
+          <UiActionButton
             type="button"
+            tone="secondary"
             className={
-              'ghost settings-connectors-clear'
+              'settings-connectors-clear'
               + (clearStage !== 'idle' ? ' is-arming' : '')
             }
             disabled={clearDisabled}
@@ -318,7 +320,7 @@ export function ConnectorSection({
             onClick={handleClearRequest}
           >
             {t('settings.connectorsClear')}
-          </button>
+          </UiActionButton>
         </div>
         {/* Two-stage destructive confirmation panel. Lives inside the
             credentials field so it visually grows out of the row that
@@ -354,26 +356,28 @@ export function ConnectorSection({
               </span>
             </div>
             <div className="settings-connectors-clear-confirm-actions">
-              <button
+              <UiActionButton
                 type="button"
-                className="ghost"
+                tone="secondary"
                 onClick={handleClearAbort}
               >
                 {t('settings.connectorsClearCancel')}
-              </button>
+              </UiActionButton>
               {clearStage === 'confirm' ? (
-                <button
+                <UiActionButton
                   type="button"
+                  tone="secondary"
                   className="settings-connectors-clear-step"
+                  icon="chevron-right"
                   onClick={handleClearContinue}
                 >
                   {t('settings.connectorsClearConfirmContinue')}
-                  <Icon name="chevron-right" size={12} />
-                </button>
+                </UiActionButton>
               ) : (
-                <button
+                <UiActionButton
                   ref={finalConfirmButtonRef}
                   type="button"
+                  tone="danger"
                   className={
                     'settings-connectors-clear-commit'
                     + (clearArmed ? ' is-armed' : '')
@@ -393,7 +397,7 @@ export function ConnectorSection({
                       </>
                     )}
                   </span>
-                </button>
+                </UiActionButton>
               )}
             </div>
           </div>

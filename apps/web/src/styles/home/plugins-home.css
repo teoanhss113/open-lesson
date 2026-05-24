@@ -21,7 +21,7 @@
 .plugins-home__heading {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--spacing-2xs);
   min-width: 0;
 }
 .plugins-home__subtitle {
@@ -39,7 +39,7 @@
   letter-spacing: 0;
 }
 .plugins-home__count {
-  font-size: 11.5px;
+  font-size: var(--font-size-micro-sm);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -111,14 +111,14 @@
   height: 20px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   background: var(--bg-subtle);
   color: var(--text-muted);
   cursor: pointer;
   transition: background-color 120ms ease, color 120ms ease;
 }
 .plugins-home__search-clear:hover {
-  background: var(--border-soft, var(--border));
+  background: var(--border-soft);
   border-color: transparent;
   color: var(--text);
 }
@@ -150,7 +150,7 @@
   font-size: 12px;
   background: var(--bg-subtle);
   padding: 1px var(--spacing-xxs);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 
 /* ============================================================
@@ -166,7 +166,7 @@
   padding-bottom: 2px;
 }
 .plugins-home__mode-total {
-  font-size: 11.5px;
+  font-size: var(--font-size-micro-sm);
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -201,10 +201,10 @@
 .plugins-home__chip--featured.is-active {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--colors-primary);
 }
 .plugins-home__chip--featured.is-active .plugins-home__chip-count {
-  color: white;
+  color: var(--colors-primary);
   opacity: 0.85;
 }
 
@@ -214,7 +214,7 @@
   border: 0;
   padding: 0;
   margin: 0;
-  font-size: 11.5px;
+  font-size: var(--font-size-micro-sm);
   color: var(--text-muted);
   cursor: pointer;
   text-decoration: underline;
@@ -326,10 +326,10 @@
 .plugins-home__pill--all.is-active {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--colors-primary);
 }
 .plugins-home__pill--all.is-active .plugins-home__pill-count {
-  color: white;
+  color: var(--colors-primary);
   opacity: 0.85;
 }
 .plugins-home__pill--sub-all {
@@ -413,7 +413,7 @@
   height: 34px;
   border-radius: var(--radius-pill);
   background: var(--accent);
-  color: white;
+  color: var(--colors-primary);
 }
 .plugins-home__contribute-inner h3 {
   margin: 0 0 var(--spacing-xs);
@@ -424,7 +424,7 @@
 .plugins-home__contribute-inner p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: var(--font-size-caption);
   line-height: 1.45;
 }
 .plugins-home__contribute-template {
@@ -437,7 +437,7 @@
 }
 .plugins-home__card:hover {
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-md, 0 12px 32px rgba(0, 0, 0, 0.08));
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 .plugins-home__card.is-active {
@@ -496,9 +496,9 @@
   right: 8px;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   background: rgba(0, 0, 0, 0.55);
-  color: white;
+  color: var(--colors-on-dark);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -580,7 +580,7 @@
 /* Reachability-fallback tile — rendered when /api/plugins/<id>/preview
    returns non-2xx. Mirrors the iframe card chrome (mac dots + url
    strip) so the row keeps a uniform rhythm, but pretends the iframe
-   is a glyph patch so the tile never paints empty white. */
+   is a glyph patch so the tile never paints empty var(--colors-on-dark). */
 .plugins-home__html--fallback {
   display: flex;
   flex-direction: column;
@@ -661,12 +661,12 @@
   font-size: 18px;
   line-height: 1.18;
   font-weight: 500;
-  color: white;
+  color: var(--colors-on-dark);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
   z-index: 1;
 }
 .plugins-home__design-headline strong {
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
 }
 .plugins-home__design-specimen {
@@ -674,7 +674,7 @@
   display: flex;
   gap: var(--spacing-xs);
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 600;
   color: rgba(255, 255, 255, 0.86);
   z-index: 1;
 }
@@ -687,7 +687,7 @@
 .plugins-home__design-swatches span {
   width: 14px;
   height: 14px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
@@ -723,7 +723,7 @@
   padding: var(--spacing-md);
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.0) 0%, rgba(0, 0, 0, 0.42) 55%, rgba(0, 0, 0, 0.78) 100%);
-  color: white;
+  color: var(--colors-on-dark);
   opacity: 0;
   transition: opacity 180ms ease;
   pointer-events: none;
@@ -747,9 +747,9 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.18);
-  color: white;
+  color: var(--colors-on-dark);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
@@ -785,10 +785,10 @@
 }
 .plugins-home__overlay-tag {
   font-size: 10.5px;
-  padding: 2px var(--spacing-xs);
+  padding: var(--spacing-2xs) var(--spacing-xs);
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.18);
-  color: white;
+  color: var(--colors-on-dark);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
@@ -866,7 +866,7 @@
    over the dark gradient. */
 .plugins-home__card-overlay .plugins-home__trust {
   background: rgba(255, 255, 255, 0.18);
-  color: white;
+  color: var(--colors-on-dark);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
@@ -880,7 +880,7 @@
   gap: var(--spacing-xxs);
   padding: var(--spacing-xxs) var(--spacing-sm);
   border-radius: var(--radius-sm);
-  font-size: 12.5px;
+  font-size: var(--font-size-caption);
   font-weight: 500;
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease,
@@ -923,7 +923,7 @@
   border: 1px solid rgba(255, 255, 255, 0.32);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.96);
-  color: #111;
+  color: var(--text-strong);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
 }
 .plugins-home__use-menu-item {
@@ -936,25 +936,25 @@
   border: 0;
   border-radius: calc(var(--radius-sm) - 2px);
   background: transparent;
-  color: inherit;
+  color: var(--text);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
 }
 .plugins-home__use-menu-item:hover,
 .plugins-home__use-menu-item:focus-visible {
-  background: rgba(17, 17, 17, 0.08);
+  background: var(--bg-subtle);
   outline: none;
 }
 .plugins-home__action--primary {
   flex: 1;
-  background: white;
-  color: #111;
-  border: 1px solid white;
+  background: var(--colors-on-dark);
+  color: var(--colors-primary);
+  border: 1px solid var(--colors-on-dark);
 }
 .plugins-home__action--primary:hover:not(:disabled) {
-  background: #f3f3f3;
-  border-color: #f3f3f3;
+  background: var(--bg-subtle);
+  border-color: var(--bg-subtle);
 }
 .plugins-home__use-menu .plugins-home__use-toggle {
   flex: 0 0 34px;
@@ -965,7 +965,7 @@
 }
 .plugins-home__action--secondary {
   background: rgba(255, 255, 255, 0.14);
-  color: white;
+  color: var(--colors-on-dark);
   border: 1px solid rgba(255, 255, 255, 0.32);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);

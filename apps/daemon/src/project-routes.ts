@@ -5,7 +5,7 @@ import {
   EXTRACTED_DOCUMENT_MEDIA_DIR,
 } from '@open-design/contracts';
 import { ArtifactRegressionError } from './artifact-stub-guard.js';
-import { decodeMultipartFilename, isSafeId, sanitizePath, sourceMediaSlug } from './projects.js';
+import { decodeMultipartFilename, isSafeId, sanitizePath, sourceMediaSlug, sourceMediaSlugLegacy } from './projects.js';
 import { listDesignSystems } from './design-systems.js';
 import {
   FIRST_PARTY_ATOMS,
@@ -892,6 +892,33 @@ export function registerProjectFileRoutes(app: Express, ctx: RegisterProjectFile
       } catch (err: any) {
         if (err?.code !== 'ENOENT') throw err;
       }
+
+      // If no directory structure media is found, check the project root for flat legacy media files
+      if (extracted.length === 0) {
+        try {
+          const rootEntries = await fs.promises.readdir(projectDir, { withFileTypes: true });
+          const legacySlug = sourceMediaSlugLegacy(req.params.name);
+          const oldPrefix = `${sourceSlug}-media-`.toLowerCase();
+          const oldLegacyPrefix = `${legacySlug}-media-`.toLowerCase();
+          const oldPrefixRaw = `_${legacySlug}-media-`.toLowerCase();
+
+          extracted = rootEntries
+            .filter((e: any) => {
+              if (!e.isFile() || e.name.startsWith('.')) return false;
+              const lower = e.name.toLowerCase();
+              return (
+                lower.startsWith(oldPrefix) ||
+                lower.startsWith(oldLegacyPrefix) ||
+                lower.startsWith(oldPrefixRaw)
+              );
+            })
+            .map((e: any) => e.name)
+            .sort((a: string, b: string) => a.localeCompare(b));
+        } catch (err: any) {
+          if (err?.code !== 'ENOENT') throw err;
+        }
+      }
+
       res.json({ extracted });
     } catch (err: any) {
       sendApiError(res, 500, 'SERVER_ERROR', err?.message || 'failed to list extracted media');
@@ -1230,7 +1257,7 @@ export function registerProjectFileRoutes(app: Express, ctx: RegisterProjectFile
 }
 
 export interface RegisterProjectUploadRoutesDeps
-  extends RouteDeps<'db' | 'http' | 'uploads' | 'node' | 'paths' | 'projectStore' | 'projectFiles'> {}
+  extends RouteDeps<'db' | 'http' | 'uploads' | 'node' | 'paths' | 'projectStore' | 'projectFiles' | 'documents'> {}
 
 export function registerProjectUploadRoutes(app: Express, ctx: RegisterProjectUploadRoutesDeps) {
   const { sendApiError } = ctx.http;
@@ -1239,7 +1266,8 @@ export function registerProjectUploadRoutes(app: Express, ctx: RegisterProjectUp
   const { fs } = ctx.node;
   const { PROJECTS_DIR } = ctx.paths;
   const { getProject } = ctx.projectStore;
-  const { writeProjectFile } = ctx.projectFiles;
+  const { writeProjectFile, resolveProjectDir } = ctx.projectFiles;
+  const { extractDocumentMediaOnly } = ctx.documents;
   const { db } = ctx;
 
   app.post(
@@ -1249,6 +1277,9 @@ export function registerProjectUploadRoutes(app: Express, ctx: RegisterProjectUp
       try {
         const incoming = Array.isArray(req.files) ? req.files : [];
         const out = [];
+        const project = getProject(db, req.params.id);
+        const projectDir = resolveProjectDir(PROJECTS_DIR, req.params.id, project?.metadata);
+
         for (const f of incoming) {
           try {
             const stat = await fs.promises.stat(f.path);
@@ -1259,6 +1290,13 @@ export function registerProjectUploadRoutes(app: Express, ctx: RegisterProjectUp
               mtime: stat.mtimeMs,
               originalName: f.originalname,
             });
+
+            // Fire-and-forget: extract media from document/PDF immediately after upload
+            fs.promises.readFile(f.path)
+              .then((buf: Buffer) => {
+                extractDocumentMediaOnly({ name: f.filename, buffer: buf }, projectDir).catch(() => {});
+              })
+              .catch(() => {});
           } catch {
             // skip files that vanished mid-flight
           }
@@ -1282,6 +1320,7 @@ export function registerProjectUploadRoutes(app: Express, ctx: RegisterProjectUp
           return sendApiError(res, 400, 'BAD_REQUEST', 'files are required');
         }
         const project = getProject(db, req.params.id);
+        const projectDir = resolveProjectDir(PROJECTS_DIR, req.params.id, project?.metadata);
         const rawPaths = req.body?.paths;
         const paths = Array.isArray(rawPaths) ? rawPaths : rawPaths ? [rawPaths] : [];
         let totalBytes = 0;
@@ -1314,6 +1353,9 @@ export function registerProjectUploadRoutes(app: Express, ctx: RegisterProjectUp
             mtime: written.mtime,
             originalName: relRaw,
           });
+
+          // Fire-and-forget: extract media from document/PDF immediately after upload
+          extractDocumentMediaOnly({ name: written.name, buffer }, projectDir).catch(() => {});
         }
         /** @type {import('@open-design/contracts').UploadProjectFilesResponse} */
         const body = { files: out };

@@ -24,9 +24,10 @@ import {
 } from './design-files/extractedMediaBrowse';
 import { getPluginFolderCandidates } from './design-files/pluginFolders';
 import { Icon } from './Icon';
-import { FlexRow } from './UiPrimitives';
+import { FlexRow, UiActionButton } from './UiPrimitives';
 import { LiveArtifactBadges } from './LiveArtifactBadges';
 import { humanBytes } from '../utils/format';
+import { kindIconName } from '../utils/fileKind';
 import { isRenderableSketchJson, SketchPreview } from './SketchPreview';
 import { SlidePreview } from './file-viewer/SlidePreview';
 import {
@@ -76,6 +77,12 @@ type DesignFilesGroupMode = 'kind' | 'modified' | 'stage' | 'folder' | 'size';
 type ModifiedSection = 'today' | 'yesterday' | 'previous7Days' | 'previous30Days' | 'older';
 type SortKey = 'name' | 'kind' | 'mtime';
 type SortDir = 'asc' | 'desc';
+type FileKindIconKind = ProjectFileKind | 'folder' | 'live-artifact';
+
+function FileKindIcon({ kind }: { kind: FileKindIconKind }) {
+  return <Icon name={kindIconName(kind)} size={14} />;
+}
+
 /**
  * `null` here is the "All files" sentinel. We use null instead of a
  * dedicated 'all' literal so a quick truthy check is enough to decide
@@ -342,7 +349,7 @@ export function DesignFilesPanel({
     if (extractionTriggeredRef.current.has(previewFile.name)) return;
     extractionTriggeredRef.current.add(previewFile.name);
     triggerExtractDocumentMedia(projectId, previewFile.name).then(() => {
-      void onRefreshFiles();
+      if (onRefreshFiles) onRefreshFiles();
     }).catch(() => {});
   }, [previewFile, projectId, onRefreshFiles]);
 
@@ -681,7 +688,7 @@ export function DesignFilesPanel({
           onDoubleClick={() => openBrowseFolder(folder.path)}
         >
           <span className="df-row-icon" data-kind="folder" aria-hidden>
-            📁
+            <FileKindIcon kind="folder" />
           </span>
         </td>
         <td
@@ -702,10 +709,10 @@ export function DesignFilesPanel({
           >
             <span className="df-row-name-wrap">
               <span className="df-row-name">
-              {browsePathLabel(folder.path, {
-                extractedMediaFolder: t('designFiles.extractedMediaFolder'),
-              })}
-            </span>
+                {browsePathLabel(folder.path, {
+                  extractedMediaFolder: t('designFiles.extractedMediaFolder'),
+                })}
+              </span>
               <span className="df-row-sub">
                 {t('designFiles.folderItemCount', { n: folder.childCount })}
               </span>
@@ -778,7 +785,7 @@ export function DesignFilesPanel({
           onDoubleClick={() => onOpenFile(f.name)}
         >
           <span className="df-row-icon" data-kind={f.kind} aria-hidden>
-            {kindGlyph(f.kind)}
+            <FileKindIcon kind={f.kind} />
           </span>
         </td>
         <td
@@ -952,7 +959,7 @@ export function DesignFilesPanel({
           onDoubleClick={() => onOpenLiveArtifact(artifact.tabId)}
         >
           <span className="df-row-icon" data-kind="live-artifact" aria-hidden>
-            ◉
+            <FileKindIcon kind="live-artifact" />
           </span>
         </td>
         <td
@@ -1528,7 +1535,7 @@ export function DesignFilesPanel({
                       onClick={() => onOpenLiveArtifact(artifact.tabId)}
                     >
                       <span className="df-row-icon" data-kind="live-artifact" aria-hidden>
-                        ◉
+                        <FileKindIcon kind="live-artifact" />
                       </span>
                       <span className="df-row-name-wrap">
                         <span className="df-row-name">{artifact.title}</span>
@@ -1569,12 +1576,12 @@ export function DesignFilesPanel({
                         onClick={() => setPreview(folder.manifestPath)}
                       >
                         <span className="df-row-icon" data-kind="folder" aria-hidden>
-                          DIR
+                          <FileKindIcon kind="folder" />
                         </span>
                         <span className="df-row-name-wrap">
                           <span className="df-row-name">{folder.path}</span>
                           <span className="df-row-sub">
-                            {folder.fileCount} files · ready to add to My plugins
+                            {t('plugins.filesReadyForMine', { n: folder.fileCount })}
                           </span>
                         </span>
                       </button>
@@ -1590,7 +1597,7 @@ export function DesignFilesPanel({
                               void handlePluginFolderAgentAction(folder.path, 'install')
                             }
                           >
-                            {installingFolder === folder.path ? 'Sending…' : 'Add to My plugins'}
+                            {installingFolder === folder.path ? t('plugins.sending') : t('plugins.addToMine')}
                           </button>
                           <button
                             type="button"
@@ -1831,6 +1838,7 @@ export function DesignFilesPanel({
       </div>
       {preview && previewFile ? (
         <DfPreview
+          key={previewFile.name}
           projectId={projectId}
           file={previewFile}
           extractedMedia={previewExtractedMedia}
@@ -1876,10 +1884,9 @@ export function DesignFilesPanel({
             }}
           >
             <a
-              className="text-decoration-none"
+              className="text-decoration-none download-menu-link"
               href={projectFileUrl(projectId, menuPos.name)}
               download={menuPos.name}
-              style={{ color: 'inherit', display: 'block', width: '100%', textAlign: 'inherit' }}
             >
               {t('designFiles.download')}
             </a>
@@ -1938,17 +1945,17 @@ export function DesignFilesPanel({
               />
             </label>
             <div className="modal-foot">
-              <button type="button" className="ghost" onClick={closeInputModal}>
+              <UiActionButton type="button" tone="secondary" onClick={closeInputModal}>
                 {t('common.cancel')}
-              </button>
-              <button
+              </UiActionButton>
+              <UiActionButton
                 type="button"
-                className="primary"
+                tone="primary"
                 disabled={inputModalSubmitDisabled}
                 onClick={() => void submitInputModal()}
               >
                 {inputModalSubmitLabel}
-              </button>
+              </UiActionButton>
             </div>
           </div>
         </div>
@@ -1978,13 +1985,16 @@ function DfPreview({
   const [extracting, setExtracting] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [dynamicMedia, setDynamicMedia] = useState<ProjectFile[]>(extractedMedia);
+  const requestSeqRef = useRef(0);
 
   useEffect(() => {
     setDynamicMedia(extractedMedia);
   }, [extractedMedia]);
 
   const loadDynamicMedia = useCallback(async () => {
+    const seq = ++requestSeqRef.current;
     const extractedPaths = await fetchExtractedDocumentMedia(projectId, file.name);
+    if (seq !== requestSeqRef.current) return;
     if (extractedPaths.length > 0) {
       const mapped = extractedPaths.map((p) => {
         const existing = extractedMedia.find((f) => f.name === p);
@@ -2044,17 +2054,14 @@ function DfPreview({
           <SlidePreview projectId={projectId} file={file} compact onOpenInTab={onOpen} />
         ) : (
           <FlexRow
+            className="df-preview-glyph"
             gap={0}
             align="center"
             justify="center"
-            style={{
-              width: '100%',
-              height: '100%',
-              color: 'var(--text-faint)',
-              fontSize: 38,
-            }}
           >
-            {kindGlyph(file.kind)}
+            <span className="df-row-icon df-preview-kind-icon" data-kind={file.kind} aria-hidden>
+              <FileKindIcon kind={file.kind} />
+            </span>
           </FlexRow>
         )}
       </div>
@@ -2083,17 +2090,15 @@ function DfPreview({
               gap={0}
               align="center"
               justify="space-between"
-              style={{ marginBottom: '8px' }}
             >
-              <div className="df-preview-assets-title" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-faint)' }}>
+              <div className="df-preview-assets-title">
                 {t('designFiles.extractedMediaFolder')} · {dynamicMedia.length}
               </div>
               <button
                 type="button"
-                className="ghost mini"
+                className="ghost mini df-preview-extract-btn"
                 disabled={extracting}
                 onClick={handleExtract}
-                style={{ padding: '2px 8px', fontSize: '11px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', height: '20px', cursor: 'pointer' }}
               >
                 {extracting ? (
                   <>
@@ -2110,7 +2115,7 @@ function DfPreview({
             </FlexRow>
             
             {extracting ? (
-              <FlexRow align="center" justify="center" style={{ padding: '24px 0', color: 'var(--text-faint)', fontSize: '12px' }}>
+              <FlexRow className="df-preview-extract-running" align="center" justify="center">
                 <Icon name="spinner" size={16} />
                 <span>Running image extraction...</span>
               </FlexRow>
@@ -2242,19 +2247,6 @@ function dateDaysBefore(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() - days);
   return result;
-}
-
-function kindGlyph(kind: ProjectFileKind): string {
-  if (kind === 'html') return '\u27E8\u27E9';
-  if (kind === 'image') return '\u25A3';
-  if (kind === 'sketch') return '\u270E';
-  if (kind === 'text') return '\u00B6';
-  if (kind === 'code') return '\u007B\u007D';
-  if (kind === 'pdf') return 'PDF';
-  if (kind === 'document') return 'DOC';
-  if (kind === 'presentation') return 'PPT';
-  if (kind === 'spreadsheet') return 'XLS';
-  return '\u00B7';
 }
 
 function kindLabel(kind: ProjectFileKind, t: TranslateFn): string {

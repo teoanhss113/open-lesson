@@ -220,7 +220,7 @@ export function SlidePreview({ projectId, file, compact = false, onOpenInTab }: 
                 aria-label={t('slideViewer.prev')}
                 title={t('slideViewer.prev')}
               >
-                <Icon name="chevron-right" size={14} style={{ transform: 'rotate(180deg)' }} />
+                <Icon name="chevron-right" size={14} className="icon-rotate-180" />
               </button>
               <span className="slide-preview-counter">{counter}</span>
               <button

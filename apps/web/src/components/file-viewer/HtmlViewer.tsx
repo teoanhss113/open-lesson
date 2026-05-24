@@ -2080,7 +2080,7 @@ export function HtmlViewer({
                 aria-label={t('fileViewer.previousSlide')}
                 disabled={slideState !== null && slideState.active <= 0}
               >
-                <Icon name="chevron-right" size={14} style={{ transform: 'rotate(180deg)' }} />
+                <Icon name="chevron-right" size={14} className="icon-rotate-180" />
               </button>
               <span className="deck-nav-counter">
                 {slideState
@@ -2111,13 +2111,13 @@ export function HtmlViewer({
                   type="button"
                   className={`viewer-action${selectedPalette || palettePopoverOpen ? ' active' : ''}`}
                   data-testid="palette-tweaks-toggle"
-                  title="Tweaks"
+                  title={t('fileViewer.tweaks')}
                   aria-haspopup="dialog"
                   aria-expanded={palettePopoverOpen}
                   onClick={() => setPalettePopoverOpen((v) => !v)}
                 >
                   <Icon name="tweaks" size={13} />
-                  <span>Tweaks</span>
+                  <span>{t('fileViewer.tweaks')}</span>
                   {selectedPalette ? (
                     <span
                       className="palette-tweaks-badge"
@@ -2305,9 +2305,8 @@ export function HtmlViewer({
               aria-haspopup="menu"
               aria-expanded={zoomMenuOpen}
               onClick={() => setZoomMenuOpen((v) => !v)}
-              style={{ minWidth: 64 }}
             >
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{zoom}%</span>
+              <span className="tabular-nums">{zoom}%</span>
               <Icon name="chevron-down" size={11} />
             </button>
             {zoomMenuOpen ? (
@@ -2323,7 +2322,7 @@ export function HtmlViewer({
                       setZoomMenuOpen(false);
                     }}
                   >
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{level}%</span>
+                    <span className="tabular-nums">{level}%</span>
                     {zoom === level ? (
                       <Icon name="check" size={13} />
                     ) : null}
@@ -2651,7 +2650,7 @@ export function HtmlViewer({
                         syncBridgeModes();
                         restorePreviewScrollPosition();
                       }}
-                      style={{ width: '100%', height: '100%', border: 0 }}
+                      className="preview-frame-base"
                     />
                   ) : (
                     <iframe
@@ -2671,7 +2670,7 @@ export function HtmlViewer({
                         syncBridgeModes();
                         restorePreviewScrollPosition();
                       }}
-                      style={{ width: '100%', height: '100%', border: 0 }}
+                      className="preview-frame-base"
                     />
                   )}
                 </PreviewDrawOverlay>

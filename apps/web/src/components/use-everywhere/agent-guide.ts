@@ -30,11 +30,11 @@ export function buildAgentGuideMarkdown(options: AgentGuideOptions = {}): string
   const daemonUrl = (options.daemonUrl ?? DEFAULT_DAEMON_URL).replace(/\/$/, '');
   const lines: string[] = [];
 
-  lines.push('# AI Curriculum Workspace — agent setup guide');
+  lines.push('# Open Lesson — agent setup guide');
   lines.push('');
   lines.push(
     'You are a coding agent (Claude Code, Codex, Cursor, openclaw, hermes, or similar). ' +
-      'The user wants AI Curriculum Workspace wired into your workflow. AI Curriculum Workspace is a local ' +
+      'The user wants Open Lesson wired into your workflow. Open Lesson is a local ' +
       'privileged daemon (`od`) plus a Skills + Design-Systems registry that exposes ' +
       'four interchangeable surfaces: CLI, HTTP API, MCP, and Skills.',
   );
@@ -42,7 +42,7 @@ export function buildAgentGuideMarkdown(options: AgentGuideOptions = {}): string
   lines.push('Follow the setup checklist, then keep the reference sections handy.');
   if (options.versionHint) {
     lines.push('');
-    lines.push(`> Reported AI Curriculum Workspace version: \`${options.versionHint}\``);
+    lines.push(`> Reported Open Lesson version: \`${options.versionHint}\``);
   }
   lines.push('');
 
@@ -54,7 +54,7 @@ export function buildAgentGuideMarkdown(options: AgentGuideOptions = {}): string
   lines.push(`   curl -s ${daemonUrl}/api/health | jq`);
   lines.push('   ```');
   lines.push('');
-  lines.push('   If it 404s or times out, ask the user to run `pnpm tools-dev` (dev) or open the AI Curriculum Workspace app (packaged).');
+  lines.push('   If it 404s or times out, ask the user to run `pnpm tools-dev` (dev) or open the Open Lesson app (packaged).');
   lines.push('');
   lines.push('2. Detect available agent CLIs and confirm `od` is on PATH:');
   lines.push('');

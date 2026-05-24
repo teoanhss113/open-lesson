@@ -175,13 +175,6 @@ export function PluginDetailView(props: Props) {
             sandbox="allow-scripts"
             className="plugin-detail__preview-frame"
             data-testid="plugin-detail-preview-iframe"
-            style={{
-              width: '100%',
-              minHeight: 360,
-              border: '1px solid var(--od-border, #ddd)',
-              borderRadius: 'var(--rounded-sm)',
-              background: '#fff',
-            }}
           />
         </section>
       ) : null}
@@ -205,7 +198,7 @@ export function PluginDetailView(props: Props) {
                     {name}
                   </a>
                   {e.title && e.title !== stem ? (
-                    <span style={{ marginLeft: '0.5em', color: 'var(--od-muted, #888)' }}>
+                    <span className="plugin-detail__example-stem">
                       <code>{stem}</code>
                     </span>
                   ) : null}

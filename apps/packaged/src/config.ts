@@ -17,6 +17,9 @@ export const PACKAGED_NAMESPACE_ENV = "OD_PACKAGED_NAMESPACE";
 export const PACKAGED_WEB_OUTPUT_MODE_OVERRIDE_ENV = "OD_PACKAGED_ALLOW_WEB_OUTPUT_MODE_OVERRIDE";
 export const PACKAGED_WEB_STANDALONE_ROOT_ENV = "OD_WEB_STANDALONE_ROOT";
 export const PACKAGED_WEB_OUTPUT_MODE_ENV = "OD_WEB_OUTPUT_MODE";
+const PRODUCT_RESOURCE_DIR_NAME = "open-lesson";
+const PACKAGED_CONFIG_FILE_NAME = "open-lesson-config.json";
+const WEB_STANDALONE_RESOURCE_NAME = "open-lesson-web-standalone";
 
 export type PackagedWebOutputMode = "server" | "standalone";
 
@@ -75,7 +78,7 @@ async function readJsonIfExists(filePath: string): Promise<RawPackagedConfig | n
 }
 
 function resolveDefaultConfigPath(): string {
-  return join(process.resourcesPath, "open-design-config.json");
+  return join(process.resourcesPath, PACKAGED_CONFIG_FILE_NAME);
 }
 
 async function readRawPackagedConfig(): Promise<RawPackagedConfig> {
@@ -89,7 +92,7 @@ async function readRawPackagedConfig(): Promise<RawPackagedConfig> {
   const electronApp = await loadElectronApp();
   return (
     (await readJsonIfExists(resolveDefaultConfigPath())) ??
-    (await readJsonIfExists(join(electronApp.getAppPath(), "open-design-config.json"))) ??
+    (await readJsonIfExists(join(electronApp.getAppPath(), PACKAGED_CONFIG_FILE_NAME))) ??
     {}
   );
 }
@@ -123,7 +126,7 @@ function resolvePackagedWebStandaloneRoot(
   const configured = resolveOptionalPath(value);
   if (configured != null) return configured;
   if (webOutputMode !== "standalone") return null;
-  return join(process.resourcesPath, "open-design-web-standalone");
+  return join(process.resourcesPath, WEB_STANDALONE_RESOURCE_NAME);
 }
 
 async function resolvePackagedRelativeEntry(value: string | undefined): Promise<string | null> {
@@ -144,10 +147,10 @@ export async function readPackagedConfig(): Promise<PackagedConfig> {
   const electronApp = await loadElectronApp();
   const namespaceBaseRoot =
     resolveOptionalPath(raw.namespaceBaseRoot) ?? join(electronApp.getPath("userData"), "namespaces");
-  const resourceRoot = resolveOptionalPath(raw.resourceRoot) ?? join(process.resourcesPath, "open-design");
+  const resourceRoot = resolveOptionalPath(raw.resourceRoot) ?? join(process.resourcesPath, PRODUCT_RESOURCE_DIR_NAME);
   const relativeNodeCommand =
     raw.nodeCommandRelative == null || raw.nodeCommandRelative.length === 0
-      ? join("open-design", "bin", "node")
+      ? join(PRODUCT_RESOURCE_DIR_NAME, "bin", "node")
       : raw.nodeCommandRelative;
   const nodeCommandCandidate = join(process.resourcesPath, relativeNodeCommand);
   const nodeCommand = (await pathExists(nodeCommandCandidate)) ? nodeCommandCandidate : null;

@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { UiActionButton } from './UiPrimitives';
 import {
   buildAgentGuideMarkdown,
   type AgentGuideOptions,
@@ -67,7 +68,7 @@ export function UseEverywhereModal({
       className="use-everywhere-modal-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="Use AI Curriculum Workspace everywhere"
+      aria-label="Use Open Lesson everywhere"
       data-testid="use-everywhere-modal"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -76,12 +77,12 @@ export function UseEverywhereModal({
       <div className="use-everywhere-modal">
         <header className="use-everywhere-modal__head">
           <div className="use-everywhere-modal__head-titles">
-            <span className="use-everywhere-modal__kicker">Integrations</span>
+            <span className="ui-kicker">Integrations</span>
             <h2 className="use-everywhere-modal__title">
-              Use AI Curriculum Workspace everywhere
+              Use Open Lesson everywhere
             </h2>
             <p className="use-everywhere-modal__subtitle">
-              Drop AI Curriculum Workspace into any IDE, agent, or script — CLI, HTTP, MCP,
+              Drop Open Lesson into any IDE, agent, or script — CLI, HTTP, MCP,
               and Skills. Use “Copy guide for an agent” and paste into Claude
               Code, Codex, Cursor, openclaw, or hermes to set up everything.
             </p>
@@ -201,25 +202,25 @@ export function UseEverywhereGuidePanel({
         </div>
         <div className="use-everywhere-modal__foot-actions">
           {onOpenSettings ? (
-            <button
+            <UiActionButton
               type="button"
-              className="use-everywhere-modal__secondary"
+              tone="secondary"
+              icon="settings"
               onClick={onOpenSettings}
               data-testid="use-everywhere-open-settings"
             >
-              <Icon name="settings" size={13} />
               Configure MCP server
-            </button>
+            </UiActionButton>
           ) : null}
-          <button
+          <UiActionButton
             type="button"
-            className="use-everywhere-modal__primary"
+            tone="primary"
+            icon="copy"
             onClick={onCopyGuide}
             data-testid="use-everywhere-copy-guide"
           >
-            <Icon name="copy" size={13} />
             {copyLabel(guideCopy, 'Copy guide for an agent')}
-          </button>
+          </UiActionButton>
         </div>
       </footer>
     </>

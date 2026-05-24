@@ -87,8 +87,7 @@ export function PlatformPicker({
         <Icon
           name="chevron-down"
           size={14}
-          className="ds-picker-chevron"
-          style={{ transform: open ? 'rotate(180deg)' : undefined }}
+          className={`ds-picker-chevron${open ? ' icon-rotate-180' : ''}`}
         />
       </button>
       {open ? (
@@ -429,8 +428,7 @@ export function PromptTemplatePicker({
         <Icon
           name="chevron-down"
           size={14}
-          className="ds-picker-chevron"
-          style={{ transform: open ? 'rotate(180deg)' : undefined }}
+          className={`ds-picker-chevron${open ? ' icon-rotate-180' : ''}`}
         />
       </button>
       {open ? (
@@ -726,8 +724,7 @@ export function DesignSystemPicker({
         <Icon
           name="chevron-down"
           size={14}
-          className="ds-picker-chevron"
-          style={{ transform: open ? 'rotate(180deg)' : undefined }}
+          className={`ds-picker-chevron${open ? ' icon-rotate-180' : ''}`}
         />
       </button>
       {open ? (

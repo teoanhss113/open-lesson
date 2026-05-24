@@ -14,6 +14,7 @@ import type {
 } from '@open-design/contracts';
 import { useT } from '../../i18n';
 import { Icon } from '../Icon';
+import { UiActionButton } from '../UiPrimitives';
 import { PluginPreviewHero } from './PluginPreviewHero';
 import { PluginMetaSections } from './PluginMetaSections';
 import { PluginShareMenu } from './PluginShareMenu';
@@ -133,16 +134,16 @@ export function PluginScenarioDetail({
         </div>
 
         <footer className="plugin-details-modal__foot">
-          <button
+          <UiActionButton
             type="button"
-            className="plugin-details-modal__secondary"
+            tone="secondary"
             onClick={onClose}
           >
             {t('common.close')}
-          </button>
-          <button
+          </UiActionButton>
+          <UiActionButton
             type="button"
-            className="plugin-details-modal__primary"
+            tone="primary"
             onClick={() => onUse(record)}
             disabled={isApplying}
             aria-busy={isApplying ? 'true' : undefined}
@@ -153,10 +154,9 @@ export function PluginScenarioDetail({
               : query
                 ? t('plugins.details.useExampleQuery')
                 : t('plugins.details.usePlugin')}
-          </button>
+          </UiActionButton>
         </footer>
       </div>
     </div>
   );
 }
-

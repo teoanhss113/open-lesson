@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useT } from '../i18n';
+import { UiActionButton } from './UiPrimitives';
 
 interface Props {
   onSave: (name: string, content: string) => void;
@@ -43,10 +44,12 @@ export function PasteTextDialog({ onSave, onClose }: Props) {
           />
         </label>
         <div className="row">
-          <button onClick={onClose}>{t('pasteDialog.cancel')}</button>
-          <button className="primary" onClick={commit} disabled={!content.trim()}>
+          <UiActionButton type="button" tone="secondary" onClick={onClose}>
+            {t('pasteDialog.cancel')}
+          </UiActionButton>
+          <UiActionButton type="button" tone="primary" onClick={commit} disabled={!content.trim()}>
             {t('pasteDialog.save')}
-          </button>
+          </UiActionButton>
         </div>
       </div>
     </div>

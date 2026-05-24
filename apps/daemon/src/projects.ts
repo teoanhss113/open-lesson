@@ -797,7 +797,7 @@ export function sourceMediaSlug(originalFilename: string): string {
   return ext || 'document';
 }
 
-function sourceMediaSlugLegacy(originalFilename) {
+export function sourceMediaSlugLegacy(originalFilename: string): string {
   const base = path.basename(originalFilename, path.extname(originalFilename));
   return base.normalize('NFC').replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^_+|_+$/g, '') || 'document';
 }

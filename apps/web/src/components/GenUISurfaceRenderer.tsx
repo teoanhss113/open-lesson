@@ -907,7 +907,6 @@ function SandboxedComponentSurface({
         data-testid="genui-component-iframe"
         data-run-id={runId}
         className="genui-surface__component-frame"
-        style={{ width: '100%', minHeight: 320, border: '1px solid var(--od-border, #ddd)' }}
       />
       {onSkip ? (
         <div className="genui-surface__actions">

@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import type { InstalledPluginRecord } from '@open-design/contracts';
 import { listPlugins } from '../state/projects';
 import { navigate } from '../router';
+import { useT } from '../i18n';
 
 interface Marketplace {
   id: string;
@@ -22,6 +23,7 @@ interface Marketplace {
 }
 
 export function MarketplaceView() {
+  const t = useT();
   const [plugins, setPlugins] = useState<InstalledPluginRecord[]>([]);
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,8 +85,7 @@ export function MarketplaceView() {
       <section className="marketplace-view__grid" data-testid="marketplace-grid">
         {visible.length === 0 && !loading ? (
           <div className="marketplace-view__empty">
-            No plugins installed yet. Try <code>od plugin install &lt;source&gt;</code> or
-            register a marketplace below.
+            {t('plugins.marketplaceEmpty')} <code>od plugin install &lt;source&gt;</code>.
           </div>
         ) : null}
         {visible.map((p) => (

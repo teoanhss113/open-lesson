@@ -20,7 +20,9 @@ import {
   ELECTRON_BUILDER_NODE_GYP_REBUILD,
   ELECTRON_BUILDER_NPM_REBUILD,
   NSIS_INSTALLER_LANGUAGE_BY_WEB_LOCALE,
+  PACKAGED_CONFIG_FILE_NAME,
   PRODUCT_NAME,
+  PRODUCT_RESOURCE_DIR_NAME,
   WEB_STANDALONE_HOOK_CONFIG_ENV,
   WEB_STANDALONE_RESOURCE_NAME,
 } from "./constants.js";
@@ -93,24 +95,24 @@ async function runElectronBuilderRaw(config: ToolPackConfig, paths: WinPaths, pr
     ? await writeWebStandaloneHookConfig(config, paths)
     : null;
   const builderConfig = {
-    appId: "io.open-design.desktop",
+    appId: "io.open-lesson.desktop",
     afterPack: webStandaloneHookConfigPath == null ? undefined : winResources.webStandaloneAfterPackHook,
     asar: ELECTRON_BUILDER_ASAR,
     buildDependenciesFromSource: ELECTRON_BUILDER_BUILD_DEPENDENCIES_FROM_SOURCE,
     compression: "maximum",
     directories: { output: paths.appBuilderOutputRoot },
-    electronDist: config.electronDistPath,
+    electronDist: process.platform === "win32" ? config.electronDistPath : undefined,
     electronVersion: config.electronVersion,
     executableName: PRODUCT_NAME,
     extraMetadata: {
       main: "./main.cjs",
-      name: "open-design-packaged-app",
+      name: "open-lesson-packaged-app",
       productName: PRODUCT_NAME,
       version: packagedVersion,
     },
     extraResources: [
-      { from: paths.resourceRoot, to: "open-design" },
-      { from: paths.packagedConfigPath, to: "open-design-config.json" },
+      { from: paths.resourceRoot, to: PRODUCT_RESOURCE_DIR_NAME },
+      { from: paths.packagedConfigPath, to: PACKAGED_CONFIG_FILE_NAME },
     ],
     files: [...ELECTRON_BUILDER_FILE_PATTERNS],
     forceCodeSigning: false,
@@ -135,7 +137,7 @@ async function runElectronBuilderRaw(config: ToolPackConfig, paths: WinPaths, pr
       warningsAsErrors: false,
     },
     productName: PRODUCT_NAME,
-    publish: [{ provider: "generic", url: "https://updates.invalid/open-design" }],
+    publish: [{ provider: "generic", url: "https://updates.invalid/open-lesson" }],
     win: {
       artifactName: `${PRODUCT_NAME}-${namespaceToken}.\${ext}`,
       icon: paths.winIconPath,
@@ -230,7 +232,7 @@ export async function materializeCachedUnpackedForInstaller(
   await removeTree(paths.unpackedRoot);
   await mkdir(dirname(paths.unpackedRoot), { recursive: true });
   await cp(cachedUnpackedRoot, paths.unpackedRoot, { recursive: true });
-  await cp(paths.packagedConfigPath, join(paths.unpackedRoot, "resources", "open-design-config.json"));
+  await cp(paths.packagedConfigPath, join(paths.unpackedRoot, "resources", PACKAGED_CONFIG_FILE_NAME));
   if (packagedVersion != null) await rewriteUnpackedAppPackageVersion(paths.unpackedRoot, packagedVersion);
   return {
     appBuilderOutputRoot: paths.appBuilderOutputRoot,
@@ -265,6 +267,7 @@ export async function runElectronBuilder(
     afterPackHook: config.webOutputMode === "standalone" ? await hashPath(winResources.webStandaloneAfterPackHook) : null,
     asar: ELECTRON_BUILDER_ASAR,
     buildDependenciesFromSource: ELECTRON_BUILDER_BUILD_DEPENDENCIES_FROM_SOURCE,
+    electronDistPath: process.platform === "win32" ? config.electronDistPath : null,
     electronBuilderCliPath: config.electronBuilderCliPath,
     electronVersion: config.electronVersion,
     filePatterns: ELECTRON_BUILDER_FILE_PATTERNS,

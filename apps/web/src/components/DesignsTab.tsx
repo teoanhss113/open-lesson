@@ -13,6 +13,7 @@ import type {
 	CurriculumRisk,
 } from "../types";
 import { Icon } from "./Icon";
+import { UiActionButton } from "./UiPrimitives";
 import { LiveArtifactBadges } from "./LiveArtifactBadges";
 import { CurriculumStatusBadge, CurriculumRiskBadge } from "./CurriculumStatusBadge";
 import { CurriculumValidationBlockers } from "./CurriculumValidationBlockers";
@@ -785,7 +786,7 @@ export function DesignsTab({
                     >
                       <div className="validating-spinner">
                         <Icon name="spinner" className="icon-spin" size={24} />
-                        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{t('curriculum.validation.running' as any) || 'Validating Rollout...'}</span>
+                        <span className="validating-label">{t('curriculum.validation.running' as any) || 'Validating Rollout...'}</span>
                       </div>
                     </div>
                   )}
@@ -979,7 +980,7 @@ export function DesignsTab({
                     >
                       <div className="validating-spinner-sm">
                         <Icon name="spinner" className="icon-spin" size={20} />
-                        <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{t('curriculum.validation.running' as any) || 'Validating...'}</span>
+                        <span className="validating-label">{t('curriculum.validation.running' as any) || 'Validating...'}</span>
                       </div>
                     </div>
                   )}
@@ -1037,19 +1038,19 @@ export function DesignsTab({
 							/>
 						</label>
 						<div className="row">
-							<button type="button" onClick={cancelRename}>
+							<UiActionButton type="button" tone="secondary" onClick={cancelRename}>
 								{t("designs.renameCancel")}
-							</button>
-							<button
+							</UiActionButton>
+							<UiActionButton
 								type="submit"
-								className="primary"
+								tone="primary"
 								disabled={
 									!renameInput.trim() ||
 									renameInput.trim() === renameTarget.original
 								}
 							>
 								{t("designs.renameSave")}
-							</button>
+							</UiActionButton>
 						</div>
 					</form>
 				</div>
@@ -1065,12 +1066,12 @@ export function DesignsTab({
 						<h2>{confirmTarget.title}</h2>
 						<p className="modal-confirm-message">{confirmTarget.message}</p>
 						<div className="row">
-							<button type="button" onClick={() => setConfirmTarget(null)}>
+							<UiActionButton type="button" tone="secondary" onClick={() => setConfirmTarget(null)}>
 								{t("designs.renameCancel")}
-							</button>
-							<button
+							</UiActionButton>
+							<UiActionButton
 								type="button"
-								className="primary danger"
+								tone="danger"
 								autoFocus
 								onClick={() => {
 									const run = confirmTarget.onConfirm;
@@ -1079,7 +1080,7 @@ export function DesignsTab({
 								}}
 							>
 								{confirmTarget.confirmLabel}
-							</button>
+							</UiActionButton>
 						</div>
 					</div>
 				</div>
@@ -1187,4 +1188,3 @@ function projectCover(
 	}
 	return { kind: "fallback", style, initial };
 }
-

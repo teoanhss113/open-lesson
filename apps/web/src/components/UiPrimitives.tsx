@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { forwardRef, type CSSProperties, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
 
 export interface PageHeaderBadge {
@@ -13,7 +13,7 @@ export function PageHeader({
   badge,
   action,
 }: {
-  kicker: string;
+  kicker?: ReactNode;
   title: ReactNode;
   lede?: ReactNode;
   badge?: PageHeaderBadge;
@@ -22,11 +22,15 @@ export function PageHeader({
   return (
     <header className="ui-page-header">
       <div className="ui-page-header__copy">
-        <p className="ui-kicker">{kicker}</p>
+        {kicker ? <p className="ui-kicker">{kicker}</p> : null}
         <h1 className="entry-section__title">{title}</h1>
         {lede ? <p className="ui-page-header__lede">{lede}</p> : null}
       </div>
-      {action ? action : badge ? <UiBadge icon={badge.icon}>{badge.label}</UiBadge> : null}
+      {action || badge ? (
+        <div className="ui-page-header__actions">
+          {action ? action : <UiBadge icon={badge?.icon}>{badge?.label}</UiBadge>}
+        </div>
+      ) : null}
     </header>
   );
 }
@@ -63,26 +67,27 @@ export function UiInfoNote({
   );
 }
 
-export function UiActionButton({
+export const UiActionButton = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  icon?: IconName;
+  tone?: 'primary' | 'secondary' | 'danger';
+}>(function UiActionButton({
   children,
   icon,
   tone = 'secondary',
   className = '',
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  icon?: IconName;
-  tone?: 'primary' | 'secondary';
-}) {
+}, ref) {
   return (
     <button
       {...props}
+      ref={ref}
       className={`ui-action-button ui-action-button--${tone}${className ? ` ${className}` : ''}`}
     >
       <span>{children}</span>
       {icon ? <Icon name={icon} size={13} /> : null}
     </button>
   );
-}
+});
 
 export function UiTabs<T extends string>({
   items,

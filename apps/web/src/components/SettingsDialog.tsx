@@ -25,7 +25,6 @@ import type {
 import { testAgent, testApiProvider } from '../providers/connection-test';
 import { fetchProviderModels } from '../providers/provider-models';
 import { Toast } from './Toast';
-import { PetSettings } from './pet/PetSettings';
 import { McpClientSection } from './McpClientSection';
 import { SkillsSection } from './SkillsSection';
 import { DesignSystemsSection } from './DesignSystemsSection';
@@ -44,7 +43,6 @@ import {
   CritiqueTheaterSection,
   NotificationsSection,
   CurriculumSection,
-  IntegrationsSection,
   MediaProvidersSection,
   OrbitSection,
   ExecutionSection,
@@ -106,6 +104,12 @@ interface Props {
 
 export * from './settings';
 
+function visibleSettingsSection(section: SettingsSection): SettingsSection {
+  if (section === 'pet') return 'appearance';
+  if (section === 'integrations') return 'mcpClient';
+  return section;
+}
+
 export function SettingsDialog({
   initial,
   agents,
@@ -152,7 +156,9 @@ export function SettingsDialog({
       applyAppearanceToDocument(lastSavedAppearanceRef.current);
     };
   }, []);
-  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
+  const [activeSection, setActiveSection] = useState<SettingsSection>(() =>
+    visibleSettingsSection(initialSection),
+  );
   // Scroll the right-hand content pane back to the top whenever the user
   // picks a different settings section. Without this, switching from a
   // long section the user had scrolled (e.g. Library) into a short one
@@ -213,7 +219,7 @@ export function SettingsDialog({
   // routes through this when the MCP tab is active so the user can press the
   // single Save button at the bottom instead of hunting for the inner one.
   useEffect(() => {
-    setActiveSection(initialSection);
+    setActiveSection(visibleSettingsSection(initialSection));
   }, [initialSection]);
 
   // settings_view — fires whenever the active section changes (and once on
@@ -735,10 +741,10 @@ export function SettingsDialog({
     composio: { title: t('connectors.title'), subtitle: t('connectors.subtitle') },
     orbit: { title: t('settings.orbit.title'), subtitle: t('settings.orbit.lede') },
     routines: {
-      title: 'Routines',
-      subtitle: 'Scheduled, unattended agent sessions that run on their own.',
+      title: t('settings.routines.title'),
+      subtitle: t('settings.routines.subtitle'),
     },
-    integrations: { title: t('settings.mcpServerTitle'), subtitle: t('settings.mcpServerHint') },
+    integrations: { title: '', subtitle: '' },
     mcpClient: { title: t('settings.externalMcpTitle'), subtitle: t('settings.externalMcpHint') },
     language: { title: t('settings.language'), subtitle: t('settings.languageHint') },
     appearance: { title: t('settings.appearance'), subtitle: t('settings.appearanceHint') },
@@ -749,7 +755,7 @@ export function SettingsDialog({
     },
     notifications: { title: t('settings.notifications'), subtitle: t('settings.notificationsHint') },
     privacy: { title: t('settings.privacy'), subtitle: t('settings.privacyHint') },
-    pet: { title: t('pet.title'), subtitle: t('pet.subtitle') },
+    pet: { title: '', subtitle: '' },
     skills: { title: t('settings.skills'), subtitle: t('settings.skillsHint') },
     designSystems: {
       title: t('settings.designSystems'),
@@ -870,7 +876,7 @@ export function SettingsDialog({
               <Icon name="image" size={18} />
               <span>
                 <strong>{t('settings.mediaProviders')}</strong>
-                <small>Image / video / audio</small>
+                <small>{t('settings.mediaProviders.subHint')}</small>
               </span>
             </button>
             <button
@@ -924,19 +930,8 @@ export function SettingsDialog({
             >
               <Icon name="history" size={18} />
               <span>
-                <strong>Routines</strong>
-                <small>Schedule unattended agent runs</small>
-              </span>
-            </button>
-            <button
-              type="button"
-              className={`settings-nav-item${activeSection === 'integrations' ? ' active' : ''}`}
-              onClick={() => setActiveSection('integrations')}
-            >
-              <Icon name="link" size={18} />
-              <span>
-                <strong>{t('settings.mcpServerTitle')}</strong>
-                <small>{t('settings.mcpServerHint')}</small>
+                <strong>{t('settings.routines.title')}</strong>
+                <small>{t('settings.routines.navHint')}</small>
               </span>
             </button>
             <button
@@ -992,17 +987,6 @@ export function SettingsDialog({
               <span>
                 <strong>{t('settings.notifications')}</strong>
                 <small>{t('settings.notificationsHint')}</small>
-              </span>
-            </button>
-            <button
-              type="button"
-              className={`settings-nav-item${activeSection === 'pet' ? ' active' : ''}`}
-              onClick={() => setActiveSection('pet')}
-            >
-              <Icon name="sparkles" size={18} />
-              <span>
-                <strong>{t('pet.navTitle')}</strong>
-                <small>{t('pet.navHint')}</small>
               </span>
             </button>
             <button
@@ -1078,8 +1062,6 @@ export function SettingsDialog({
               }}
             />
           ) : null}
-          {activeSection === 'integrations' ? <IntegrationsSection /> : null}
-
           {activeSection === 'mcpClient' ? <McpClientSection /> : null}
 
           {activeSection === 'composio' ? (
@@ -1158,10 +1140,6 @@ export function SettingsDialog({
 
           {activeSection === 'notifications' ? (
             <NotificationsSection cfg={cfg} setCfg={setCfg} />
-          ) : null}
-
-          {activeSection === 'pet' ? (
-            <PetSettings cfg={cfg} setCfg={setCfg} />
           ) : null}
 
           {activeSection === 'skills' ? (

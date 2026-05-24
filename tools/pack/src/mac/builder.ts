@@ -8,7 +8,9 @@ import {
   ELECTRON_BUILDER_ASAR,
   ELECTRON_BUILDER_FILE_PATTERNS,
   MAC_ELECTRON_LANGUAGES,
+  PACKAGED_CONFIG_FILE_NAME,
   PRODUCT_NAME,
+  PRODUCT_RESOURCE_DIR_NAME,
   WEB_STANDALONE_HOOK_CONFIG_ENV,
   WEB_STANDALONE_RESOURCE_NAME,
 } from "./constants.js";
@@ -107,13 +109,13 @@ export async function runElectronBuilder(
     executableName: identity.executableName,
     extraMetadata: {
       main: "./main.cjs",
-      name: "open-design-packaged-app",
+      name: "open-lesson-packaged-app",
       productName: identity.productName,
       version: packagedVersion,
     },
     extraResources: [
-      { from: paths.resourceRoot, to: "open-design" },
-      { from: paths.packagedConfigPath, to: "open-design-config.json" },
+      { from: paths.resourceRoot, to: PRODUCT_RESOURCE_DIR_NAME },
+      { from: paths.packagedConfigPath, to: PACKAGED_CONFIG_FILE_NAME },
     ],
     files: [...ELECTRON_BUILDER_FILE_PATTERNS],
     mac: {
@@ -135,7 +137,7 @@ export async function runElectronBuilder(
     publish: [
       {
         provider: "generic",
-        url: "https://updates.invalid/open-design",
+        url: "https://updates.invalid/open-lesson",
       },
     ],
   };

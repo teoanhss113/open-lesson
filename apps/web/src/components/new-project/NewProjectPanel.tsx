@@ -15,6 +15,7 @@ import {
 import { openFolderDialog } from '../../providers/registry';
 import { Icon } from '../Icon';
 import { Toast } from '../Toast';
+import { UiActionButton } from '../UiPrimitives';
 
 import type {
   CreateTab,
@@ -265,15 +266,17 @@ export function NewProjectPanel({
           onOpenConnectorsTab={onOpenConnectorsTab}
         />
 
-        <button
-          className="primary newproj-create"
+        <UiActionButton
+          type="button"
+          tone="primary"
+          icon="plus"
+          className="newproj-create"
           data-testid="create-project"
           onClick={handleCreate}
           disabled={!canCreate}
         >
-          <Icon name="plus" size={13} />
-          <span>{t('newproj.createCurriculumWorkspace')}</span>
-        </button>
+          {t('newproj.createCurriculumWorkspace')}
+        </UiActionButton>
         {onImportClaudeDesign ? (
           <>
             <input

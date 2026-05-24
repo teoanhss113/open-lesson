@@ -71,7 +71,7 @@ export function CurriculumSection({
         </div>
       </div>
 
-      <div className="settings-language-grid" role="radiogroup" aria-label={t('settings.language')} style={{ marginBottom: 'var(--spacing-xl)' }}>
+      <div className="settings-language-grid mb-xl" role="radiogroup" aria-label={t('settings.language')}>
         {LOCALES.map((code) => {
           const active = locale === code;
           return (
@@ -110,7 +110,7 @@ export function CurriculumSection({
         <small className="hint">{t('settings.curriculum.defaultAgeGroupHint')}</small>
       </label>
 
-      <label className="field" style={{ marginTop: 'var(--spacing-md)' }}>
+      <label className="field mt-md">
         <span className="field-label">{t('settings.curriculum.defaultLevel')}</span>
         <select
           value={defaults.defaultLevel ?? 'Beginner'}
@@ -123,7 +123,7 @@ export function CurriculumSection({
         <small className="hint">{t('settings.curriculum.defaultLevelHint')}</small>
       </label>
 
-      <label className="field" style={{ marginTop: 'var(--spacing-md)' }}>
+      <label className="field mt-md">
         <span className="field-label">{t('settings.curriculum.defaultSkillId')}</span>
         <select
           value={defaults.defaultSkillId ?? 'curriculum-analysis'}
@@ -131,11 +131,11 @@ export function CurriculumSection({
           disabled={loadingSkills}
         >
           {loadingSkills ? (
-            <option value="">Loading skills...</option>
+            <option value="">{t('common.loading')}</option>
           ) : (
             <>
               {skills.length === 0 ? (
-                <option value="curriculum-analysis">Curriculum Quality Analyzer (curriculum-analysis)</option>
+                <option value="curriculum-analysis">{t('settings.curriculum.fallbackSkillLabel')}</option>
               ) : (
                 skills.map((s) => (
                   <option key={s.id} value={s.id}>

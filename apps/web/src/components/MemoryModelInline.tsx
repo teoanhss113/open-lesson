@@ -387,16 +387,7 @@ export function MemoryModelInline({
         <span
           role="status"
           aria-live="polite"
-          style={{
-            display: 'inline-block',
-            marginLeft: 'var(--spacing-xs)',
-            marginTop: -2,
-            fontSize: 11,
-            fontWeight: 500,
-            color: 'var(--text-success, #1f7a3a)',
-            textTransform: 'none',
-            letterSpacing: 0,
-          }}
+          className="memory-model-flash"
         >
           {flash}
         </span>
@@ -430,7 +421,7 @@ export function MemoryModelInline({
         </option>
       </select>
       {customActive ? (
-        <FlexRow className="field-row" style={{ marginTop: 'var(--spacing-xs)' }}>
+        <FlexRow className="field-row memory-model-custom-row">
           <input
             type="text"
             aria-label={t('settings.memoryModelInlineLabel')}
@@ -454,7 +445,7 @@ export function MemoryModelInline({
           </button>
         </FlexRow>
       ) : null}
-      <p className="hint" style={{ marginTop: 'var(--spacing-xxs)', fontSize: 11 }}>
+      <p className="hint memory-model-inline-hint">
         {mode === 'api'
           ? t('settings.memoryModelInlineHintByok')
           : effectiveChatProtocol

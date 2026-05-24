@@ -111,18 +111,20 @@ export function DocxViewer({
           body {
             margin: 0;
             padding: 0;
-            background-color: var(--bg-panel, #f3f4f6);
+            background-color: var(--bg-panel);
             font-family: Inter, system-ui, -apple-system, sans-serif;
             overflow: auto !important;
           }
           #docx-container {
-            background-color: var(--bg-panel, #f3f4f6) !important;
+            background-color: var(--bg-panel) !important;
             width: 100%;
             max-width: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
             display: block !important;
           }
           .docx-wrapper {
-            background-color: var(--bg-panel, #f3f4f6) !important;
+            background-color: var(--bg-panel) !important;
             padding: 24px !important;
             display: flex !important;
             flex-direction: column !important;
@@ -138,6 +140,7 @@ export function DocxViewer({
             margin-bottom: 24px !important;
             border-radius: var(--rounded-lg, 8px) !important;
             box-sizing: border-box !important;
+            max-width: none !important;
           }
         `;
         currentIframe.contentDocument.head.appendChild(style);
@@ -166,9 +169,23 @@ export function DocxViewer({
               const docxElements = currentContainer.querySelectorAll('.docx');
               let maxWidth = 0;
               docxElements.forEach((el: any) => {
-                const w = el.getBoundingClientRect().width;
+                // Measure both the bounding rect and the scroll width to capture any overflowing tables or content.
+                const w = Math.max(el.getBoundingClientRect().width, el.scrollWidth);
                 if (w > maxWidth) maxWidth = w;
               });
+
+              // docx-preview can size the wrapper wider than the iframe viewport
+              // without making scrollWidth exceed clientWidth. Include its border
+              // box so "fit" scales against the real rendered page stack width.
+              const wrapper = currentContainer.querySelector('.docx-wrapper');
+              if (wrapper) {
+                const wrapperWidth = Math.max(wrapper.getBoundingClientRect().width, wrapper.scrollWidth);
+                const wrapperContentWidth = Math.max(0, wrapperWidth - 48);
+                if (wrapperContentWidth > maxWidth) {
+                  maxWidth = wrapperContentWidth;
+                }
+              }
+
               if (maxWidth > 0) {
                 window.parent.postMessage({
                   type: 'od:docx-width',
@@ -251,44 +268,16 @@ export function DocxViewer({
 
   return (
     <FlexCol
+      className="srcdoc-viewer-shell"
       gap={0}
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-        background: 'var(--bg-panel, #f3f4f6)',
-      }}
     >
       {loading && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            color: 'var(--text-muted, #4b5563)',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: '14px',
-            zIndex: 10,
-          }}
-        >
+        <div className="srcdoc-viewer-status">
           {t('docxViewer.preparing')}
         </div>
       )}
       {error && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            color: 'var(--text-danger, #ef4444)',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: '14px',
-            zIndex: 10,
-          }}
-        >
+        <div className="srcdoc-viewer-status error">
           {error}
         </div>
       )}
@@ -301,12 +290,7 @@ export function DocxViewer({
         sandbox="allow-scripts allow-downloads allow-same-origin"
         srcDoc={srcDoc}
         onLoad={handleIframeLoad}
-        style={{
-          width: '100%',
-          height: '100%',
-          border: 'none',
-          background: 'var(--bg-panel, #f3f4f6)',
-        }}
+        className="preview-frame-base"
       />
     </FlexCol>
   );

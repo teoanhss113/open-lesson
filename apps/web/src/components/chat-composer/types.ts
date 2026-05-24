@@ -3,13 +3,13 @@ import type { ResearchOptions } from '@open-design/contracts';
 
 export type TranslateFn = (key: keyof Dict, vars?: Record<string, string | number>) => string;
 
-export type ToolsTab = 'plugins' | 'skills' | 'mcp' | 'import' | 'pet';
+export type ToolsTab = 'plugins' | 'skills' | 'mcp' | 'import';
 
 export type MentionTab = 'all' | 'plugins' | 'skills' | 'mcp' | 'files';
 
 export interface SlashCommand {
   id: string;
-  // Visible label, e.g. `/hatch`. Shown in the popover row.
+  // Visible label, e.g. `/search`. Shown in the popover row.
   label: string;
   // Text inserted into the draft when the user picks the entry.
   insert: string;

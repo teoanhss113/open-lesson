@@ -55,9 +55,9 @@ export function ToolsPluginsPanel({
             aria-selected={source === 'community'}
             className={`composer-tools-segment${source === 'community' ? ' active' : ''}`}
             onClick={() => setSource('community')}
-            title={`${communityPlugins.length} installed official plugins`}
+            title={t('plugins.source.officialCount', { n: communityPlugins.length })}
           >
-            Official
+            {t('plugins.source.official')}
           </button>
           <button
             type="button"
@@ -65,9 +65,9 @@ export function ToolsPluginsPanel({
             aria-selected={source === 'mine'}
             className={`composer-tools-segment${source === 'mine' ? ' active' : ''}`}
             onClick={() => setSource('mine')}
-            title={`${userPlugins.length} installed user plugins`}
+            title={t('plugins.source.mineCount', { n: userPlugins.length })}
           >
-            My plugins
+            {t('plugins.source.mine')}
           </button>
         </div>
         <input
@@ -82,13 +82,13 @@ export function ToolsPluginsPanel({
         <div className="composer-tools-empty">
           {plugins.length === 0 ? (
             <>
-              No plugins installed yet. Browse Official or add your own with{' '}
+              {t('plugins.emptyInstallPrefix')}{' '}
               <code>od plugin install &lt;source&gt;</code>.
             </>
           ) : query ? (
-            <>No {source === 'community' ? 'Official' : 'My plugins'} results for “{query}”.</>
+            <>{t('plugins.emptyQuery', { source: source === 'community' ? t('plugins.source.official') : t('plugins.source.mine'), query })}</>
           ) : (
-            <>No {source === 'community' ? 'Official' : 'My plugins'} plugins available.</>
+            <>{t('plugins.emptySource', { source: source === 'community' ? t('plugins.source.official') : t('plugins.source.mine') })}</>
           )}
         </div>
       ) : (
@@ -127,15 +127,15 @@ export function ToolsPluginsPanel({
                   )}
                 </span>
                 {pendingId === p.id ? (
-                  <span className="composer-tools-row-pending">Applying…</span>
+                  <span className="composer-tools-row-pending">{t('plugins.applying')}</span>
                 ) : null}
               </button>
               <button
                 type="button"
                 className="composer-tools-row-side"
                 onClick={() => onShowDetails(p)}
-                title={`View details for ${p.title}`}
-                aria-label={`View details for ${p.title}`}
+                title={t('plugins.viewDetailsFor', { title: p.title })}
+                aria-label={t('plugins.viewDetailsFor', { title: p.title })}
               >
                 <Icon name="eye" size={12} />
               </button>
@@ -252,6 +252,7 @@ export function ToolsSkillsPanel({
   currentSkillId: string | null;
   onPick: (skill: SkillSummary) => void | Promise<void>;
 }) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const [pendingId, setPendingId] = useState<string | null>(null);
   const visibleSkills = useMemo(
@@ -265,13 +266,13 @@ export function ToolsSkillsPanel({
           className="composer-tools-search"
           value={query}
           onChange={(e) => setQuery(e.currentTarget.value)}
-          placeholder="Search skills…"
-          aria-label="Search skills"
+          placeholder={t('skills.searchPlaceholder')}
+          aria-label={t('skills.searchAria')}
         />
       </div>
       {visibleSkills.length === 0 ? (
         <div className="composer-tools-empty">
-          {skills.length === 0 ? 'No skills available yet.' : `No skills found for “${query}”.`}
+          {skills.length === 0 ? t('skills.empty') : t('skills.emptyQuery', { query })}
         </div>
       ) : (
         <div className="composer-tools-list">
@@ -303,7 +304,7 @@ export function ToolsSkillsPanel({
                   </span>
                 </span>
                 {pendingId === skill.id ? (
-                  <span className="composer-tools-row-pending">Applying…</span>
+                  <span className="composer-tools-row-pending">{t('plugins.applying')}</span>
                 ) : null}
               </button>
             );

@@ -29,6 +29,7 @@ import { PluginDetailsModal } from './PluginDetailsModal';
 import { PluginsHomeSection } from './PluginsHomeSection';
 import { useI18n } from '../i18n';
 import type { PluginUseAction } from './plugins-home/useActions';
+import { PageHeader, UiActionButton, UiBadge } from './UiPrimitives';
 
 type PluginsTab = 'installed' | 'available' | 'sources' | 'team';
 
@@ -259,43 +260,36 @@ export function PluginsView({
   }
 
   return (
-    <section className="plugins-view" aria-labelledby="plugins-title">
-      <header className="plugins-view__hero">
-        <div>
-          <p className="plugins-view__kicker">{copy.kicker}</p>
-          <h1 id="plugins-title" className="entry-section__title">
-            {copy.title}
-          </h1>
-          <p className="plugins-view__lede">
-            {copy.lede}
-          </p>
-        </div>
-        <div className="plugins-view__hero-actions">
-          <button
-            type="button"
-            className="plugins-view__primary"
-            onClick={() => onCreatePlugin?.()}
-            data-testid="plugins-create-button"
-          >
-            <Icon name="edit" size={13} />
-            <span>{t('homeHero.chip.createPlugin')}</span>
-          </button>
-          <button
-            type="button"
-            className="plugins-view__secondary"
-            onClick={() => setImportOpen(true)}
-            aria-haspopup="dialog"
-            data-testid="plugins-import-button"
-          >
-            <Icon name="plus" size={13} />
-            <span>{copy.importPlugin}</span>
-          </button>
-          <div className="plugins-view__badge" aria-hidden="true">
-            <Icon name="grid" size={15} />
-            <span>{copy.agentContext}</span>
-          </div>
-        </div>
-      </header>
+    <section className="ui-page plugins-view" aria-labelledby="plugins-title">
+      <PageHeader
+        kicker={copy.kicker}
+        title={<span id="plugins-title">{copy.title}</span>}
+        lede={copy.lede}
+        action={(
+          <>
+            <UiActionButton
+              type="button"
+              tone="primary"
+              icon="edit"
+              onClick={() => onCreatePlugin?.()}
+              data-testid="plugins-create-button"
+            >
+              {t('homeHero.chip.createPlugin')}
+            </UiActionButton>
+            <UiActionButton
+              type="button"
+              tone="secondary"
+              icon="plus"
+              onClick={() => setImportOpen(true)}
+              aria-haspopup="dialog"
+              data-testid="plugins-import-button"
+            >
+              {copy.importPlugin}
+            </UiActionButton>
+            <UiBadge icon="grid">{copy.agentContext}</UiBadge>
+          </>
+        )}
+      />
 
       <div className="plugins-view__stats" aria-label={copy.summaryAria}>
         <StatCard label={copy.installed} value={userPlugins.length} />
@@ -568,24 +562,24 @@ function PluginShareConfirmModal({
         </div>
 
         <footer className="plugin-details-modal__foot">
-          <button
+          <UiActionButton
             type="button"
-            className="plugin-details-modal__secondary"
+            tone="secondary"
             onClick={onClose}
             disabled={pending}
           >
             {copy.cancel}
-          </button>
-          <button
+          </UiActionButton>
+          <UiActionButton
             type="button"
-            className="plugin-details-modal__primary"
+            tone="primary"
             onClick={onConfirm}
             disabled={pending}
             aria-busy={pending ? 'true' : undefined}
             data-testid="plugin-share-confirm-start"
           >
             {pending ? copy.starting : details.confirmLabel}
-          </button>
+          </UiActionButton>
         </footer>
       </div>
     </div>
@@ -764,23 +758,23 @@ function AvailablePluginsPanel({
                   </div>
                 </div>
                 <div className="plugins-view__row-actions">
-                  <button
+                  <UiActionButton
                     type="button"
-                    className="plugins-view__secondary"
+                    tone="secondary"
                     onClick={() => onOpenDetails(plugin)}
                     data-testid={`plugins-available-details-${plugin.entry.name}`}
                   >
                     {copy.details}
-                  </button>
-                  <button
+                  </UiActionButton>
+                  <UiActionButton
                     type="button"
-                    className="plugins-view__primary"
+                    tone="primary"
                     onClick={() => onInstall(plugin)}
                     disabled={pendingKey === plugin.key}
                     data-testid={`plugins-available-install-${plugin.entry.name}`}
                   >
                     {pendingKey === plugin.key ? copy.installing : copy.install}
-                  </button>
+                  </UiActionButton>
                 </div>
               </article>
             );
@@ -962,24 +956,24 @@ function AvailablePluginDetailsModal({
         </div>
 
         <footer className="plugin-details-modal__foot">
-          <button
+          <UiActionButton
             type="button"
-            className="plugin-details-modal__secondary"
+            tone="secondary"
             onClick={onClose}
             disabled={pending}
           >
             {copy.close}
-          </button>
-          <button
+          </UiActionButton>
+          <UiActionButton
             type="button"
-            className="plugin-details-modal__primary"
+            tone="primary"
             onClick={() => onInstall(plugin)}
             disabled={pending}
             aria-busy={pending ? 'true' : undefined}
             data-testid={`plugins-available-details-install-${plugin.entry.name}`}
           >
             {pending ? copy.installing : copy.install}
-          </button>
+          </UiActionButton>
         </footer>
       </div>
     </div>
@@ -1044,13 +1038,13 @@ function SourcesPanel({
             <option value="trusted">{copy.trustTrusted}</option>
             <option value="official">{copy.trustOfficial}</option>
           </select>
-          <button
+          <UiActionButton
             type="submit"
-            className="plugins-view__primary"
+            tone="primary"
             disabled={!trimmedUrl || pendingAction === 'add'}
           >
             {pendingAction === 'add' ? copy.adding : copy.addSource}
-          </button>
+          </UiActionButton>
         </div>
       </form>
 
@@ -1086,22 +1080,22 @@ function SourcesPanel({
                   <option value="trusted">{copy.trustTrusted}</option>
                   <option value="official">{copy.trustOfficial}</option>
                 </select>
-                <button
+                <UiActionButton
                   type="button"
-                  className="plugins-view__secondary"
+                  tone="secondary"
                   onClick={() => onRefresh(marketplace)}
                   disabled={pendingAction === `refresh:${marketplace.id}`}
                 >
                   {pendingAction === `refresh:${marketplace.id}` ? copy.refreshing : copy.refresh}
-                </button>
-                <button
+                </UiActionButton>
+                <UiActionButton
                   type="button"
-                  className="plugins-view__danger"
+                  tone="danger"
                   onClick={() => onRemove(marketplace)}
                   disabled={pendingAction === `remove:${marketplace.id}`}
                 >
                   {pendingAction === `remove:${marketplace.id}` ? copy.removing : copy.remove}
-                </button>
+                </UiActionButton>
               </div>
             </article>
           ))}
@@ -1164,7 +1158,7 @@ function PluginImportModal({
       >
         <header className="plugins-import-modal__head">
           <div>
-            <p className="plugins-view__kicker">{copy.userPlugins}</p>
+            <p className="ui-kicker">{copy.userPlugins}</p>
             <h2 id="plugins-import-title">{copy.importAPlugin}</h2>
           </div>
           <button
@@ -1213,14 +1207,14 @@ function PluginImportModal({
                   placeholder="github:owner/repo@main/plugins/my-plugin"
                   disabled={working}
                 />
-                <button
+                <UiActionButton
                   type="button"
-                  className="plugins-view__primary"
+                  tone="primary"
                   onClick={runImport}
                   disabled={working || !canSubmit}
                 >
                   {working ? copy.importing : copy.import}
-                </button>
+                </UiActionButton>
               </div>
               <div className="plugins-view__source-help">
                 {copy.supportsPrefix} <code>github:owner/repo[@ref][/subpath]</code>, HTTPS{' '}
@@ -1267,13 +1261,13 @@ function PluginImportModal({
           <p>
             {copy.importFooter}
           </p>
-          <button
+          <UiActionButton
             type="button"
-            className="plugins-view__secondary"
+            tone="secondary"
             onClick={onClose}
           >
             {copy.cancel}
-          </button>
+          </UiActionButton>
         </footer>
       </section>
     </div>
@@ -1351,14 +1345,14 @@ function FileImportPanel({
         />
         <span>{fileLabel}</span>
       </label>
-      <button
+      <UiActionButton
         type="button"
-        className="plugins-view__primary"
+        tone="primary"
         onClick={onImport}
         disabled={working || !canSubmit}
       >
         {working ? copy.importing : copy.import}
-      </button>
+      </UiActionButton>
     </section>
   );
 }
@@ -1465,22 +1459,22 @@ type PluginsViewCopy = ReturnType<typeof pluginsViewCopy>;
 function pluginsViewCopy(locale: string) {
   if (locale === 'vi') {
     return {
-      kicker: 'Tiện ích',
-      title: 'Tiện ích',
-      lede: 'Duyệt quy trình đã cài, khám phá mục từ registry, quản lý nguồn và chuẩn bị tiện ích để dùng trong nhóm.',
-      importPlugin: 'Nhập tiện ích',
+      kicker: 'Thư viện mở rộng',
+      title: 'Plugins',
+      lede: 'Duyệt workflow đã cài, khám phá mục từ registry, quản lý nguồn và chuẩn bị plugin để dùng trong nhóm.',
+      importPlugin: 'Nhập plugin',
       agentContext: 'Ngữ cảnh AI',
-      summaryAria: 'Tóm tắt tiện ích',
+      summaryAria: 'Tóm tắt plugin',
       installed: 'Đã cài',
       available: 'Có sẵn',
       sources: 'Nguồn',
-      pluginAreas: 'Khu vực tiện ích',
-      loadingPlugins: 'Đang tải tiện ích...',
-      installedPluginsTitle: 'Tiện ích đã cài',
-      installedPluginsSubtitle: 'Các tiện ích bạn đã nhập hoặc cài từ nguồn marketplace.',
-      installedPluginsEmpty: 'Chưa có tiện ích người dùng nào. Hãy tạo, nhập hoặc cài một mục trong tab Có sẵn.',
+      pluginAreas: 'Khu vực plugin',
+      loadingPlugins: 'Đang tải plugin...',
+      installedPluginsTitle: 'Plugin đã cài',
+      installedPluginsSubtitle: 'Các plugin bạn đã nhập hoặc cài từ nguồn marketplace.',
+      installedPluginsEmpty: 'Chưa có plugin người dùng nào. Hãy tạo, nhập hoặc cài một mục trong tab Có sẵn.',
       tabs: {
-        installed: { label: 'Đã cài', hint: 'Tiện ích của bạn' },
+        installed: { label: 'Đã cài', hint: 'Plugin của bạn' },
         available: { label: 'Có sẵn', hint: 'Từ nguồn' },
         sources: { label: 'Nguồn', hint: 'Catalog' },
         team: { label: 'Nhóm', hint: 'Doanh nghiệp' },
@@ -1488,9 +1482,9 @@ function pluginsViewCopy(locale: string) {
       availableTitle: 'Có sẵn từ nguồn',
       availableSubtitle: 'Các mục catalog phát hiện từ marketplace đã cấu hình.',
       ofCount: (shown: number, total: number) => `${shown} / ${total}`,
-      availableFiltersAria: 'Bộ lọc tiện ích có sẵn',
-      searchAvailable: 'Tìm tiện ích có sẵn',
-      clearAvailableSearch: 'Xóa tìm kiếm tiện ích có sẵn',
+      availableFiltersAria: 'Bộ lọc plugin có sẵn',
+      searchAvailable: 'Tìm plugin có sẵn',
+      clearAvailableSearch: 'Xóa tìm kiếm plugin có sẵn',
       clearSearch: 'Xóa tìm kiếm',
       source: 'Nguồn',
       allSources: 'Tất cả nguồn',
@@ -1500,7 +1494,7 @@ function pluginsViewCopy(locale: string) {
       details: 'Chi tiết',
       installing: 'Đang cài...',
       install: 'Cài đặt',
-      closeAvailableDetails: 'Đóng chi tiết tiện ích có sẵn',
+      closeAvailableDetails: 'Đóng chi tiết plugin có sẵn',
       close: 'Đóng',
       about: 'Giới thiệu',
       noDescription: 'Chưa có mô tả.',
@@ -1522,50 +1516,50 @@ function pluginsViewCopy(locale: string) {
       adding: 'Đang thêm...',
       addSource: 'Thêm nguồn',
       noRegistrySources: 'Chưa cấu hình nguồn registry nào.',
-      pluginCount: (count: number) => `${count} tiện ích`,
+      pluginCount: (count: number) => `${count} plugin`,
       catalogVersion: (version: string) => `catalog v${version}`,
       trustFor: (name: string) => `Mức tin cậy cho ${name}`,
       refreshing: 'Đang làm mới...',
       refresh: 'Làm mới',
       removing: 'Đang xóa...',
       remove: 'Xóa',
-      userPlugins: 'Tiện ích người dùng',
-      importAPlugin: 'Nhập tiện ích',
+      userPlugins: 'Plugin người dùng',
+      importAPlugin: 'Nhập plugin',
       closeImportDialog: 'Đóng hộp thoại nhập',
       importSource: 'Nguồn nhập',
       fromGithub: 'Từ GitHub',
       fromGithubBody: 'Cài bằng đường dẫn github:owner/repo.',
       uploadZip: 'Tải zip lên',
-      uploadZipBody: 'Tải lên một gói tiện ích.',
+      uploadZipBody: 'Tải lên một gói plugin.',
       uploadFolder: 'Tải thư mục lên',
-      uploadFolderBody: 'Tải lên một thư mục tiện ích.',
+      uploadFolderBody: 'Tải lên một thư mục plugin.',
       githubArchiveOrMarketplace: 'Nguồn GitHub, archive hoặc marketplace',
       importing: 'Đang nhập...',
       import: 'Nhập',
       supportsPrefix: 'Hỗ trợ',
-      supportsSuffix: 'archive, hoặc tên tiện ích marketplace.',
+      supportsSuffix: 'archive, hoặc tên plugin marketplace.',
       uploadZipPanelBody: 'Chọn file .zip chứa open-design.json, SKILL.md hoặc .claude-plugin/plugin.json.',
-      uploadFolderPanelBody: 'Chọn thư mục tiện ích. Đường dẫn tương đối sẽ được giữ nguyên khi cài vào registry người dùng.',
+      uploadFolderPanelBody: 'Chọn thư mục plugin. Đường dẫn tương đối sẽ được giữ nguyên khi cài vào registry người dùng.',
       noZipSelected: 'Chưa chọn zip',
       noFolderSelected: 'Chưa chọn thư mục',
       filesSelected: (count: number) => `${count} tệp đã chọn`,
-      importFooter: 'Tiện ích đã nhập là tiện ích người dùng và được lưu tách khỏi tiện ích chính thức đi kèm.',
+      importFooter: 'Plugin đã nhập là plugin người dùng và được lưu tách khỏi plugin chính thức đi kèm.',
       cancel: 'Hủy',
       closeShareConfirmation: 'Đóng xác nhận chia sẻ',
       whatThisStarts: 'Quy trình sẽ bắt đầu',
-      sourcePlugin: 'Tiện ích nguồn',
-      plugin: 'Tiện ích',
+      sourcePlugin: 'Plugin nguồn',
+      plugin: 'Plugin',
       copiedTo: 'Đã sao chép tới',
       trust: 'Mức tin cậy',
       actionPrompt: 'Prompt hành động',
       starting: 'Đang bắt đầu...',
       comingSoon: 'Sắp có',
       teamTitle: 'Marketplace riêng cho nhóm',
-      teamBody: 'Khu vực này dành cho catalog nhóm/doanh nghiệp, chính sách tin cậy riêng và kiểm soát vòng đời tiện ích dùng chung.',
+      teamBody: 'Khu vực này dành cho catalog nhóm/doanh nghiệp, chính sách tin cậy riêng và kiểm soát vòng đời plugin dùng chung.',
     };
   }
   return {
-    kicker: 'Plugins',
+    kicker: 'Extension library',
     title: 'Plugins',
     lede: 'Browse installed workflows, discover registry entries, manage sources, and prepare plugins for team distribution.',
     importPlugin: 'Import plugin',
@@ -1672,7 +1666,7 @@ function TeamPanel({ copy }: { copy: PluginsViewCopy }) {
         <Icon name="sparkles" size={18} />
       </span>
       <div>
-        <p className="plugins-view__kicker">{copy.comingSoon}</p>
+        <p className="ui-kicker">{copy.comingSoon}</p>
         <h2 id="plugins-team-title">{copy.teamTitle}</h2>
         <p>{copy.teamBody}</p>
       </div>

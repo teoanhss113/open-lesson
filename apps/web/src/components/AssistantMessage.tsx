@@ -752,6 +752,7 @@ function PluginActionPanel({
     action: PluginFolderAgentAction,
   ) => Promise<void> | void;
 }) {
+  const t = useT();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [noticeByFolder, setNoticeByFolder] = useState<Record<string, string>>(
     {},
@@ -773,7 +774,7 @@ function PluginActionPanel({
       await onRequestPluginFolderAgentAction(folder.path, action);
       setNoticeByFolder((prev) => ({
         ...prev,
-        [folder.path]: "Sent to the agent. The CLI run will continue in chat.",
+        [folder.path]: t("plugins.agentActionSent"),
       }));
     } finally {
       setBusyKey(null);
@@ -781,15 +782,15 @@ function PluginActionPanel({
   }
 
   return (
-    <div className="plugin-action-panel" aria-label="Plugin next actions">
+    <div className="plugin-action-panel" aria-label={t("plugins.nextActions")}>
       <div className="plugin-action-panel__head">
         <span className="plugin-action-panel__icon" aria-hidden>
           <Icon name="sparkles" size={15} />
         </span>
         <div>
-          <div className="plugin-action-panel__title">Plugin ready</div>
+          <div className="plugin-action-panel__title">{t("plugins.ready")}</div>
           <div className="plugin-action-panel__subtitle">
-            Send the next step to the agent so it can run the od CLI.
+            {t("plugins.readyHint")}
           </div>
         </div>
       </div>
@@ -806,7 +807,7 @@ function PluginActionPanel({
               </span>
               <div className="plugin-action-card__copy">
                 <code className="plugin-action-card__path">{folder.path}</code>
-                <span>{folder.fileCount} files ready for My plugins</span>
+                <span>{t("plugins.filesReadyForMine", { n: folder.fileCount })}</span>
               </div>
             </div>
             <div className="plugin-action-card__actions">
@@ -822,7 +823,7 @@ function PluginActionPanel({
                   size={13}
                 />
                 <span>
-                  {busyKey === `install:${folder.path}` ? "Sending..." : "Add to My plugins"}
+                  {busyKey === `install:${folder.path}` ? t("plugins.sending") : t("plugins.addToMine")}
                 </span>
               </button>
               <button

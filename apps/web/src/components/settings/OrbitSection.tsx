@@ -16,6 +16,7 @@ import {
   isOrbitRunDisabled,
   persistConfigAndRunOrbit,
 } from './settings-logic';
+import { UiActionButton } from '../UiPrimitives';
 
 function formatRelative(
   iso: string | undefined | null,
@@ -357,25 +358,17 @@ export function OrbitSection({
               ? t('settings.orbit.statusActive')
               : t('settings.orbit.statusOff')}
           </span>
-          <button
+          <UiActionButton
             type="button"
-            className={'orbit-run-cta' + (isBusy ? ' is-busy' : '')}
+            tone="primary"
+            icon={isBusy ? 'spinner' : 'play'}
+            className={`orbit-run-cta${isBusy ? ' is-busy' : ''}`}
             onClick={() => void triggerNow()}
             disabled={runDisabled}
             title={runDisabledTitle}
           >
-            {isBusy ? (
-              <>
-                <Icon name="spinner" size={14} className="icon-spin" />
-                <span>{t('settings.orbit.running')}</span>
-              </>
-            ) : (
-              <>
-                <Icon name="play" size={14} />
-                <span>{t('settings.orbit.runOpen')}</span>
-              </>
-            )}
-          </button>
+            {isBusy ? t('settings.orbit.running') : t('settings.orbit.runOpen')}
+          </UiActionButton>
         </div>
       </header>
 
@@ -416,15 +409,16 @@ export function OrbitSection({
             </p>
           </div>
           <div className="orbit-config-gate-actions">
-            <button
+            <UiActionButton
               type="button"
+              tone="primary"
+              icon="chevron-right"
               className="orbit-config-gate-action"
               onClick={onOpenComposioSection}
               data-testid="orbit-config-gate-action"
             >
-              <span>{t(gateActionKey)}</span>
-              <Icon name="chevron-right" size={13} />
-            </button>
+              {t(gateActionKey)}
+            </UiActionButton>
           </div>
         </div>
       ) : null}

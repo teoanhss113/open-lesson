@@ -5,9 +5,8 @@ import { ConnectorSection } from './SettingsDialog';
 import { Icon } from './Icon';
 import { McpClientSection } from './McpClientSection';
 import { PageHeader, UiTabs } from './UiPrimitives';
-import { UseEverywhereGuidePanel } from './UseEverywhereModal';
 
-export type IntegrationTab = 'mcp' | 'connectors' | 'skills' | 'use-everywhere';
+export type IntegrationTab = 'mcp' | 'connectors' | 'skills';
 
 interface Props {
   config: AppConfig;
@@ -37,17 +36,14 @@ export function IntegrationsView({
     }));
   }, [config.composio]);
 
-  const liveDaemonUrl =
-    typeof window !== 'undefined' ? window.location.origin : undefined;
   const tabs: ReadonlyArray<{ id: IntegrationTab; label: string; hint: string }> = [
     { id: 'mcp', label: t('integrations.tabMcp'), hint: t('integrations.tabMcpHint') },
     { id: 'connectors', label: t('integrations.tabConnectors'), hint: t('integrations.tabConnectorsHint') },
     { id: 'skills', label: t('integrations.tabSkills'), hint: t('integrations.tabSkillsHint') },
-    { id: 'use-everywhere', label: t('integrations.tabUseEverywhere'), hint: t('integrations.tabUseEverywhereHint') },
   ];
 
   return (
-    <section className="integrations-view" aria-labelledby="integrations-title">
+    <section className="ui-page integrations-view" aria-labelledby="integrations-title">
       <PageHeader
         kicker={t('integrations.kicker')}
         title={<span id="integrations-title">{t('integrations.title')}</span>}
@@ -77,14 +73,6 @@ export function IntegrationsView({
 
         {activeTab === 'skills' ? <SkillsComingSoonPanel /> : null}
 
-        {activeTab === 'use-everywhere' ? (
-          <div className="integrations-view__use-everywhere">
-            <UseEverywhereGuidePanel
-              onOpenSettings={() => setActiveTab('mcp')}
-              {...(liveDaemonUrl ? { daemonUrl: liveDaemonUrl } : {})}
-            />
-          </div>
-        ) : null}
       </div>
     </section>
   );

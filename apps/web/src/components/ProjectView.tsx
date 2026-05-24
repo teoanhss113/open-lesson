@@ -107,6 +107,7 @@ import {
 import { decideAutoOpenAfterWrite } from './auto-open-file';
 import { FileWorkspace } from './FileWorkspace';
 import { Icon } from './Icon';
+import { UiActionButton } from './UiPrimitives';
 import {
   buildPluginFolderAgentActionPrompt,
   type PluginFolderAgentAction,
@@ -164,11 +165,6 @@ interface Props {
   onRefreshAgents: () => void;
   onOpenSettings: () => void;
   onOpenMcpSettings?: () => void;
-  // Pet wiring forwarded to the chat composer so users can adopt /
-  // wake / tuck a pet without leaving the project view.
-  onAdoptPetInline?: (petId: string) => void;
-  onTogglePet?: () => void;
-  onOpenPetSettings?: () => void;
   onBack: () => void;
   onClearPendingPrompt: () => void;
   onTouchProject: () => void;
@@ -229,9 +225,6 @@ export function ProjectView({
   onRefreshAgents,
   onOpenSettings,
   onOpenMcpSettings,
-  onAdoptPetInline,
-  onTogglePet,
-  onOpenPetSettings,
   onBack,
   onClearPendingPrompt,
   onTouchProject,
@@ -2501,15 +2494,15 @@ export function ProjectView({
             autoFocus
           />
           <div className="project-instructions-actions">
-            <button type="button" className="sm ghost" disabled={instructionsSaving} onClick={() => {
+            <UiActionButton type="button" tone="secondary" disabled={instructionsSaving} onClick={() => {
               setInstructionsDraft(project.customInstructions ?? '');
               setInstructionsOpen(false);
             }}>
               {t('common.cancel')}
-            </button>
-            <button type="button" className="sm primary" disabled={instructionsSaving} onClick={handleSaveInstructions}>
+            </UiActionButton>
+            <UiActionButton type="button" tone="primary" disabled={instructionsSaving} onClick={handleSaveInstructions}>
               {t('common.save')}
-            </button>
+            </UiActionButton>
           </div>
         </div>
       )}
@@ -2574,10 +2567,6 @@ export function ProjectView({
               onRenameConversation={handleRenameConversation}
               onOpenSettings={onOpenSettings}
               onOpenMcpSettings={onOpenMcpSettings}
-              petConfig={config.pet}
-              onAdoptPet={onAdoptPetInline}
-              onTogglePet={onTogglePet}
-              onOpenPetSettings={onOpenPetSettings}
               researchAvailable={config.mode === 'daemon'}
               projectMetadata={project.metadata}
               onProjectMetadataChange={(metadata) => {

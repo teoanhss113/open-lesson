@@ -84,3 +84,6 @@ apps/landing-page/public/previews/
 
 # Open Design Reference folder
 open-design-main/
+
+# pnpm store
+.pnpm-store/

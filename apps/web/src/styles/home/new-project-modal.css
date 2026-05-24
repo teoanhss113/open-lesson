@@ -179,5 +179,5 @@
 }
 .template-project-modal__error {
   margin-top: var(--spacing-sm);
-  color: var(--danger, #b42318);
+  color: var(--red);
 }

@@ -252,7 +252,7 @@ export function AvatarMenu({
             </>
           ) : null}
 
-          <div style={{ height: 1, background: 'var(--border-soft)', margin: 'var(--spacing-xxs) var(--spacing-xs)' }} />
+          <div className="menu-hairline" />
 
           <button
             type="button"

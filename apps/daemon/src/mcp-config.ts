@@ -367,7 +367,17 @@ export function buildAcpMcpServers(servers: McpServerConfig[]): AcpMcpServer[] {
 // flows through the same persistence path as a fully-custom entry.
 // ───────────────────────────────────────────────────────────────────────
 
-export const MCP_TEMPLATES: McpTemplate[] = [
+const TEACHING_MCP_TEMPLATE_IDS = new Set([
+  'fetch',
+  'filesystem',
+  'screenshot-website-fast',
+  'antv-chart',
+  'mermaid',
+  'pdfspark',
+  'a11y',
+]);
+
+const ALL_MCP_TEMPLATES: McpTemplate[] = [
   // ── image-generation ────────────────────────────────────────────────
   {
     id: 'higgsfield-openclaw',
@@ -1039,3 +1049,7 @@ export const MCP_TEMPLATES: McpTemplate[] = [
     args: ['-y', 'a11y-mcp-server'],
   },
 ];
+
+export const MCP_TEMPLATES: McpTemplate[] = ALL_MCP_TEMPLATES.filter((template) =>
+  TEACHING_MCP_TEMPLATE_IDS.has(template.id),
+);

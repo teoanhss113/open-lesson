@@ -381,7 +381,7 @@ export function LiveArtifactViewer({
               title={t('fileViewer.resetZoom')}
               tabIndex={mode === 'preview' ? 0 : -1}
             >
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{zoom}%</span>
+              <span className="tabular-nums">{zoom}%</span>
             </button>
             <button
               type="button"

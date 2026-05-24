@@ -143,6 +143,20 @@ export function DocumentPreviewViewer({
     return effectivePreviewScale(previewViewport, actualZoom / 100, previewBodySize);
   }, [previewViewport, actualZoom, previewBodySize]);
 
+  const previewShellStyle = useMemo((): CSSProperties & Record<string, string | number> => {
+    const previewScale = actualZoom / 100;
+    if (isDoc && previewViewport === 'desktop') {
+      return {
+        width: `${docxWidth}px`,
+        minWidth: `${docxWidth}px`,
+        height: `${100 / previewScale}%`,
+        transform: `scale(${previewScale})`,
+        transformOrigin: '0 0',
+      };
+    }
+    return previewScaleShellStyle(previewViewport, previewScale);
+  }, [actualZoom, docxWidth, isDoc, previewViewport]);
+
   // Reset page/slide/sheet/review indices when switching files
   useEffect(() => {
     setActiveSlide(0);
@@ -780,7 +794,7 @@ export function DocumentPreviewViewer({
         style={previewViewportStyle(previewViewport, actualZoom / 100, previewBodySize)}
       >
         <div className="comment-frame-clip">
-          <div style={previewScaleShellStyle(previewViewport, actualZoom / 100)}>
+          <div style={previewShellStyle}>
             <PreviewDrawOverlay
               active={drawOverlayOpen}
               onActiveChange={setDrawOverlayOpen}
@@ -964,13 +978,13 @@ export function DocumentPreviewViewer({
                     type="button"
                     className={`viewer-action${selectedPalette || palettePopoverOpen ? ' active' : ''}`}
                     data-testid="palette-tweaks-toggle"
-                    title="Tweaks"
+                    title={t('fileViewer.tweaks')}
                     aria-haspopup="dialog"
                     aria-expanded={palettePopoverOpen}
                     onClick={() => setPalettePopoverOpen((v) => !v)}
                   >
                     <Icon name="tweaks" size={13} />
-                    <span>Tweaks</span>
+                    <span>{t('fileViewer.tweaks')}</span>
                     {selectedPalette ? (
                       <span
                         className="palette-tweaks-badge"
@@ -1154,7 +1168,7 @@ export function DocumentPreviewViewer({
                       <Icon name="chevron-down" size={11} />
                     </button>
                     {zoomMenuOpen ? (
-                      <div className="zoom-menu-popover" role="menu" style={{ display: 'block', position: 'absolute', right: 0, zIndex: 100 }}>
+                      <div className="zoom-menu-popover is-open" role="menu">
                         <button
                           type="button"
                           className={`zoom-menu-item${zoom === 'fit' ? ' active' : ''}`}

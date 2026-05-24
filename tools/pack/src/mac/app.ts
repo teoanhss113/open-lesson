@@ -17,7 +17,7 @@ import {
 } from "../mac-prebundle.js";
 import { copyBundledResourceTrees } from "../resources.js";
 import { runEsbuild, runNpmInstall, runPnpm } from "./commands.js";
-import { INTERNAL_PACKAGES } from "./constants.js";
+import { INTERNAL_PACKAGES, PRODUCT_RESOURCE_DIR_NAME } from "./constants.js";
 import { resolveMacInstallIdentity } from "./identity.js";
 import { readPackagedVersion } from "./manifest.js";
 import type { MacPaths, PackedTarballInfo } from "./types.js";
@@ -206,9 +206,9 @@ export async function writeAssembledApp(
     `${JSON.stringify(
       {
         dependencies,
-        description: "Open Design packaged runtime",
+        description: "Open Lesson packaged runtime",
         main: "./main.cjs",
-        name: "open-design-packaged-app",
+        name: "open-lesson-packaged-app",
         private: true,
         productName: identity.productName,
         version: packagedVersion,
@@ -234,7 +234,7 @@ export async function writeAssembledApp(
         ...(usePrebundledStandaloneWeb ? { daemonCliEntryRelative: MAC_PREBUNDLED_DAEMON_CLI_RELATIVE_PATH } : {}),
         ...(usePrebundledStandaloneWeb ? { daemonSidecarEntryRelative: MAC_PREBUNDLED_DAEMON_SIDECAR_RELATIVE_PATH } : {}),
         namespace: config.namespace,
-        nodeCommandRelative: "open-design/bin/node",
+        nodeCommandRelative: `${PRODUCT_RESOURCE_DIR_NAME}/bin/node`,
         ...(config.telemetryRelayUrl == null ? {} : { telemetryRelayUrl: config.telemetryRelayUrl }),
         ...(config.posthogKey == null ? {} : { posthogKey: config.posthogKey }),
         ...(config.posthogHost == null ? {} : { posthogHost: config.posthogHost }),

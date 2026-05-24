@@ -7740,6 +7740,7 @@ export async function startServer({
     paths: pathDeps,
     projectStore: projectStoreDeps,
     projectFiles: projectFileDeps,
+    documents: { buildDocumentPreview, extractDocumentMediaOnly },
   });
 
   const composeDaemonSystemPrompt = async ({
