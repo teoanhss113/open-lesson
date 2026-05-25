@@ -8319,24 +8319,25 @@ export async function startServer({
     const attachmentHint = safeAttachments.length
       ? `\n\nAttached project files: ${safeAttachments.map((p) => `\`${p}\``).join(', ')}`
       : '';
-    const docxTemplateAttachments = safeAttachments.filter((p) => p.toLowerCase().endsWith('.docx'));
+    const nativeTemplateAttachments = safeAttachments.filter((p) =>
+      /\.(docx|pptx)$/i.test(p),
+    );
     const contentSourceAttachments = safeAttachments.filter((p) =>
       /\.(xlsx|xls|csv)$/i.test(p),
     );
-    const docxCloneHint = docxTemplateAttachments.length > 0
+    const documentTemplateHint = nativeTemplateAttachments.length > 0
       ? `\n\nDocument-template workflow (composer guardrail):\n` +
-        `- The attached DOCX file(s) ${docxTemplateAttachments.map((p) => `\`${p}\``).join(', ')} are layout/design templates, not a request to recreate the design as HTML.\n` +
-        `- If the user asks to create a new Lesson Plan, Teaching Guide, syllabus, report, or similar curriculum document based on the DOCX design, default output MUST be a new .docx file. Copy the most relevant DOCX template to a fresh descriptive filename first, then replace lesson-specific content inside the copy.\n` +
-        `- Preserve the original DOCX package structure: styles, sections, page size, margins, headers, footers, logos, images, tables, borders, numbering, relationships, and theme parts. Prefer editing the cloned DOCX with python-docx or by unzipping and modifying Word XML. Do not flatten the document into HTML unless the user explicitly asks for HTML.\n` +
-        `- Keep the original template file unchanged unless the user explicitly asks to edit the original. If a spreadsheet is attached${contentSourceAttachments.length > 0 ? ` (${contentSourceAttachments.map((p) => `\`${p}\``).join(', ')})` : ''}, treat it as the content/data source and map its lesson data into the cloned DOCX layout.\n` +
-        `- If exact DOCX editing is not possible in the runtime, say that clearly and ask before falling back to HTML; do not silently produce an HTML artifact when the template is DOCX.\n`
+        `- The attached native template file(s) ${nativeTemplateAttachments.map((p) => `\`${p}\``).join(', ')} are layout/design templates, not a request to recreate the design as HTML.\n` +
+        `- If the user asks to create a new curriculum document, deck, slides, teaching guide, syllabus, report, or similar output based on the template design, default output MUST be a new native file of the requested type. Copy the most relevant template to a fresh descriptive filename first, then replace lesson-specific content inside the copy.\n` +
+        `- You may ask a concise clarification question or show a question-form only when essential information is truly missing, but the final output must still be the requested native file. Do not create brand-spec.md or HTML unless the user explicitly asks for HTML. Treat minor missing details as defaults and complete the cloned native file.\n` +
+        `- Keep the original template file unchanged unless the user explicitly asks to edit the original. If a spreadsheet is attached${contentSourceAttachments.length > 0 ? ` (${contentSourceAttachments.map((p) => `\`${p}\``).join(', ')})` : ''}, treat it as the content/data source and map its lesson data into the cloned native file.\n` +
+        `- If exact native-file editing is not possible in the runtime, say that clearly and ask before falling back to HTML; do not silently produce an HTML artifact when the template is a native file.\n`
       : '';
 
-    // Automatically parse binary attachment contents (PDF, DOCX, PPTX, XLSX)
-    // and extract any binary assets (images, logos) into the project directory
-    // so they are available to the AI prompt and workspace.
+    // Automatically parse binary attachment contents (PDF, DOCX, PPTX, XLSX).
+    // Embedded media is extracted for the workspace file panel, but is not
+    // injected into generated HTML or forced into agent output.
     let attachmentsPreviewBlock = '';
-    let extractedImagesGuardrail = '';
     if (cwd && safeAttachments.length > 0) {
       const parsedAttachments = [];
       for (const attachmentRelPath of safeAttachments) {
@@ -8369,12 +8370,6 @@ export async function startServer({
             return `### File: ${pa.name}\n\n${sectionsStr}`;
           }).join('\n\n---\n\n');
 
-        if (attachmentsPreviewBlock.includes('MANDATORY Extracted Assets & Images')) {
-          extractedImagesGuardrail = '\n\n## MANDATORY IMAGE EMBEDDING RULES\n' +
-            '- The attached documents contain extracted images and slides that represent the core visual content of the lesson.\n' +
-            '- When you generate any HTML webpage, teaching slides, or interactive prototypes based on these attachments, you MUST embed these images in the output using the exact `<img src="_document_media/...` relative paths listed under the "MANDATORY Extracted Assets & Images" section.\n' +
-            '- Do NOT substitute them with generic placeholders, SVG sketches, or blank boxes. Integrate all extracted images seamlessly into your generated code so the lesson content remains complete and visually correct.\n';
-        }
       }
     }
 
@@ -8577,13 +8572,13 @@ export async function startServer({
     });
     const composed = [
       instructionPrompt
-        ? `# Instructions (read first)\n\n${instructionPrompt}${cwdHint}${linkedDirsHint}${docxCloneHint}${extractedImagesGuardrail}\n\n---\n`
+        ? `# Instructions (read first)\n\n${instructionPrompt}${cwdHint}${linkedDirsHint}${documentTemplateHint}\n\n---\n`
         : cwdHint
-          ? `# Instructions${cwdHint}${linkedDirsHint}${docxCloneHint}${extractedImagesGuardrail}\n\n---\n`
+          ? `# Instructions${cwdHint}${linkedDirsHint}${documentTemplateHint}\n\n---\n`
           : linkedDirsHint
-            ? `# Instructions${linkedDirsHint}${docxCloneHint}${extractedImagesGuardrail}\n\n---\n`
-            : docxCloneHint || extractedImagesGuardrail
-              ? `# Instructions${docxCloneHint}${extractedImagesGuardrail}\n\n---\n`
+            ? `# Instructions${linkedDirsHint}${documentTemplateHint}\n\n---\n`
+            : documentTemplateHint
+              ? `# Instructions${documentTemplateHint}\n\n---\n`
               : '',
       `# User request\n\n${message || '(No extra typed instruction.)'}${attachmentHint}${commentHint}${attachmentsPreviewBlock}`,
       safeImages.length

@@ -4,7 +4,11 @@ import type {
 } from '@open-design/contracts';
 import type { ProjectFile, ChatAttachment, SkillSummary } from '../../types';
 import type { McpServerConfig, McpTemplate } from '../../state/mcp';
-import { inlineMentionToken, type InlineMentionEntity } from '../../utils/inlineMentions';
+import {
+  buildInlineMentionParts,
+  inlineMentionToken,
+  type InlineMentionEntity,
+} from '../../utils/inlineMentions';
 
 export const USER_PLUGIN_SOURCE_KINDS = new Set<PluginSourceKind>([
   'user',
@@ -186,4 +190,45 @@ export function buildComposerMentionEntities({
     });
   }
   return entities;
+}
+
+export function attachmentsWithMentionedFiles({
+  text,
+  files,
+  staged,
+}: {
+  text: string;
+  files: ProjectFile[];
+  staged: ChatAttachment[];
+}): ChatAttachment[] {
+  const byPath = new Map<string, ProjectFile>();
+  for (const file of files) {
+    const filePath = file.path ?? file.name;
+    if (filePath) byPath.set(filePath, file);
+  }
+
+  const next = [...staged];
+  const seen = new Set(next.map((attachment) => attachment.path));
+  const fileEntities = buildComposerMentionEntities({
+    files,
+    mcpServers: [],
+    plugins: [],
+    skills: [],
+    staged,
+  });
+  const parts = buildInlineMentionParts(text, fileEntities, { highlightUnknown: false });
+  for (const part of parts ?? []) {
+    if (part.kind !== 'mention' || part.entity.kind !== 'file') continue;
+    const filePath = part.entity.id;
+    if (!filePath || seen.has(filePath)) continue;
+    const file = byPath.get(filePath);
+    next.push({
+      path: filePath,
+      name: file?.name ?? filePath.split('/').pop() ?? filePath,
+      kind: looksLikeImage(filePath) ? 'image' : 'file',
+      size: file?.size,
+    });
+    seen.add(filePath);
+  }
+  return next;
 }

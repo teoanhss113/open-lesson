@@ -33,8 +33,7 @@ describe('document preview media extraction', () => {
     const extractedPath = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, 'Lesson_1-docx', 'image1.png');
     expect(await readFile(extractedPath, 'utf8')).toBe('png-data');
     const sections = preview.sections as PreviewSection[];
-    const mediaSection = sections.find((section) => section.title === 'MANDATORY Extracted Assets & Images — MUST USE');
-    expect(mediaSection?.lines.join('\n')).toContain(`${EXTRACTED_DOCUMENT_MEDIA_DIR}/Lesson_1-docx/image1.png`);
+    expect(sections.some((section) => section.title.includes('Extracted Assets'))).toBe(false);
   });
 
   it('extracts XLSX images into a source-specific media folder', async () => {
@@ -51,6 +50,6 @@ describe('document preview media extraction', () => {
     const extractedPath = path.join(projectDir, EXTRACTED_DOCUMENT_MEDIA_DIR, 'Workbook-xlsx', 'image1.png');
     expect(await readFile(extractedPath, 'utf8')).toBe('xlsx-png');
     const sections = preview.sections as PreviewSection[];
-    expect(sections.some((section) => section.title === 'MANDATORY Extracted Assets & Images — MUST USE')).toBe(true);
+    expect(sections.some((section) => section.title.includes('Extracted Assets'))).toBe(false);
   });
 });

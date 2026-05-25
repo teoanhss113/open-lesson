@@ -330,7 +330,7 @@
 .zoom-trigger { min-width: 64px; }
 .tabular-nums { font-variant-numeric: tabular-nums; }
 .icon-rotate-180 { transform: rotate(180deg); }
-.fallback-iframe { width: 100%; height: 100%; border: none; background: var(--colors-canvas); }
+.fallback-iframe { width: 100%; height: 100%; border: none; background: var(--colors-canvas); overflow: hidden !important; }
 
 /* Zoom / popover */
 .zoom-popover { display: block; position: absolute; right: 0; z-index: 100; }
@@ -395,7 +395,27 @@
 .selection-context-name { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 12px/1.40 var(--sans); color: currentColor; }
 .selection-context-remove { display: inline-flex; align-items: center; justify-content: center; padding: var(--spacing-2xs); background: transparent; border: none; cursor: pointer; color: currentColor; }
 
-.preview-frame-base { width: 100%; height: 100%; border: none; background: var(--colors-canvas); }
+.preview-frame-base { width: 100%; height: 100%; border: none; background: var(--colors-canvas); overflow: hidden !important; }
+.preview-pan-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 99999;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.preview-pan-overlay.is-dragging {
+  cursor: grabbing;
+}
+/* Global cursor override during spacebar-pan drag so the cursor stays correct over child iframes */
+body.spacebar-panning * { cursor: grab !important; }
+body.spacebar-panning.is-dragging * { cursor: grabbing !important; }
+body.spacebar-panning .viewer-body { overflow: hidden !important; }
+.preview-viewport-desktop .preview-frame-clip,
+.preview-viewport-desktop .comment-frame-clip {
+  overflow: visible !important;
+}
 .srcdoc-viewer-shell { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg-panel); }
 .srcdoc-viewer-shell.canvas { background: var(--colors-canvas); }
 .srcdoc-viewer-status {
@@ -10904,6 +10924,7 @@ button.connector-action.is-loading {
   min-height: 0;
   background: var(--bg-panel);
   border-left: 1px solid var(--border);
+  overflow-y: auto;
 }
 .df-preview-empty {
   flex: 1;
@@ -10995,19 +11016,34 @@ button.connector-action.is-loading {
   object-fit: cover;
   display: block;
 }
-.df-preview-actions { display: inline-flex; gap: var(--spacing-xxs); margin-top: var(--spacing-xxs); flex-wrap: wrap; }
+.df-preview-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: var(--spacing-md) calc(-1 * var(--spacing-md)) calc(-1 * var(--spacing-md));
+  display: inline-flex;
+  gap: var(--spacing-xxs);
+  flex-wrap: wrap;
+  box-shadow: 0 -4px 12px -8px rgba(0, 0, 0, 0.08);
+}
 .df-preview-actions button {
   font-size: var(--font-size-micro);
   padding: var(--spacing-xxs) var(--spacing-xs);
   background: var(--bg-panel);
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xxs);
 }
 .df-preview-actions button:hover { background: var(--bg-subtle); border-color: var(--border-strong); }
+.df-preview-actions .ghost-link {
+  border-radius: var(--radius-pill);
+}
 
 /* Row context menu */
 .df-row-popover {
@@ -11209,7 +11245,7 @@ button.connector-action.is-loading {
   min-height: 0;
   position: relative;
   background: var(--bg);
-  overflow: auto;
+  overflow: hidden;
 }
 .live-artifact-refresh-notice {
   position: sticky;
@@ -24536,3 +24572,33 @@ body.entry-resizing { cursor: col-resize; user-select: none; }
   margin-top: var(--spacing-xs);
   font-family: monospace;
 }
+
+/* Custom drag and drop file ghost styling */
+.df-drag-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xxs) var(--spacing-md);
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-micro-sm);
+  font-weight: 500;
+  color: var(--text);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 9999;
+}
+.df-drag-ghost-icon {
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.df-drag-ghost-label {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 180px;
+}
+

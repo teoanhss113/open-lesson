@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DESIGN_FILES_DRAG_MIME } from '../constants';
 import { useT } from '../i18n';
+
 import type { Dict } from '../i18n/types';
 import { fetchExtractedDocumentMedia, projectFileUrl, triggerExtractDocumentMedia } from '../providers/registry';
 import type { LiveArtifactWorkspaceEntry, ProjectFile, ProjectFileKind } from '../types';
@@ -93,7 +95,9 @@ type KindFamilyFilter = KindFamily | null;
 type DesignFilesInputModal =
   | { kind: 'newFolder'; value: string }
   | { kind: 'moveSelected'; value: string };
-const DESIGN_FILES_DRAG_MIME = 'application/x-open-design-files';
+
+
+
 
 const MODIFIED_SECTION_ORDER: ModifiedSection[] = [
   'today',
@@ -610,6 +614,39 @@ export function DesignFilesPanel({
     ev.dataTransfer.setData(DESIGN_FILES_DRAG_MIME, JSON.stringify(names));
     ev.dataTransfer.setData('text/plain', names.join('\n'));
     setDraggingMove(true);
+
+    // Create a beautiful, compact custom drag ghost image matching the Design System
+    const ghost = document.createElement('div');
+    ghost.className = 'df-drag-ghost';
+
+    const icon = document.createElement('span');
+    icon.className = 'df-drag-ghost-icon';
+    const firstName = names[0] || name;
+    const firstFile = files.find((f) => f.name === firstName);
+    const kind = firstFile ? firstFile.kind : 'file';
+    icon.textContent = kind === 'image' ? '🖼️' : '📄';
+    ghost.appendChild(icon);
+
+    const label = document.createElement('span');
+    label.className = 'df-drag-ghost-label';
+    const baseName = firstName.split('/').pop() || firstName;
+    label.textContent = names.length > 1 ? `${baseName} (+${names.length - 1})` : baseName;
+    ghost.appendChild(label);
+
+    ghost.style.position = 'absolute';
+    ghost.style.top = '-1000px';
+    ghost.style.left = '-1000px';
+    document.body.appendChild(ghost);
+
+    if (typeof ev.dataTransfer.setDragImage === 'function') {
+      ev.dataTransfer.setDragImage(ghost, 16, 16);
+    }
+
+    setTimeout(() => {
+      if (document.body.contains(ghost)) {
+        document.body.removeChild(ghost);
+      }
+    }, 0);
   }
 
   function endFileDrag() {
@@ -2155,20 +2192,41 @@ function DfPreview({
           </div>
         ) : null}
 
-        <div className="df-preview-actions">
-            <a
-              className="ghost-link text-decoration-none"
-              href={url}
-              download={file.name}
-          >
-            {t('designFiles.download')}
-          </a>
-          <button type="button" onClick={onClose}>
-            {t('designFiles.previewClose')}
-          </button>
-        </div>
+        <DfPreviewActions
+          url={url}
+          fileName={file.name}
+          onClose={onClose}
+        />
       </div>
     </aside>
+  );
+}
+
+interface DfPreviewActionsProps {
+  url: string;
+  fileName: string;
+  onClose: () => void;
+}
+
+export function DfPreviewActions({
+  url,
+  fileName,
+  onClose,
+}: DfPreviewActionsProps) {
+  const t = useT();
+  return (
+    <div className="df-preview-actions">
+      <a
+        className="ghost-link text-decoration-none"
+        href={url}
+        download={fileName}
+      >
+        {t('designFiles.download')}
+      </a>
+      <button type="button" onClick={onClose}>
+        {t('designFiles.previewClose')}
+      </button>
+    </div>
   );
 }
 

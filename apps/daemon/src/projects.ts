@@ -22,7 +22,7 @@ import {
   evaluateArtifactStubGuard,
   readArtifactStubGuardConfigFromEnv,
 } from './artifact-stub-guard.js';
-import { postProcessHtmlWithExtractedImages } from './inject-extracted-images.js';
+import { sanitizeHtmlArtifact } from './html-artifact-sanitizer.js';
 
 const FORBIDDEN_SEGMENT = /^$|^\.\.?$/;
 const RESERVED_PROJECT_FILE_SEGMENTS = new Set(['.live-artifacts']);
@@ -701,10 +701,8 @@ export async function writeProjectFile(
   let fileContent = body;
   if (safeName.endsWith('.html') || safeName.endsWith('.htm')) {
     const htmlString = Buffer.isBuffer(body) ? body.toString('utf8') : body;
-    if (!htmlString.includes('BEGIN AUTOMATICALLY INJECTED EXTRACTED IMAGES')) {
-      const processedHtml = await postProcessHtmlWithExtractedImages(htmlString, dir);
-      fileContent = Buffer.isBuffer(body) ? Buffer.from(processedHtml, 'utf8') : processedHtml;
-    }
+    const processedHtml = sanitizeHtmlArtifact(htmlString);
+    fileContent = Buffer.isBuffer(body) ? Buffer.from(processedHtml, 'utf8') : processedHtml;
   }
   await writeFile(target, fileContent);
   if (validatedManifest) {

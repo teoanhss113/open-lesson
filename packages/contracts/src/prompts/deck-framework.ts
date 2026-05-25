@@ -324,6 +324,12 @@ Decks regress when each turn re-authors the scale-to-fit logic, the keyboard han
 
 **You do not write any of that. You do not modify any of that.** Your job is to fill content slots only.
 
+## Native PPTX output gate
+
+If the user's brief explicitly asks for \`.pptx\`, \`PPTX\`, \`PowerPoint\`, \`tạo file PPTX\`, or \`file PPTX mới\`, the deliverable is a real \`.pptx\` file. Do not satisfy that request by emitting \`index.html\`, \`deck.html\`, or an \`<artifact type="text/html">\` block.
+
+For native PPTX requests, use this framework only as an internal planning/fidelity reference if needed. The final work must create or edit a PowerPoint package saved with a \`.pptx\` extension in the project folder. Copy/edit the referenced PPTX package when one is available. Do not satisfy a PPTX request with HTML unless the user explicitly asks for HTML or exact PPTX editing is not possible and you say that clearly before falling back. If you create a temporary HTML deck to design/capture slides, you must still export/build the PPTX before reporting done, and the final answer must point to the \`.pptx\` path.
+
 ## Workflow — copy framework first, then fill content
 
 When the user asks for slides, your TodoWrite plan **must** start with "copy the deck framework verbatim" before any content step. The intended order is:

@@ -32,6 +32,7 @@ import {
 } from '../../utils/inlineMentions';
 import { ANNOTATION_EVENT, type AnnotationEventDetail } from '../PreviewDrawOverlay';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
+import { DESIGN_FILES_DRAG_MIME } from '../../constants';
 
 import type { ChatSendMeta, ToolsTab, SlashCommand } from './types';
 import { escapeRegExp, looksLikeImage, buildComposerMentionEntities } from './utils';
@@ -547,6 +548,34 @@ export const ChatComposer = forwardRef<ChatComposerHandle, Props>(
     function handleDrop(e: React.DragEvent<HTMLDivElement>) {
       e.preventDefault();
       setDragActive(false);
+
+      const customData = e.dataTransfer.getData(DESIGN_FILES_DRAG_MIME);
+      if (customData) {
+        try {
+          const names = JSON.parse(customData) as string[];
+          if (Array.isArray(names) && names.length > 0) {
+            const newStaged: ChatAttachment[] = [];
+            for (const filePath of names) {
+              if (filePath && !staged.some((s) => s.path === filePath)) {
+                const projectFile = projectFiles.find((f) => (f.path ?? f.name) === filePath);
+                newStaged.push({
+                  path: filePath,
+                  name: projectFile?.name ?? filePath.split('/').pop() ?? filePath,
+                  kind: looksLikeImage(filePath) ? 'image' : 'file',
+                  size: projectFile?.size,
+                });
+              }
+            }
+            if (newStaged.length > 0) {
+              setStaged((s) => [...s, ...newStaged]);
+            }
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to parse dragged design files', err);
+        }
+      }
+
       const files = Array.from(e.dataTransfer.files ?? []);
       if (files.length > 0) void uploadFiles(files);
     }

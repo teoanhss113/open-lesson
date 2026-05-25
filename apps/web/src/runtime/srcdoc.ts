@@ -72,7 +72,40 @@ export function buildSrcdoc(
     : withSelection;
   const withEdit = options.editBridge ? injectManualEditBridge(withPalette) : withPalette;
   const withSnapshot = injectSnapshotBridge(withEdit);
-  return injectSelectionTracker(withSnapshot);
+  const withSpacePan = injectSpacePanBridge(withSnapshot);
+  return injectSelectionTracker(withSpacePan);
+}
+
+/**
+ * Space-pan bridge: lets the parent host detect when the Space key is pressed
+ * or released inside a sandboxed iframe, and prevents the default browser
+ * scroll-on-space behaviour from scrolling the iframe body.
+ *
+ * Messages posted to parent:
+ *   { type: 'od:space-pan', state: 'down' | 'up' }
+ */
+function injectSpacePanBridge(doc: string): string {
+  const script = `<script data-od-space-pan-bridge>(function(){
+  function isInput(el){
+    if(!el) return false;
+    var tag = el.tagName ? el.tagName.toUpperCase() : '';
+    return tag==='INPUT'||tag==='TEXTAREA'||(el.isContentEditable);
+  }
+  document.addEventListener('keydown', function(e){
+    if(e.code!=='Space'&&e.key!==' ') return;
+    if(isInput(e.target)||isInput(document.activeElement)) return;
+    e.preventDefault();
+    try{ window.parent.postMessage({type:'od:space-pan',state:'down'},'*'); }catch(_){}
+  }, true);
+  document.addEventListener('keyup', function(e){
+    if(e.code!=='Space'&&e.key!==' ') return;
+    try{ window.parent.postMessage({type:'od:space-pan',state:'up'},'*'); }catch(_){}
+  }, true);
+  window.addEventListener('blur', function(){
+    try{ window.parent.postMessage({type:'od:space-pan',state:'up'},'*'); }catch(_){}
+  });
+})();</script>`;
+  return injectBeforeBodyEnd(doc, script);
 }
 
 function injectSelectionTracker(doc: string): string {

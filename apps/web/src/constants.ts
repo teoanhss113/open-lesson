@@ -7,3 +7,6 @@
 // shared across multiple surfaces.
 
 export const APP_NAME = 'Curriculum Workspace';
+
+export const DESIGN_FILES_DRAG_MIME = 'application/x-open-design-files';
+

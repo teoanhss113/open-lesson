@@ -102,15 +102,18 @@ function renderDocumentTemplateWorkflowHint(
     return file?.path ?? file?.name ?? attachment.path;
   });
   const docx = resolved.filter((path) => /\.docx$/i.test(path));
-  if (docx.length === 0) return '';
+  const pptx = resolved.filter((path) => /\.pptx$/i.test(path));
+  if (docx.length === 0 && pptx.length === 0) return '';
+  const nativeTemplates = [...docx, ...pptx];
   const dataSources = resolved.filter((path) => /\.(xlsx|xls|csv)$/i.test(path));
   return [
     '<document-template-workflow>',
-    `DOCX template(s): ${docx.map((path) => `\`${path}\``).join(', ')}`,
     dataSources.length > 0
       ? `Content/data source(s): ${dataSources.map((path) => `\`${path}\``).join(', ')}`
       : 'Content/data source(s): none attached',
-    'When the user asks for a new curriculum document based on a DOCX design, default to a new .docx output: copy the DOCX template to a fresh descriptive filename, then replace lesson-specific content inside the clone while preserving styles, page setup, headers, footers, tables, numbering, images, relationships, and theme parts. Do not silently produce HTML unless the user explicitly asks for HTML or DOCX editing is impossible and you state that limitation.',
+    `Native template(s): ${nativeTemplates.map((path) => `\`${path}\``).join(', ')}`,
+    'When the user asks for a new curriculum document, presentation, deck, teaching guide, syllabus, report, or similar output based on a native template design, default to a new native output file: copy the template to a fresh descriptive filename, then replace lesson-specific content inside the clone. Do not silently produce HTML unless the user explicitly asks for HTML or native-file editing is impossible and you state that limitation.',
+    'You may ask a concise clarification question or show a question-form only when essential information is truly missing, but the final output must still be the requested native file. Treat minor missing details as defaults and complete the cloned native file.',
     '</document-template-workflow>',
   ].join('\n');
 }

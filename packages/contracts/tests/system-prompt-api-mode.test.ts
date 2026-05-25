@@ -47,6 +47,7 @@ describe('composeSystemPrompt — API mode (#313)', () => {
       expect(prompt).toContain('### Branch A — user provided a brand/reference source, or `brand` value is `"brand_spec"` / `"reference_match"`');
       expect(prompt).toContain('ask them to paste/upload the brand spec or reference and stop');
       expect(prompt).toContain('Do not guess a brand domain or invent tokens');
+      expect(prompt).toContain('Do not classify Office/document templates (`.pptx`, `.docx`, `.xlsx`, `.pdf`) as brand/reference sources');
       expect(prompt).toContain('An active design system does not suppress Branch A when the user provides a brand/reference source');
       expect(prompt).toContain('### Branch B — no user-provided brand/reference source and no Branch A brand value');
       expect(prompt).toContain('active-design-system cases where the user did not provide a new brand/reference source');
@@ -54,10 +55,35 @@ describe('composeSystemPrompt — API mode (#313)', () => {
       expect(prompt).toContain('`brand_spec` / `reference_match` without a provided source → ask for the source and stop; do not guess brand tokens.');
     });
 
+    it('treats native PPTX requests as non-HTML workflows that skip discovery and brand extraction', () => {
+      const prompt = composeSystemPrompt({
+        skillMode: 'deck',
+        metadata: {
+          kind: 'deck',
+        } as any,
+      });
+
+      expect(prompt).toContain('Native Office files are outside the HTML artifact workflow');
+      expect(prompt).toContain('When the user explicitly asks to create or edit a `.pptx`');
+      expect(prompt).toContain('Native Office/PDF deliverable requests supersede the default-router exception');
+      expect(prompt).toContain('do not emit `<question-form id="task-type">` either');
+      expect(prompt).toContain('The user explicitly asks for a native Office/PDF deliverable such as "create a new PPTX", "tạo file PPTX mới"');
+      expect(prompt).toContain('Native PPTX decks override the HTML deck framework');
+      expect(prompt).toContain('Do not create `brand-spec.md` or HTML unless the user explicitly asks for HTML');
+      expect(prompt).toContain('Native PPTX output gate');
+      expect(prompt).toContain('the deliverable is a real `.pptx` file');
+      expect(prompt).toContain('Do not satisfy that request by emitting `index.html`, `deck.html`, or an `<artifact type="text/html">` block');
+      expect(prompt).toContain('You may ask a concise clarification question or show a question-form only when essential information is truly missing');
+      expect(prompt).toContain('Treat minor missing details as defaults and complete the cloned `.pptx`');
+      expect(prompt).toContain('Copy/edit the referenced PPTX package when one is available');
+      expect(prompt).toContain('If you create a temporary HTML deck to design/capture slides, you must still export/build the PPTX before reporting done');
+    });
+
     it('does not inject the API-mode preamble', () => {
       const prompt = composeSystemPrompt({});
       expect(prompt).not.toMatch(/API mode — no tools available/i);
     });
+
   });
 
   describe('API mode (streamFormat: plain)', () => {

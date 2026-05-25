@@ -96,6 +96,24 @@ describe('historyWithApiAttachmentContext', () => {
     expect(mockedFetchProjectFilePreview).toHaveBeenCalledWith('project-1', 'report.pdf');
     expect(history[0]?.content).toContain('Quarterly results');
   });
+
+  it('adds native template workflow guidance for attached Office templates', async () => {
+    const history = await historyWithApiAttachmentContext(
+      [
+        userMessage('msg-1', 'Create buoi 2 slides', [
+          { path: 'slides/buoi-1.pptx', name: 'buoi-1.pptx', kind: 'file' },
+          { path: 'syllabus.xlsx', name: 'syllabus.xlsx', kind: 'file' },
+        ]),
+      ],
+      'msg-1',
+      'project-1',
+      [projectFile('slides/buoi-1.pptx', 'document'), projectFile('syllabus.xlsx', 'document')],
+    );
+
+    expect(history[0]?.content).toContain('Native template(s): `slides/buoi-1.pptx`');
+    expect(history[0]?.content).toContain('default to a new native output file');
+    expect(history[0]?.content).toContain('Treat minor missing details as defaults and complete the cloned native file');
+  });
 });
 
 function userMessage(

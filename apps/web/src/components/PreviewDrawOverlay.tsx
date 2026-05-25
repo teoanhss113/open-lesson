@@ -108,11 +108,13 @@ export function PreviewDrawOverlay({
     if (!wrap || !cvs) return;
     const resize = () => {
       const rect = wrap.getBoundingClientRect();
+      const width = wrap.clientWidth || rect.width || 0;
+      const height = wrap.clientHeight || rect.height || 0;
       const dpr = window.devicePixelRatio || 1;
-      cvs.width = Math.max(1, Math.floor(rect.width * dpr));
-      cvs.height = Math.max(1, Math.floor(rect.height * dpr));
-      cvs.style.width = `${rect.width}px`;
-      cvs.style.height = `${rect.height}px`;
+      cvs.width = Math.max(1, Math.floor(width * dpr));
+      cvs.height = Math.max(1, Math.floor(height * dpr));
+      cvs.style.width = `${width}px`;
+      cvs.style.height = `${height}px`;
       redraw();
     };
     resize();
@@ -136,7 +138,12 @@ export function PreviewDrawOverlay({
   function pointFromEvent(e: PointerEvent): Point {
     const cvs = canvasRef.current!;
     const rect = cvs.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const scaleX = (rect.width / (cvs.offsetWidth || 1)) || 1;
+    const scaleY = (rect.height / (cvs.offsetHeight || 1)) || 1;
+    return {
+      x: (e.clientX - rect.left) / scaleX,
+      y: (e.clientY - rect.top) / scaleY,
+    };
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -287,8 +294,10 @@ export function PreviewDrawOverlay({
     });
     if (!bg) return null;
     ctx.drawImage(bg, 0, 0, snap.w, snap.h);
-    const sx = snap.w / Math.max(1, rect.width);
-    const sy = snap.h / Math.max(1, rect.height);
+    const iframeWidth = iframe.offsetWidth || rect.width || 1;
+    const iframeHeight = iframe.offsetHeight || rect.height || 1;
+    const sx = snap.w / iframeWidth;
+    const sy = snap.h / iframeHeight;
     drawCaptureTarget(ctx, sx, sy, captureTarget);
     ctx.strokeStyle = STROKE_COLOR;
     ctx.lineWidth = STROKE_WIDTH * Math.max(sx, sy);

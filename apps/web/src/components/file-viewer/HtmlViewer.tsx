@@ -128,6 +128,7 @@ import { PreviewViewportControls } from './PreviewViewportControls';
 import { BoardComposerPopover } from './BoardComposerPopover';
 import { CommentSidePanel } from './CommentSidePanel';
 import { InspectPanel } from './InspectPanel';
+import { useSpacebarPan } from './useSpacebarPan';
 
 export function HtmlViewer({
   projectId,
@@ -232,6 +233,7 @@ export function HtmlViewer({
   const [source, setSource] = useState<string | null>(liveHtml ?? null);
   const [inlinedSource, setInlinedSource] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
+  const previewScale = zoom / 100;
   const [previewViewport, setPreviewViewport] = useState<PreviewViewportId>('desktop');
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
   const zoomMenuRef = useRef<HTMLDivElement | null>(null);
@@ -283,6 +285,7 @@ export function HtmlViewer({
   const [manualEditViewportWidth, setManualEditViewportWidth] = useState<number | null>(null);
   const [previewBodyRef, previewBodySize] = usePreviewCanvasSize<HTMLDivElement>();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const { isSpacePressed, isDragging, panOffset, resetPanOffset, handlePointerDown } = useSpacebarPan(previewBodyRef, iframeRef, previewScale);
   const previewScrollRestoreRef = useRef<{
     hostLeft: number;
     hostTop: number;
@@ -440,7 +443,6 @@ export function HtmlViewer({
   const [commentSidePanelCollapsed, setCommentSidePanelCollapsed] = useState(false);
   const [strokePoints, setStrokePoints] = useState<StrokePoint[]>([]);
   const previewStateKey = `${projectId}:${file.name}`;
-  const previewScale = zoom / 100;
 
   function deploymentMapForCurrentFile(items: WebDeploymentInfo[]) {
     const next: Partial<Record<WebDeployProviderId, WebDeploymentInfo>> = {};
@@ -2574,12 +2576,23 @@ export function HtmlViewer({
           ) : null}
         </>)}
       <div className="viewer-body" ref={previewBodyRef}>
+        {isSpacePressed && (
+          <div
+            className={`preview-pan-overlay${isDragging ? ' is-dragging' : ''}`}
+            onPointerDown={handlePointerDown}
+          />
+        )}
         {source === null ? (
           <div className="viewer-empty">{t('fileViewer.loading')}</div>
         ) : mode === 'preview' ? (
           <div
             className={`${manualEditMode ? 'manual-edit-workspace' : 'comment-preview-layer'} preview-viewport preview-viewport-${previewViewport}`}
-            style={previewViewportStyle(previewViewport, previewScale, previewBodySize)}
+            style={{
+              ...previewViewportStyle(previewViewport, previewScale, previewBodySize),
+              ...(panOffset.x !== 0 || panOffset.y !== 0
+                ? { transform: `translate(${panOffset.x}px, ${panOffset.y}px)`, willChange: 'transform' }
+                : {}),
+            }}
           >
             {manualEditMode ? (
               <ManualEditPanel

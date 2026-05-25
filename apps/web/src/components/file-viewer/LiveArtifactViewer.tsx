@@ -23,6 +23,7 @@ import { PreviewDrawOverlay } from '../PreviewDrawOverlay';
 import { PreviewViewportControls } from './PreviewViewportControls';
 import type { PreviewViewportId, TranslateFn } from './types';
 import { previewScaleShellStyle, previewViewportStyle } from './utils';
+import { useSpacebarPan } from './useSpacebarPan';
 
 export function LiveArtifactViewer({
   projectId,
@@ -213,6 +214,7 @@ export function LiveArtifactViewer({
     [projectId, liveArtifact.artifactId, reloadKey],
   );
   const previewScale = zoom / 100;
+  const { isSpacePressed, isDragging, handlePointerDown } = useSpacebarPan(previewBodyRef, iframeRef, previewScale);
 
   function bumpZoom(delta: number) {
     setZoom((z) => Math.max(25, Math.min(200, z + delta)));
@@ -425,6 +427,12 @@ export function LiveArtifactViewer({
         </div>
       </div>
       <div className="viewer-body" ref={previewBodyRef}>
+        {isSpacePressed && (
+          <div
+            className={`preview-pan-overlay${isDragging ? ' is-dragging' : ''}`}
+            onPointerDown={handlePointerDown}
+          />
+        )}
         {refreshError ? (
           <LiveArtifactRefreshNotice
             tone="error"

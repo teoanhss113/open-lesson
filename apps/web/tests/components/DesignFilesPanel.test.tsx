@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DesignFilesPanel } from '../../src/components/DesignFilesPanel';
+import { DESIGN_FILES_DRAG_MIME } from '../../src/constants';
 import { EXTRACTED_DOCUMENT_MEDIA_DIR } from '@open-design/contracts';
 import type { ProjectFile, ProjectFileKind } from '../../src/types';
 
@@ -84,7 +85,7 @@ function getSelects(container: HTMLElement) {
   return Array.from(container.querySelectorAll<HTMLSelectElement>('select'));
 }
 
-const DESIGN_FILES_DRAG_MIME = 'application/x-open-design-files';
+
 
 function createDesignFilesDragDataTransfer(fileNames: string[]) {
   const store = new Map<string, string>();

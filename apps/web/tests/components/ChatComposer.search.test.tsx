@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ChatComposer } from '../../src/components/ChatComposer';
+import { DESIGN_FILES_DRAG_MIME } from '../../src/constants';
 import { ANNOTATION_EVENT } from '../../src/components/PreviewDrawOverlay';
 import { uploadProjectFiles } from '../../src/providers/registry';
 import type { ChatAttachment, ChatCommentAttachment, SkillSummary } from '../../src/types';
@@ -546,6 +547,74 @@ describe('ChatComposer /search command', () => {
 
     expect(onSend).not.toHaveBeenCalled();
     expect((input as HTMLTextAreaElement).value).toBe('keep this draft');
+  });
+
+  it('stages local project files on drop via DESIGN_FILES_DRAG_MIME', async () => {
+    const onSend = vi.fn();
+
+    render(
+      <ChatComposer
+        projectId="project-1"
+        projectFiles={[
+          {
+            name: 'lesson1.lp',
+            path: 'lesson1.lp',
+            kind: 'document',
+            size: 1024,
+            mtime: Date.now(),
+            mime: 'text/plain',
+          },
+          {
+            name: 'visual.png',
+            path: 'images/visual.png',
+            kind: 'image',
+            size: 2048,
+            mtime: Date.now(),
+            mime: 'image/png',
+          },
+        ]}
+        streaming={false}
+        onEnsureProject={async () => 'project-1'}
+        onSend={onSend}
+        onStop={vi.fn()}
+      />,
+    );
+
+    const composer = screen.getByTestId('chat-composer');
+    const store = new Map<string, string>();
+    store.set(DESIGN_FILES_DRAG_MIME, JSON.stringify(['lesson1.lp', 'images/visual.png']));
+    const dataTransfer = {
+      files: [],
+      getData: vi.fn((type: string) => store.get(type) ?? ''),
+    };
+
+    fireEvent.drop(composer, { dataTransfer });
+
+    await waitFor(() => expect(screen.getByText('lesson1.lp')).toBeTruthy());
+    expect(screen.getByText('visual.png')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('chat-send'));
+
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
+    expect(onSend).toHaveBeenCalledWith(
+      '',
+      [
+        {
+          path: 'lesson1.lp',
+          name: 'lesson1.lp',
+          kind: 'file',
+          size: 1024,
+        },
+        {
+          path: 'images/visual.png',
+          name: 'visual.png',
+          kind: 'image',
+          size: 2048,
+        },
+      ],
+      [],
+      undefined,
+    );
   });
 });
 

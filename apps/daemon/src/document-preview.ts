@@ -198,23 +198,6 @@ async function extractAndSavePdfImages(
   return extractedFiles;
 }
 
-function extractedMediaSection(sourceKind: string, extracted: string[]): PreviewSection {
-  return {
-    title: 'MANDATORY Extracted Assets & Images — MUST USE',
-    lines: [
-      `CRITICAL INSTRUCTION FOR GENERATING HTML/LESSONS:`,
-      `This source ${sourceKind} contains actual images/diagrams/slides that have been extracted and saved to the project directory.`,
-      `When generating HTML/CSS materials for this document, you MUST include and embed ALL these images in the generated HTML.`,
-      `DO NOT use placeholders, DO NOT use blank divs, and DO NOT ignore them.`,
-      `To use them, insert these exact <img> tags directly into your HTML:`,
-      '',
-      ...extracted.map((img) => `- <img src="${img}" alt="${path.basename(img)}" />`),
-      '',
-      `Each of these images corresponds to a page, slide, or diagram in the original file. Ensure they are displayed in a clean, logical grid or flow in the final output so teachers and students can see them.`,
-    ],
-  };
-}
-
 /**
  * Lightweight extraction-only path: extracts embedded images from a document
  * and writes them to `_document_media/{slug}/` without building or returning
@@ -311,10 +294,7 @@ async function previewPdf(
       },
     ];
     if (projectDir && originalFilename) {
-      const extracted = await extractAndSavePdfImages(buffer, originalFilename, projectDir);
-      if (extracted.length > 0) {
-        sections.push(extractedMediaSection('PDF', extracted));
-      }
+      await extractAndSavePdfImages(buffer, originalFilename, projectDir);
     }
     return sections;
   } catch {
@@ -344,10 +324,7 @@ async function previewDocx(
   ];
 
   if (projectDir && originalFilename) {
-    const extracted = await extractAndSaveZipImages(zip, originalFilename, projectDir, 'word/media/');
-    if (extracted.length > 0) {
-      sections.push(extractedMediaSection('document', extracted));
-    }
+    await extractAndSaveZipImages(zip, originalFilename, projectDir, 'word/media/');
   }
 
   return sections;
@@ -376,10 +353,7 @@ async function previewPptx(
     : [{ title: 'Presentation', lines: ['No readable slides found.'] }];
 
   if (projectDir && originalFilename) {
-    const extracted = await extractAndSaveZipImages(zip, originalFilename, projectDir, 'ppt/media/');
-    if (extracted.length > 0) {
-      finalSections.push(extractedMediaSection('presentation', extracted));
-    }
+    await extractAndSaveZipImages(zip, originalFilename, projectDir, 'ppt/media/');
   }
 
   return finalSections;
@@ -406,10 +380,7 @@ async function previewXlsx(
     : [{ title: 'Spreadsheet', lines: ['No readable sheets found.'] }];
 
   if (projectDir && originalFilename) {
-    const extracted = await extractAndSaveZipImages(zip, originalFilename, projectDir, 'xl/media/');
-    if (extracted.length > 0) {
-      finalSections.push(extractedMediaSection('spreadsheet', extracted));
-    }
+    await extractAndSaveZipImages(zip, originalFilename, projectDir, 'xl/media/');
   }
 
   return finalSections;

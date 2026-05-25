@@ -42,6 +42,7 @@ import { PptxViewer } from './PptxViewer';
 import { BoardComposerPopover } from './BoardComposerPopover';
 import { CommentSidePanel } from './CommentSidePanel';
 import { InspectPanel } from './InspectPanel';
+import { useSpacebarPan } from './useSpacebarPan';
 import {
   buildBoardCommentAttachments,
   commentsToAttachments,
@@ -132,30 +133,24 @@ export function DocumentPreviewViewer({
   // Dynamic zoom scale calculation
   const calculatedScale = useMemo(() => {
     if (!previewBodySize?.width) return 100;
+    if (isDoc) return 100; // Documents are full-width, no scaling needed
     const availableWidth = previewBodySize.width - 48;
-    const targetWidth = isDeck ? 1000 : (isDoc ? docxWidth : 850);
+    const targetWidth = isDeck ? 1000 : 850;
     return Math.max(25, Math.min(200, Math.round((availableWidth / targetWidth) * 100)));
-  }, [previewBodySize?.width, isDeck, isDoc, docxWidth]);
+  }, [previewBodySize?.width, isDeck, isDoc]);
 
   const actualZoom = zoom === 'fit' ? calculatedScale : zoom;
+  const previewScale = actualZoom / 100;
 
   const overlayPreviewScale = useMemo(() => {
     return effectivePreviewScale(previewViewport, actualZoom / 100, previewBodySize);
   }, [previewViewport, actualZoom, previewBodySize]);
 
   const previewShellStyle = useMemo((): CSSProperties & Record<string, string | number> => {
-    const previewScale = actualZoom / 100;
-    if (isDoc && previewViewport === 'desktop') {
-      return {
-        width: `${docxWidth}px`,
-        minWidth: `${docxWidth}px`,
-        height: `${100 / previewScale}%`,
-        transform: `scale(${previewScale})`,
-        transformOrigin: '0 0',
-      };
-    }
     return previewScaleShellStyle(previewViewport, previewScale);
-  }, [actualZoom, docxWidth, isDoc, previewViewport]);
+  }, [actualZoom, previewViewport, previewScale]);
+
+  const { isSpacePressed, isDragging, panOffset, resetPanOffset, handlePointerDown } = useSpacebarPan(previewBodyRef, iframeRef, previewScale);
 
   // Reset page/slide/sheet/review indices when switching files
   useEffect(() => {
@@ -163,6 +158,7 @@ export function DocumentPreviewViewer({
     setActiveSheet(0);
     setPdfTab('visual');
     setMode('preview');
+    resetPanOffset();
     setZoom('fit');
     setPreviewViewport('desktop');
     setBoardMode(false);
@@ -791,7 +787,12 @@ export function DocumentPreviewViewer({
     return (
       <div
         className={`comment-preview-layer preview-viewport preview-viewport-${previewViewport}`}
-        style={previewViewportStyle(previewViewport, actualZoom / 100, previewBodySize)}
+        style={{
+          ...previewViewportStyle(previewViewport, actualZoom / 100, previewBodySize),
+          ...(panOffset.x !== 0 || panOffset.y !== 0
+            ? { transform: `translate(${panOffset.x}px, ${panOffset.y}px)`, willChange: 'transform' }
+            : {}),
+        }}
       >
         <div className="comment-frame-clip">
           <div style={previewShellStyle}>
@@ -1221,6 +1222,12 @@ export function DocumentPreviewViewer({
       </div>
 
       <div className="viewer-body" ref={previewBodyRef}>
+        {isSpacePressed && (
+          <div
+            className={`preview-pan-overlay${isDragging ? ' is-dragging' : ''}`}
+            onPointerDown={handlePointerDown}
+          />
+        )}
         {mode === 'preview' ? renderBody() : renderSource()}
         {mode === 'preview' && boardMode && activeCommentTarget ? (
           <BoardComposerPopover
