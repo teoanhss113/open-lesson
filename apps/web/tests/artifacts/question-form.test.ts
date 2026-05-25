@@ -67,4 +67,35 @@ describe('splitOnQuestionForms', () => {
 
     expect(text).toContain('- Primary surface: Mobile (iOS/Android) [value: mobile]');
   });
+
+  it('parses question-form tags escaped by a markdown code block renderer', () => {
+    const input = [
+      'Let me confirm the brief.',
+      '```',
+      '&lt;question-form id=&quot;discovery&quot; title=&quot;Quick brief&quot;&gt;',
+      '{',
+      '  "questions": [',
+      '    {',
+      '      "id": "format",',
+      '      "label": "Output format",',
+      '      "type": "radio",',
+      '      "options": ["HTML slide deck", "PowerPoint PPTX"]',
+      '    }',
+      '  ]',
+      '}',
+      '&lt;/question-form&gt;',
+      '```',
+    ].join('\n');
+
+    const segments = splitOnQuestionForms(input);
+
+    expect(segments).toHaveLength(3);
+    expect(segments[1]).toMatchObject({
+      kind: 'form',
+      form: {
+        id: 'discovery',
+        title: 'Quick brief',
+      },
+    });
+  });
 });

@@ -89,13 +89,14 @@ const OPEN_RE = /<question-form\b([^>]*)>/i;
 const CLOSE_TAG = '</question-form>';
 
 export function splitOnQuestionForms(input: string): FormSegment[] {
+  const normalized = normalizeEscapedQuestionFormTags(input);
   const out: FormSegment[] = [];
   let cursor = 0;
   // Scan repeatedly for <question-form> opens; for each, locate the
   // matching close tag and try to parse the JSON body. Anything that
   // doesn't parse cleanly stays in the prose stream.
-  while (cursor < input.length) {
-    const slice = input.slice(cursor);
+  while (cursor < normalized.length) {
+    const slice = normalized.slice(cursor);
     const m = OPEN_RE.exec(slice);
     if (!m) {
       out.push({ kind: 'text', text: slice });
@@ -103,27 +104,45 @@ export function splitOnQuestionForms(input: string): FormSegment[] {
     }
     const openStart = cursor + m.index;
     const openEnd = openStart + m[0].length;
-    const closeIdx = input.indexOf(CLOSE_TAG, openEnd);
+    const closeIdx = normalized.indexOf(CLOSE_TAG, openEnd);
     if (closeIdx === -1) {
       // Unterminated — leave the rest as prose so we don't swallow it.
       out.push({ kind: 'text', text: slice });
       break;
     }
     if (openStart > cursor) {
-      out.push({ kind: 'text', text: input.slice(cursor, openStart) });
+      out.push({ kind: 'text', text: normalized.slice(cursor, openStart) });
     }
-    const body = input.slice(openEnd, closeIdx);
+    const body = normalized.slice(openEnd, closeIdx);
     const attrs = parseAttrs(m[1] ?? '');
     const form = tryParseForm(body, attrs);
     if (form) {
-      out.push({ kind: 'form', form, raw: input.slice(openStart, closeIdx + CLOSE_TAG.length) });
+      out.push({ kind: 'form', form, raw: normalized.slice(openStart, closeIdx + CLOSE_TAG.length) });
     } else {
       // Malformed — keep raw text so the user can still see it.
-      out.push({ kind: 'text', text: input.slice(openStart, closeIdx + CLOSE_TAG.length) });
+      out.push({ kind: 'text', text: normalized.slice(openStart, closeIdx + CLOSE_TAG.length) });
     }
     cursor = closeIdx + CLOSE_TAG.length;
   }
   return out;
+}
+
+function normalizeEscapedQuestionFormTags(input: string): string {
+  if (!/&lt;\/?question-form\b/i.test(input)) return input;
+  return input.replace(/&lt;(\/?question-form\b[\s\S]*?)&gt;/gi, (_match, tag: string) => {
+    return `<${decodeTagEntities(tag)}>`;
+  });
+}
+
+function decodeTagEntities(input: string): string {
+  return input
+    .replace(/&quot;/g, '"')
+    .replace(/&#34;/g, '"')
+    .replace(/&#x22;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
 }
 
 function parseAttrs(raw: string): Record<string, string> {

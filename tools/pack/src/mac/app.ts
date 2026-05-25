@@ -1,4 +1,4 @@
-import { chmod, cp, mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, readdir, rm, writeFile, access } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
 import type { ToolPackConfig } from "../config.js";
@@ -130,7 +130,17 @@ export async function copyResourceTree(config: ToolPackConfig, paths: MacPaths):
     resourceRoot: paths.resourceRoot,
   });
   await mkdir(join(paths.resourceRoot, "bin"), { recursive: true });
-  await cp(process.execPath, join(paths.resourceRoot, "bin", "node"));
+
+  let nodeSource = process.execPath;
+  try {
+    const staticNodePath = join(config.workspaceRoot, ".tmp", "node-static-mac");
+    await access(staticNodePath);
+    nodeSource = staticNodePath;
+  } catch {
+    // Fall back to process.execPath
+  }
+
+  await cp(nodeSource, join(paths.resourceRoot, "bin", "node"));
   await chmod(join(paths.resourceRoot, "bin", "node"), 0o755);
 }
 
